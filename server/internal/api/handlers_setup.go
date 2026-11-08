@@ -36,6 +36,8 @@ func (s *Server) GetInstance(ctx context.Context, _ GetInstanceRequestObject) (G
 		out.Name, out.SignupOpen, out.SetupRequired = inst.Name, inst.SignupOpen, false
 		out.PrivacyText, out.TermsText = strPtr(inst.PrivacyText), strPtr(inst.TermsText)
 		out.CopyrightContact = strPtr(inst.CopyrightContact)
+		emailReset := inst.BaseURL != "" && app.mailEnabled(ctx)
+		out.EmailPasswordReset = &emailReset
 	}
 	return out, nil
 }

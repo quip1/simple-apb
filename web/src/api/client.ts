@@ -89,7 +89,8 @@ export function createApiClient(opts: ClientOptions = {}) {
     return res;
   };
 
-  return createClient<paths>({ baseUrl: base, credentials: "include", fetch: authedFetch });
+  // `refresh` is also used by raw fetches (resumable uploads).
+  return Object.assign(createClient<paths>({ baseUrl: base, credentials: "include", fetch: authedFetch }), { refresh });
 }
 
 export type ApiClient = ReturnType<typeof createApiClient>;

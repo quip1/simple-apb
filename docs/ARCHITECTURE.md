@@ -1,6 +1,6 @@
 # Architecture (as built)
 
-> Updated as each phase lands. Current state: **Phase 1 accepted; Phase 2 milestones 1–6** (web foundation, player screens, account and stats, admin panel, moderation and social, metadata pipeline).
+> Updated as each phase lands. Current state: **Phase 1 accepted; Phase 2 milestones 1–7** (web foundation, player screens, account and stats, admin panel, moderation and social, metadata pipeline, email, uploads and end-to-end tests).
 
 ## Overview
 
@@ -44,6 +44,9 @@
 | Admin panel | `web/src/pages/admin` (lazy-loaded), `server/internal/api/handlers_panel.go`, `handlers_settings.go`, `internal/sysinfo` | dashboard, users/groups/tags, master store, Trash, takedowns, audit log + CSV, backups, settings (ADR-0032) |
 | Social & moderation | `internal/authz/social.go`, `internal/store/social.go`, `internal/api/handlers_social.go`, `web/src/pages/admin/inbox` | reviews and ratings, recommendations, who's listening, reports, sharing your uploads (Public via the review queue), collection sharing, inbox tabs (ADR-0034) |
 | Metadata | `internal/metadata`, `internal/store/metadata.go`, `internal/api/handlers_metadata.go`, `web/src/components/MetadataDialog.svelte` | Open Library, Google Books and Audnexus providers, confidence scoring, fill-only matching job after import, locked hand edits, needs-review inbox tab, provider covers (ADR-0035) |
+| Email | `internal/mail` (templates, catalog, SMTP), `internal/api/mail.go` | sign-up approved/declined, password reset by email, opt-in admin alerts; sent as jobs (ADR-0036) |
+| Web uploads | `web/src/lib/upload.ts`, `web/src/pages/Uploads.svelte` | resumable tus uploads from the browser with import status (ADR-0037) |
+| End-to-end tests | `web/e2e`, `web/playwright.config.ts`, CI job `e2e` | Playwright journey against the real server binary (ADR-0037) |
 | Web player | `web/src/lib/player.svelte.ts`, `live.svelte.ts` | one `<audio>` on the book timeline (multi-file or HLS via hls.js), signed stream links, progress sync + conflict prompt, Media Session, `/ws` hints (ADR-0029) |
 | TS client | `web/src/api` | generated types + cookie/CSRF/refresh-aware client |
 | Kotlin client | `android/core-api` | generated at build time |
@@ -67,7 +70,7 @@ Errors are typed (`httpError`, `auth.Error`, `setup.Error`, `store.ErrNotFound`�
 | `metadata` | providers (Open Library, Google Books, Audnexus), scoring, the matching job, provider covers |
 | `sync` | progress, bookmarks, conflicts, delta sync |
 | `stream` | range serving, bandwidth shaping |
-| `push`, `mail` | ntfy publisher, SMTP |
+| `push`, `mail` | ntfy publisher; SMTP with translated plain-text + HTML templates |
 | `moderation` | reserved; reports, the review queue and takedowns currently live in `store` (`social.go`, `admin.go`) and `api` (`handlers_social.go`, `handlers_panel.go`) |
 | `stats`, `backup`, `jobs` | stats, backups/scrubs, job queue |
 | `sysinfo` | disk space, memory and load for the admin dashboard |

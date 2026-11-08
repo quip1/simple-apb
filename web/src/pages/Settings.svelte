@@ -151,6 +151,22 @@
     </label>
   </section>
 
+  {#if session.me?.role === "admin"}
+    <section class="card stack" aria-labelledby="s-alerts">
+      <h2 id="s-alerts">{t("settings.alerts")}</h2>
+      <label class="check">
+        <input
+          type="checkbox"
+          checked={session.me?.prefs?.email_alerts === true}
+          disabled={!session.me?.email}
+          onchange={(e) => patchMe({ prefs: { ...(session.me?.prefs ?? {}), email_alerts: e.currentTarget.checked } })}
+        />
+        <span>{t("settings.email_alerts")}</span>
+      </label>
+      <p class="muted">{session.me?.email ? t("settings.email_alerts_hint") : t("settings.email_alerts_no_email")}</p>
+    </section>
+  {/if}
+
   <section class="card stack" aria-labelledby="s-account">
     <h2 id="s-account">{t("settings.account")}</h2>
     <p>{t("settings.signed_in_as", { name: session.me?.display_name ?? "", user: session.me?.username ?? "" })}</p>

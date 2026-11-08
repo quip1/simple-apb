@@ -244,7 +244,10 @@
 <svelte:head><title>{t("nav.library")} · {session.instance?.name ?? ""}</title></svelte:head>
 
 <div class="stack">
-  <h1>{t("nav.library")}</h1>
+  <div class="row head">
+    <h1>{t("nav.library")}</h1>
+    {#if session.me?.permissions.can_upload}<a class="upload" href="/uploads" use:link>{t("uploads.title")}</a>{/if}
+  </div>
 
   <nav class="views" aria-label={t("library.views")}>
     {#each VIEWS as v (v)}
@@ -424,6 +427,18 @@
 </Dialog>
 
 <style>
+  .head {
+    justify-content: space-between;
+    align-items: center;
+  }
+  .head h1 {
+    margin: 0;
+  }
+  .upload {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
   .views {
     display: flex;
     gap: 0.25rem;

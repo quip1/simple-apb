@@ -51,7 +51,11 @@ func (a *App) getStatus(ctx context.Context, key string) *opStatus {
 }
 
 func (a *App) registerOpsJobs() {
-	a.Jobs.Handle(push.JobPush, a.Push.Handle)
+	a.Jobs.Handle(push.JobPush, func(ctx context.Context, j *jobs.Job) (any, error) {
+		a.adminAlertsFrom(ctx, j) // opted-in admins also get an email
+		return a.Push.Handle(ctx, j)
+	})
+	a.Jobs.Handle(JobMail, a.sendMailJob)
 	a.Jobs.Handle(JobBackup, func(ctx context.Context, _ *jobs.Job) (any, error) {
 		name, err := a.Backup.Run(ctx)
 		if err != nil {

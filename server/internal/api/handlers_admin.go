@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/quip1/simple-apb/server/internal/authz"
+	"github.com/quip1/simple-apb/server/internal/mail"
 	"github.com/quip1/simple-apb/server/internal/store"
 )
 
@@ -81,12 +82,19 @@ func (s *Server) ApproveSignupRequest(ctx context.Context, req ApproveSignupRequ
 		if err := store.RecordGroupChange(ctx, tx, pub, r.UserID); err != nil {
 			return err
 		}
-		return store.Audit(ctx, tx, store.AuditEntry{ActorID: admin, Action: "user.approve", ObjectType: "user", ObjectID: r.UserID, IP: clientIP(ctx)})
+		if err := store.Audit(ctx, tx, store.AuditEntry{ActorID: admin, Action: "user.approve", ObjectType: "user", ObjectID: r.UserID, IP: clientIP(ctx)}); err != nil {
+			return err
+		}
+		link := ""
+		if base := s.App().baseURL(ctx); base != "" {
+			link = base + "/login"
+		}
+		s.App().queueMail(ctx, tx, mailPayload{Template: mail.SignupApproved, UserID: r.UserID, Link: link})
+		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	// Email notification (when SMTP is set up) arrives with the mail templates.
 	return ApproveSignupRequest204Response{}, nil
 }
 
@@ -112,8 +120,12 @@ func (s *Server) DenySignupRequest(ctx context.Context, req DenySignupRequestReq
 		if err := store.SetUserStatus(ctx, tx, r.UserID, "deleted", "signup_denied", nil); err != nil {
 			return err
 		}
-		return store.Audit(ctx, tx, store.AuditEntry{ActorID: admin, Action: "user.deny", ObjectType: "user", ObjectID: r.UserID,
-			IP: clientIP(ctx), Details: map[string]any{"reason": reason}})
+		if err := store.Audit(ctx, tx, store.AuditEntry{ActorID: admin, Action: "user.deny", ObjectType: "user", ObjectID: r.UserID,
+			IP: clientIP(ctx), Details: map[string]any{"reason": reason}}); err != nil {
+			return err
+		}
+		s.App().queueMail(ctx, tx, mailPayload{Template: mail.SignupDenied, UserID: r.UserID, Vars: map[string]string{"reason": strings.TrimSpace(reason)}})
+		return nil
 	})
 	if err != nil {
 		return nil, err

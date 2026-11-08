@@ -14,17 +14,19 @@
   import Library from "./pages/Library.svelte";
   import Login from "./pages/Login.svelte";
   import PersonPage from "./pages/PersonPage.svelte";
+  import ForgotPassword from "./pages/ForgotPassword.svelte";
   import ResetPassword from "./pages/ResetPassword.svelte";
   import Player from "./pages/Player.svelte";
   import Security from "./pages/Security.svelte";
   import Settings from "./pages/Settings.svelte";
   import Stats from "./pages/Stats.svelte";
+  import Uploads from "./pages/Uploads.svelte";
   import Setup from "./pages/Setup.svelte";
   import Signup from "./pages/Signup.svelte";
 
   const PUBLIC = ["/login", "/signup"];
   // Reachable signed in or out.
-  const OPEN = ["/reset-password"];
+  const OPEN = ["/reset-password", "/forgot-password"];
   const loadAdmin = () => import("./pages/admin/AdminRoutes.svelte");
 
   onMount(loadSession);
@@ -87,6 +89,8 @@
   <Setup />
 {:else if match("/reset-password", route.path)}
   <ResetPassword />
+{:else if match("/forgot-password", route.path)}
+  <ForgotPassword />
 {:else if match("/login", route.path)}
   <Login />
 {:else if match("/signup", route.path)}
@@ -107,6 +111,8 @@
       <Security />
     {:else if match("/stats", route.path)}
       <Stats />
+    {:else if match("/uploads", route.path)}
+      <Uploads />
     {:else if route.path === "/admin" || route.path.startsWith("/admin/")}
       {#if session.me.role === "admin"}
         {#await loadAdmin()}

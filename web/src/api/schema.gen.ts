@@ -1040,6 +1040,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/password-reset/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Email a password reset link ("forgot my password")
+         * @description Works when email is set up and the instance address is configured
+         *     (`Instance.email_password_reset`). The answer is always 202, whether or
+         *     not the account exists or has an email address, so it reveals nothing.
+         *     Limited to 3 requests per hour per IP and per account.
+         */
+        post: operations["requestPasswordReset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/user-tags": {
         parameters: {
             query?: never;
@@ -1965,6 +1988,8 @@ export interface components {
             privacy_text?: string;
             terms_text?: string;
             copyright_contact?: string;
+            /** @description People can reset a forgotten password by email */
+            email_password_reset?: boolean;
             oidc_providers: components["schemas"]["OidcProvider"][];
         };
         /** @description Clients below `required` must block with "Update required"; below `recommended` show a soft banner. */
@@ -3325,6 +3350,10 @@ export interface components {
             google_books_key?: string;
             audnexus?: boolean;
             threshold?: number;
+        };
+        PasswordResetRequest: {
+            /** @description Username or email address */
+            login: string;
         };
     };
     responses: {
@@ -5115,6 +5144,30 @@ export interface operations {
         responses: {
             /** @description Password set */
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    requestPasswordReset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetRequest"];
+            };
+        };
+        responses: {
+            /** @description If the account has an email address, a link is on its way */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };

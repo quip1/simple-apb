@@ -1,14 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-// Package mail sends optional SMTP email (plain text; HTML templates arrive
-// with the translated templates in Phase 2).
+// Package mail sends optional SMTP email: translated plain-text + HTML
+// templates (templates.go), delivered as multipart/alternative.
 package mail
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/tls"
+	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"mime"
 	"net"
 	"net/smtp"
 	"strconv"
@@ -20,10 +24,15 @@ import (
 
 // Send delivers a plain-text message.
 func Send(ctx context.Context, cfg settings.SMTP, to, subject, body string) error {
+	return SendMessage(ctx, cfg, Message{To: to, Subject: subject, Text: body})
+}
+
+// SendMessage delivers a message (with an HTML part when it has one).
+func SendMessage(ctx context.Context, cfg settings.SMTP, m Message) error {
 	if !cfg.Enabled() {
 		return errors.New("smtp is not configured")
 	}
-	if strings.ContainsAny(to+subject, "\r\n") {
+	if strings.ContainsAny(m.To+m.Subject+cfg.From, "\r\n") {
 		return errors.New("invalid header value")
 	}
 	addr := net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))
@@ -66,21 +75,54 @@ func Send(ctx context.Context, cfg settings.SMTP, to, subject, body string) erro
 	if err := c.Mail(cfg.From); err != nil {
 		return fmt.Errorf("MAIL FROM: %w", err)
 	}
-	if err := c.Rcpt(to); err != nil {
+	if err := c.Rcpt(m.To); err != nil {
 		return fmt.Errorf("RCPT TO: %w", err)
 	}
 	w, err := c.Data()
 	if err != nil {
 		return err
 	}
-	msg := "From: " + cfg.From + "\r\nTo: " + to + "\r\nSubject: " + subject +
-		"\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\nDate: " +
-		time.Now().UTC().Format(time.RFC1123Z) + "\r\n\r\n" + strings.ReplaceAll(body, "\n", "\r\n")
-	if _, err := w.Write([]byte(msg)); err != nil {
+	if _, err := w.Write(Compose(cfg.From, m, time.Now())); err != nil {
 		return err
 	}
 	if err := w.Close(); err != nil {
 		return err
 	}
 	return c.Quit()
+}
+
+// Compose builds the RFC 5322 message: the subject encoded as needed and
+// base64 bodies (plain text, plus HTML as multipart/alternative).
+func Compose(from string, m Message, now time.Time) []byte {
+	var b strings.Builder
+	h := func(k, v string) { b.WriteString(k + ": " + v + "\r\n") }
+	h("From", from)
+	h("To", m.To)
+	h("Subject", mime.QEncoding.Encode("utf-8", m.Subject))
+	h("Date", now.UTC().Format(time.RFC1123Z))
+	h("MIME-Version", "1.0")
+	h("Auto-Submitted", "auto-generated")
+	part := func(ctype, body string) {
+		b.WriteString("Content-Type: " + ctype + "; charset=utf-8\r\nContent-Transfer-Encoding: base64\r\n\r\n")
+		enc := base64.StdEncoding.EncodeToString([]byte(strings.ReplaceAll(body, "\n", "\r\n")))
+		for len(enc) > 76 {
+			b.WriteString(enc[:76] + "\r\n")
+			enc = enc[76:]
+		}
+		b.WriteString(enc + "\r\n")
+	}
+	if m.HTML == "" {
+		part("text/plain", m.Text)
+		return []byte(b.String())
+	}
+	var rnd [12]byte
+	_, _ = rand.Read(rnd[:])
+	boundary := "sapb-" + hex.EncodeToString(rnd[:])
+	h("Content-Type", `multipart/alternative; boundary="`+boundary+`"`)
+	b.WriteString("\r\n--" + boundary + "\r\n")
+	part("text/plain", m.Text)
+	b.WriteString("--" + boundary + "\r\n")
+	part("text/html", m.HTML)
+	b.WriteString("--" + boundary + "--\r\n")
+	return []byte(b.String())
 }

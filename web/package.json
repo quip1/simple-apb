@@ -13,9 +13,10 @@
     "build": "vite build",
     "build:embed": "vite build && node scripts/embed.mjs",
     "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
-    "format": "prettier --write \"src/**/*.{ts,svelte,css}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,svelte,css}\"",
-    "lint": "eslint ."
+    "format": "prettier --write \"src/**/*.{ts,svelte,css}\" \"e2e/**/*.ts\" playwright.config.ts",
+    "format:check": "prettier --check \"src/**/*.{ts,svelte,css}\" \"e2e/**/*.ts\" playwright.config.ts",
+    "lint": "eslint .",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "hls.js": "^1.6.15",
@@ -26,6 +27,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@playwright/test": "^1.65.0",
     "@redocly/cli": "^2.0.0",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@types/qrcode": "^1.5.6",

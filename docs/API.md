@@ -2,7 +2,7 @@
 
 > **Generated** from `server/openapi.yaml` by `web/scripts/gen-api-docs.mjs`. Do not edit by hand.
 
-Version **0.11.0** · base path `/api/v1`
+Version **0.12.0** · base path `/api/v1`
 
 REST API for Simple APB. All endpoints live under `/api/v1`.
 
@@ -36,6 +36,7 @@ REST API for Simple APB. All endpoints live under `/api/v1`.
 | POST | `/auth/refresh` | Exchange a refresh token for a new token pair (rotating) | public | 200, 401 |
 | POST | `/auth/logout` | End the current device session | yes | 204, 401 |
 | POST | `/auth/password-reset` | Set a new password with a reset token (signs out all sessions) | public | 204, 400, 429 |
+| POST | `/auth/password-reset/request` | Email a password reset link ("forgot my password") | public | 202, 400, 429 |
 
 ### me
 
@@ -227,6 +228,7 @@ REST API for Simple APB. All endpoints live under `/api/v1`.
 | `privacy_text` | string |  |  |
 | `terms_text` | string |  |  |
 | `copyright_contact` | string |  |  |
+| `email_password_reset` | boolean |  | People can reset a forgotten password by email |
 | `oidc_providers` | array of `OidcProvider` | yes |  |
 
 ### ClientVersionGuard
@@ -1673,4 +1675,10 @@ Enum: `title`, `subtitle`, `description`, `publisher`, `published_year`, `langua
 | `google_books_key` | string |  | Write-only; empty clears it |
 | `audnexus` | boolean |  |  |
 | `threshold` | number |  |  |
+
+### PasswordResetRequest
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `login` | string | yes | Username or email address |
 

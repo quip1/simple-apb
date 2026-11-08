@@ -66,6 +66,9 @@
       {#if error}<Alert kind="error">{error}</Alert>{/if}
       <Button type="submit" {busy}>{t("auth.sign_in")}</Button>
     </form>
+    {#if session.instance?.email_password_reset}
+      <p><a href="/forgot-password" use:link>{t("forgot.link")}</a></p>
+    {/if}
     {#if session.instance?.signup_open}
       <p>{t("auth.no_account")} <a href="/signup" use:link>{t("auth.request_account")}</a></p>
     {/if}

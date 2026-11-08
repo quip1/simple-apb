@@ -11,7 +11,7 @@
 openapi: 3.0.3
 info:
   title: Simple APB API
-  version: 0.11.0
+  version: 0.12.0
   description: |
     REST API for Simple APB. All endpoints live under `/api/v1`.
 
@@ -1321,6 +1321,27 @@ paths:
             schema: { $ref: "#/components/schemas/PasswordReset" }
       responses:
         "204": { description: Password set }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /auth/password-reset/request:
+    post:
+      tags: [auth]
+      operationId: requestPasswordReset
+      summary: Email a password reset link ("forgot my password")
+      description: |
+        Works when email is set up and the instance address is configured
+        (`Instance.email_password_reset`). The answer is always 202, whether or
+        not the account exists or has an email address, so it reveals nothing.
+        Limited to 3 requests per hour per IP and per account.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PasswordResetRequest" }
+      responses:
+        "202": { description: "If the account has an email address, a link is on its way" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "429": { $ref: "#/components/responses/TooManyRequests" }
 
@@ -2682,6 +2703,7 @@ components:
         privacy_text: { type: string }
         terms_text: { type: string }
         copyright_contact: { type: string }
+        email_password_reset: { type: boolean, description: "People can reset a forgotten password by email" }
         oidc_providers:
           type: array
           items: { $ref: "#/components/schemas/OidcProvider" }
@@ -4208,3 +4230,9 @@ components:
         google_books_key: { type: string, maxLength: 200, description: "Write-only; empty clears it" }
         audnexus: { type: boolean }
         threshold: { type: number, minimum: 0.5, maximum: 1 }
+
+    PasswordResetRequest:
+      type: object
+      required: [login]
+      properties:
+        login: { type: string, minLength: 1, maxLength: 254, description: "Username or email address" }

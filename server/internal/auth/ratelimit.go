@@ -72,6 +72,9 @@ type Limits struct {
 	LoginAccount *Limiter // 5 / min per account
 	SignupIP     *Limiter // 3 / hour per IP
 	ResetIP      *Limiter // 3 / hour per IP
+	// Email reset requests: 3 / hour per IP and per account (no mail bombing).
+	ResetRequestIP      *Limiter
+	ResetRequestAccount *Limiter
 }
 
 // DefaultLimits returns the brief's limits.
@@ -81,6 +84,9 @@ func DefaultLimits() *Limits {
 		LoginAccount: NewLimiter(5, time.Minute),
 		SignupIP:     NewLimiter(3, time.Hour),
 		ResetIP:      NewLimiter(3, time.Hour),
+
+		ResetRequestIP:      NewLimiter(3, time.Hour),
+		ResetRequestAccount: NewLimiter(3, time.Hour),
 	}
 }
 

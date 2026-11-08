@@ -117,6 +117,12 @@ func GetUserByUsername(ctx context.Context, q Querier, username string) (*User, 
 		strings.ToLower(username)))
 }
 
+// GetUserByLogin finds a user by username or email, case-insensitive.
+func GetUserByLogin(ctx context.Context, q Querier, login string) (*User, error) {
+	l := strings.ToLower(strings.TrimSpace(login))
+	return scanUser(q.QueryRow(ctx, `SELECT `+userCols+` FROM users WHERE lower(username) = ? OR lower(email) = ? LIMIT 1`, l, l))
+}
+
 // CountUsers returns the number of users (any status).
 func CountUsers(ctx context.Context, q Querier) (int64, error) {
 	var n int64

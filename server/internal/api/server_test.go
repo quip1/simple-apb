@@ -197,6 +197,7 @@ func (h *harness) setupInstance() string {
 	h.srv.App().Auth.Limits = &auth.Limits{
 		LoginIP: auth.NewLimiter(1000, time.Minute), LoginAccount: auth.NewLimiter(1000, time.Minute),
 		SignupIP: auth.NewLimiter(1000, time.Minute), ResetIP: auth.NewLimiter(1000, time.Minute),
+		ResetRequestIP: auth.NewLimiter(1000, time.Minute), ResetRequestAccount: auth.NewLimiter(3, time.Hour),
 	}
 	return secret
 }

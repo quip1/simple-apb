@@ -586,7 +586,7 @@ from `secret.key`. It needs no table and is single-use by construction: setting 
 changes the hash, so the same token (and any other outstanding link) stops matching. Links work
 for 24 hours, are rate-limited per IP, and using one signs the account out everywhere and clears a
 lockout. The token sits in the URL fragment (`/reset-password#…`), so it never reaches server logs
-or `Referer` headers. Email-based reset (when SMTP is configured) comes with the mail templates.
+or `Referer` headers. Email-based reset arrived with ADR-0036.
 
 ## ADR-0034 — Social features and moderation
 
@@ -677,6 +677,54 @@ never overwritten), or to the cache if the library is read-only. `cover_url` now
 live in the database and survive re-scans, because a re-scan only replaces files and chapters.
 Moving a book folder after its title or author changes is left to the book tools (Phase 5).
 
+## ADR-0036 — Email templates and reset by email
+
+**Templates (brief §6.15).** Four emails: sign-up approved, sign-up declined (with the admin's
+note), password reset, and admin alerts. Each is sent as `multipart/alternative`: plain text plus
+a simple inline-styled HTML version, because mail clients ignore stylesheets. The words live in
+the shared catalogs (`i18n/*.json`, keys `mail.*`), so they are translated with the rest of the
+app. `go generate` copies them into `server/internal/mail/catalog/` for embedding, and a test fails
+if the copy is stale. Mail strings use simple `{placeholders}` only, with no plurals, and are
+rendered in the recipient's locale, falling back to English. HTML values are escaped.
+
+**Delivery.** Emails are jobs (`mail_send`). A slow or unreachable mail server never delays a
+request, and failures retry with backoff. Without SMTP nothing is queued. The job result never
+records the address or the link.
+
+**Forgot password.** `POST /auth/password-reset/request` takes a username or email address and
+always answers 202. It emails the existing reset link (ADR-0033) when the account can sign in and
+has an address. Only the configured instance address is used for the link, never the request's
+`Host` header, so a forged header can't plant another site's address in someone's reset email.
+Email reset is offered (`Instance.email_password_reset`) only when SMTP and the instance address
+are both set. Requests are limited to 3 per hour per IP and, silently, per account, so nobody can
+use the form to flood an inbox.
+
+**Admin alerts.** Admins who turn on "Email me admin alerts" in Settings (the account pref
+`email_alerts`, which needs an email address) get an email for each admin push event: sign-up
+request, report, review request, failed backup, integrity problem, unclean restart. The email is
+sent on the push job's first attempt only, so push retries don't repeat it. Like push, it carries
+no personal details: it names the event and links to the admin panel.
+
+## ADR-0037 — Web uploads and the end-to-end journey
+
+**Uploads in the web app.** "Upload books" (from the library, for accounts with `can_upload`)
+sends files to the tus endpoint with a small client (`web/src/lib/upload.ts`). It sends 8 MB
+chunks; after a network error it asks the server how much arrived (HEAD) and continues from
+there, and it refreshes the session once if a long upload outlives the access token. The page
+lists recent uploads and their import status. This completes "run the instance from the browser"
+(Phase 2 acceptance) and the brief's end-to-end journey.
+
+**Playwright (brief §15).** `web/e2e` starts the real server binary with its own temporary
+directories, completes setup through the API, then drives the journey in Chromium: a sign-up
+through the form, approval in the admin inbox (signing in with a TOTP code), an upload, sharing it
+with Public from the admin library, playback on one browser profile, and the position carried over
+to a second profile (a second device). The fixture is an mp3, because Playwright's Chromium has no
+AAC decoder. Each profile sends its own `X-Forwarded-For` (a documentation address,
+RFC 5737), with the server trusting only 127.0.0.1 as a proxy. That way the real per-IP sign-in
+limits stay on and apply per profile. Online metadata lookups are switched off for the run. The
+suite runs serially with no retries (a retry would meet the accounts the first try created). CI
+runs it as the `e2e` job and keeps the report and traces when it fails.
+
 ---
 
 ## Open questions for Jacob
@@ -688,7 +736,7 @@ Moving a book folder after its title or author changes is left to the book tools
 | Q3 | Commit the Gradle wrapper now, or when the Android app starts (Phase 3)? | CI installs Gradle 9.1 directly; wrapper added in Phase 3 |
 | Q4 | ~~Review the schema and API outline~~ **Approved** (Phase 0 accepted) | — |
 | Q8 | ~~Web framework (brief #8)~~ **Answered: Svelte** (ADR-0026) | — |
-| Q9 | Accent colour and icon (brief #9): **to be picked on real screens** once Home/Library/Player exist | Placeholder accent |
+| Q9 | Accent colour and icon (brief #9): four accents (Tide, Dusk, Fern, Ink) shown on real screens and four icon ideas, waiting for the pick | Placeholder accent (Ink) |
 | Q10 | Copyright/takedown contact in the footer (brief #3) | Yes, admin-editable (proposed default) |
 | Q5 | ~~TOTP replay protection~~ **Answered: yes** (ADR-0027) | — |
 | Q7 | ~~AAC-LC instead of HE-AAC~~ **Answered: AAC-LC is fine** (ADR-0018) | — |

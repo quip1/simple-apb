@@ -90,3 +90,31 @@ func (s *Service) ResetPassword(ctx context.Context, token, newPassword, ip stri
 		return store.Audit(ctx, tx, store.AuditEntry{ActorID: u.ID, Action: "user.password_reset", ObjectType: "user", ObjectID: u.ID, IP: ip})
 	})
 }
+
+// RequestReset handles "forgot my password" (brief §6.6, email reset). It
+// returns the account and a reset token when one should be emailed, or a nil
+// user when there is nobody to email (unknown login, no address, an account
+// that can't sign in, or the per-account limit). Callers answer the same way
+// in every case so the response never reveals whether an account exists.
+func (s *Service) RequestReset(ctx context.Context, login, ip string) (*store.User, string, error) {
+	if ok, wait := s.Limits.ResetRequestIP.Allow(ip); !ok {
+		return nil, "", rateLimited(wait)
+	}
+	u, err := store.GetUserByLogin(ctx, s.DB, login)
+	if errors.Is(err, store.ErrNotFound) {
+		return nil, "", nil
+	} else if err != nil {
+		return nil, "", err
+	}
+	if u.Email == "" || (u.Status != "active" && u.Status != "restricted") {
+		return nil, "", nil
+	}
+	if ok, _ := s.Limits.ResetRequestAccount.Allow(u.ID); !ok {
+		return nil, "", nil
+	}
+	token, _, err := s.NewResetToken(u)
+	if err != nil {
+		return nil, "", err
+	}
+	return u, token, nil
+}
