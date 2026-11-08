@@ -5,7 +5,7 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-**Current phase: 1 — Server core** (milestones M1–M3 done: foundations, setup wizard, accounts/auth/authz, library).
+**Current phase: 1 — Server core** (milestones M1–M4 done: foundations, setup wizard, accounts/auth/authz, library, streaming).
 
 ### Added (Phase 1)
 - Crash-safe file writes (`fsutil`: temp → fsync → rename → fsync dir), bootstrap `config.json`, `secret.key` with HKDF-derived keys and AES-GCM encryption for secret settings.
@@ -16,6 +16,7 @@ All notable changes to this project are documented here. The format follows
 - Admin API: sign-up approval/denial, users (status/role/quota/notice with required reason), groups and members, session revocation.
 - Client IP from `X-Forwarded-For` only via `SIMPLEAPB_TRUSTED_PROXIES`.
 - M3 library: persisted job queue (retries, crash requeue, periodic jobs); ffprobe wrapper; book detection (m4b, mp3 folders, multi-disc, multiple m4b per folder); scanner with settle time, fsnotify + hourly rescan, quarantine of missing books; resumable tus uploads with quota check, safe unzip, sha256 verify, dedup and crash-safe import into the canonical layout; visibility rules (entries ∪ distributions, minus removed/hidden/filtered/taken down); admin master store browser, distributions, Trash (restore, purge one, empty with password + TOTP + count, 30-day auto-purge); library, book detail, author/narrator/series endpoints; `openapi.yaml` 0.3.0.
+- M4 streaming: range serving of original files (resumable, `?download=1` for bulk), on-demand HLS `low`/`medium` with frame-aligned segments and restart-on-seek, LRU transcode cache (hourly prune), signed 6-hour stream URLs for casting (visibility re-checked per request), resized cached covers with ETags, global egress shaper (80 Mbps default) with live minimums, class weights and per-user fair share; `openapi.yaml` 0.4.0; ADR-0017..0019.
 
 ## Phase 0
 

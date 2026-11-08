@@ -11,7 +11,7 @@
 openapi: 3.0.3
 info:
   title: Simple APB API
-  version: 0.3.0
+  version: 0.4.0
   description: |
     REST API for Simple APB. All endpoints live under `/api/v1`.
 
@@ -500,6 +500,11 @@ paths:
           in: header
           required: false
           schema: { type: string, example: "bytes=0-1048575" }
+        - name: download
+          in: query
+          required: false
+          description: "Set for bulk downloads (offline copies). Unset = live playback, which gets a guaranteed share of bandwidth (bitrate × 1.5) before downloads are served."
+          schema: { type: boolean, default: false }
       responses:
         "200":
           description: Whole file

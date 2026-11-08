@@ -328,3 +328,12 @@ func VisibleBook(ctx context.Context, q Querier, userID, bookID string) (*Librar
 		WHERE b.id = ? AND ` + visibleFilter + ` LIMIT 1`
 	return scanLibraryItem(q.QueryRow(ctx, query, userID, userID, userID, userID, userID, bookID, userID))
 }
+
+// UserHighPriority reports whether the user belongs to a high-priority group
+// (bandwidth priority class, brief §6.10).
+func UserHighPriority(ctx context.Context, q Querier, userID string) (bool, error) {
+	var n int64
+	err := q.QueryRow(ctx, `SELECT COUNT(*) FROM group_members m JOIN groups g ON g.id = m.group_id
+		WHERE m.user_id = ? AND g.high_priority = ?`, userID, true).Scan(&n)
+	return n > 0, err
+}

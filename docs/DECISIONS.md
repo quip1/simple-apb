@@ -270,6 +270,66 @@ hourly scan is the fallback for mounts where inotify is unreliable.
 
 ---
 
+## ADR-0017 — Bandwidth shaper
+
+**Decision.** One in-process shaper enforces the global egress cap (default 80 Mbps) on every audio
+byte (original files, HLS segments, downloads). Each response is a *flow*; every 20 ms the shaper
+hands out that tick's byte budget:
+1. **live playback first:** each live flow gets a guaranteed minimum of its bitrate × 1.5 (scaled down
+   proportionally only if the minimums alone exceed the cap);
+2. **weighted fair share of the rest:** class weights admin 4, high-priority group 2, everyone else 1;
+   a class's share splits equally between its **users**, then between that user's connections —
+   opening five connections gets you nothing extra;
+3. **water-filling:** share a flow doesn't need is re-offered to flows that still want more, so the
+   link never idles while anyone waits.
+
+The allocation is a pure function (`stream.Allocate`) with deterministic unit tests; the ticker loop
+around it is tiny. Clients mark offline downloads with `?download=1` (bulk); everything else
+(playback range requests, HLS) is live. Covers are not shaped (small, cached by clients).
+`Shaper.Snapshot()` exposes live flows for the admin dashboard (Phase 2).
+
+**Alternatives.** Per-connection token buckets (unfair per user, can't prioritize); kernel traffic
+shaping (`tc`) on the host (not portable to self-hosters, can't see users or classes).
+
+## ADR-0018 — HLS: on-demand, frame-aligned, restart on seek
+
+- **Codec.** The brief asks for HE-AAC 32 kbps for `low`. HE-AAC needs `libfdk_aac`, which is
+  non-free and can't ship in our image. `low` is AAC-LC 32 kbps mono at 22.05 kHz (fine for
+  speech), and `medium` is AAC-LC 64 kbps stereo at 44.1 kHz. Segments are MPEG-TS, which hls.js,
+  ExoPlayer and the Chromecast Default Media Receiver all play.
+- **Whole-book timeline.** One playlist covers the book across all its files (ffmpeg concat demuxer,
+  `inpoint` into the first file). The playlist is generated up front from the known duration, so
+  players can seek anywhere immediately.
+- **Frame-aligned segments.** Segments are ~10 s rounded to a whole number of AAC frames (215 frames
+  = 9.985 s at 22.05 kHz; 431 = 10.008 s at 44.1 kHz). A transcoder restarted at segment N therefore
+  cuts at exactly the sample positions a from-the-start run would, and `-output_ts_offset` keeps
+  timestamps continuous across runs.
+- **Seek = restart.** A request for a segment that's not on disk and not about to be produced
+  restarts ffmpeg at that segment. So a listener jumping to hour 30 of a 40-hour book waits for one
+  segment, not for 30 hours of encoding.
+- **No half-written segments.** ffmpeg's `hls_flags temp_file` writes each segment under a temp name
+  and renames it when complete, so "file exists" means "segment complete".
+- **Bounded work.** A transcoder more than 60 segments (~10 min) ahead of the last request is
+  stopped and restarted on demand. The cache (`/cache/hls/<book>/<checksum>/<profile>/`) is keyed by
+  the book's checksum, so re-imported files never serve stale audio. An hourly job evicts
+  least-recently-used books above the cap (default 10 GB, setting `bandwidth.hls_cache_gb`).
+
+## ADR-0019 — Signed stream URLs
+
+Casting targets (Chromecast, DLNA, Sonos) can't send our auth headers, so `POST
+/books/{id}/stream-url` returns URLs with `?sig=v1.<user>.<book>.<expiry>.<HMAC-SHA256>` (key derived
+from `secret.key`, purpose `stream-url`), valid 6 hours and only for that book. Every request
+re-checks that the user is still active and can still see the book, so a takedown, ban or revoked
+distribution cuts off even an issued URL. HLS playlists fetched with a signature carry it into
+every segment URI. URLs are built from the instance's public base URL (setup wizard), because a
+speaker on the LAN must reach the server by its public name, not the address the phone used.
+
+**Deferred:** a single "download whole book" endpoint (`GET /books/{id}/download`). Clients download
+per file with Range (resumable) and `?download=1`, which already covers offline copies on Android
+and Windows. A zip/m4b bundle can come later if a client needs it.
+
+---
+
 ## Open questions for Jacob
 
 | # | Question | Current choice (until answered) |
@@ -279,4 +339,5 @@ hourly scan is the fallback for mounts where inotify is unreliable.
 | Q3 | Commit the Gradle wrapper now, or when the Android app starts (Phase 3)? | CI installs Gradle 9.1 directly; wrapper added in Phase 3 |
 | Q4 | ~~Review the schema and API outline~~ **Approved** (Phase 0 accepted) | — |
 | Q5 | TOTP replay protection (reject a code already used in its 30 s window)? Adds a column per user. | Not yet; rate limits + lockout bound guessing |
+| Q7 | `low` HLS is AAC-LC 32 kbps instead of HE-AAC (HE-AAC needs non-free libfdk_aac; see ADR-0018). OK? | AAC-LC |
 | Q6 | Brief says the wizard is "served at `/setup`". Phase 1 ships the wizard **API**; the wizard **page** comes with the web SPA in Phase 2 (until then: curl, see `docs/SETUP-API.md`). OK? | As described |

@@ -17,7 +17,11 @@ import (
 	"github.com/quip1/simple-apb/server/internal/media"
 	"github.com/quip1/simple-apb/server/internal/settings"
 	"github.com/quip1/simple-apb/server/internal/store"
+	"github.com/quip1/simple-apb/server/internal/stream"
 )
+
+// JobHLSPrune evicts least-recently-used transcodes above the cache cap.
+const JobHLSPrune = "hls_prune"
 
 // App is everything that exists once the instance is set up.
 type App struct {
@@ -26,6 +30,10 @@ type App struct {
 	Lib     *library.Library
 	Jobs    *jobs.Runner
 	Uploads http.Handler
+	Shaper  *stream.Shaper
+	HLS     *stream.HLS
+	Signer  stream.Signer
+	hlsCap  int64
 	log     *slog.Logger
 }
 
@@ -53,6 +61,14 @@ func NewApp(ctx context.Context, db *store.DB, secrets *config.Secrets, log *slo
 	if err := os.MkdirAll(a.Lib.IncomingPath(), 0o750); err != nil {
 		return nil, fmt.Errorf("create upload staging dir: %w", err)
 	}
+	bw, err := a.Settings().Bandwidth(ctx)
+	if err != nil {
+		return nil, err
+	}
+	a.Shaper = stream.NewShaper(bw.EgressMbps)
+	a.HLS = stream.NewHLS(o.Tools.FFmpeg, o.Paths.Cache, log)
+	a.Signer = stream.Signer{Key: secrets.Derive("stream-url")}
+	a.hlsCap = int64(max(bw.HLSCacheGB, 1)) << 30
 	workers := o.JobWorkers
 	if workers <= 0 {
 		workers = 2
@@ -81,6 +97,10 @@ func (a *App) registerJobs() {
 		}
 		return res, err
 	})
+	a.Jobs.Handle(JobHLSPrune, func(_ context.Context, _ *jobs.Job) (any, error) {
+		n, err := a.HLS.Prune(a.hlsCap)
+		return map[string]int{"books_evicted": n}, err
+	})
 	a.Jobs.Handle(library.JobPurgeTrash, func(ctx context.Context, _ *jobs.Job) (any, error) {
 		n, err := a.Lib.PurgeExpired(ctx, time.Now())
 		return map[string]int{"purged": n}, err
@@ -99,7 +119,10 @@ func (a *App) Start(ctx context.Context) {
 	} else if n > 0 {
 		a.log.Warn("requeued jobs interrupted by a previous shutdown", "count", n)
 	}
+	a.Shaper.Start(ctx)
+	go func() { <-ctx.Done(); a.HLS.StopAll() }()
 	a.Jobs.Start(ctx)
+	a.Jobs.Every(ctx, JobHLSPrune, time.Hour, nil)
 	a.Jobs.Every(ctx, library.JobScan, time.Hour, nil)
 	a.Jobs.Every(ctx, library.JobPurgeTrash, 24*time.Hour, nil)
 	a.Jobs.Every(ctx, library.JobPurgeRemoved, 24*time.Hour, nil)

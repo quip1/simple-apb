@@ -63,6 +63,8 @@ type Ntfy struct {
 // Bandwidth settings (brief §6.10).
 type Bandwidth struct {
 	EgressMbps int `json:"egress_mbps"`
+	// HLSCacheGB caps the transcode cache (LRU), default 10.
+	HLSCacheGB int `json:"hls_cache_gb"`
 }
 
 // Auth settings.
@@ -73,7 +75,7 @@ type Auth struct {
 // Defaults for each group.
 func DefaultInstance() Instance   { return Instance{Name: "Simple APB", SignupOpen: true} }
 func DefaultLibrary() Library     { return Library{Path: "/library"} }
-func DefaultBandwidth() Bandwidth { return Bandwidth{EgressMbps: 80} }
+func DefaultBandwidth() Bandwidth { return Bandwidth{EgressMbps: 80, HLSCacheGB: 10} }
 
 // Store loads and saves settings.
 type Store struct {

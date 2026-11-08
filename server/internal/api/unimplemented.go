@@ -18,23 +18,3 @@ func (s *Server) PutProgress(context.Context, PutProgressRequestObject) (PutProg
 func (s *Server) GetSyncDelta(context.Context, GetSyncDeltaRequestObject) (GetSyncDeltaResponseObject, error) {
 	return nil, ErrNotImplemented
 }
-
-func (s *Server) GetBookFile(context.Context, GetBookFileRequestObject) (GetBookFileResponseObject, error) {
-	return nil, ErrNotImplemented
-}
-
-func (s *Server) GetHlsPlaylist(context.Context, GetHlsPlaylistRequestObject) (GetHlsPlaylistResponseObject, error) {
-	return nil, ErrNotImplemented
-}
-
-func (s *Server) GetHlsSegment(context.Context, GetHlsSegmentRequestObject) (GetHlsSegmentResponseObject, error) {
-	return nil, ErrNotImplemented
-}
-
-func (s *Server) CreateStreamUrl(context.Context, CreateStreamUrlRequestObject) (CreateStreamUrlResponseObject, error) {
-	return nil, ErrNotImplemented
-}
-
-func (s *Server) GetBookCover(context.Context, GetBookCoverRequestObject) (GetBookCoverResponseObject, error) {
-	return nil, ErrNotImplemented
-}

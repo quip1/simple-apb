@@ -1,6 +1,6 @@
 # Architecture (as built)
 
-> Updated as each phase lands. Current state: **Phase 1 — server core, milestones M1–M3** (foundations, setup wizard, accounts/auth/authz, library).
+> Updated as each phase lands. Current state: **Phase 1 — server core, milestones M1–M4** (foundations, setup wizard, accounts/auth/authz, library, streaming).
 
 ## Overview
 
@@ -35,7 +35,8 @@
 | Admin API | `internal/api/handlers_admin.go` | sign-up inbox, users, groups/members, session revocation |
 | Library | `internal/library`, `internal/api/handlers_library.go`, `handlers_master.go` | detection + import, scanner, tus uploads, dedup, distribution, Trash (ADR-0015) |
 | Jobs | `internal/jobs` | persisted queue, retries, periodic jobs (ADR-0016) |
-| Not yet built | `internal/api/unimplemented.go` | progress/sync and media/streaming — answer `501` until M4–M5 |
+| Streaming | `internal/stream`, `internal/api/handlers_media.go` | range files, HLS, signed URLs, covers, bandwidth shaper (ADR-0017..0019) |
+| Not yet built | `internal/api/unimplemented.go` | progress and delta sync — answer `501` until M5 |
 | TS client | `web/src/api` | generated types + small typed wrapper |
 | Kotlin client | `android/core-api` | generated at build time |
 | CI | `.github/workflows/ci.yml` | spec lint + codegen freshness, Go tests on SQLite and Postgres, golangci-lint, Kotlin client build, Docker image build |

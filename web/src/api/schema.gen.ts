@@ -2220,7 +2220,10 @@ export interface operations {
     };
     getBookFile: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Set for bulk downloads (offline copies). Unset = live playback, which gets a guaranteed share of bandwidth (bitrate × 1.5) before downloads are served. */
+                download?: boolean;
+            };
             header?: {
                 Range?: string;
             };
