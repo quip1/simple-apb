@@ -42,7 +42,7 @@
     background: rgb(0 0 0 / 0.6);
   }
   :global([data-theme="eink"]) dialog::backdrop {
-    background: rgb(255 255 255 / 0.85);
+    background: #ffffff; /* solid: e-ink has no greys (brief §11) */
   }
   .body {
     padding: 1.25rem;
