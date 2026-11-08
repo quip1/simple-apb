@@ -5,7 +5,7 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-**Current phase: 2 — Admin panel + web player** (milestones 1–7 done: web foundation, player screens, account and stats, admin panel, moderation and social, metadata pipeline, email, uploads and end-to-end tests; the accent colour and icon are still to be picked). Phase 1 accepted 2026-11-08.
+**Current phase: 2 — Admin panel + web player** (milestones 1–7 done: web foundation, player screens, account and stats, admin panel, moderation and social, metadata pipeline, email, uploads and end-to-end tests). Phase 1 accepted 2026-11-08.
 
 ### Added (Phase 2)
 - Web app foundation: Svelte 5 + Vite + TypeScript, embedded in the server binary with SPA fallback, strict CSP and caching; cookie auth with CSRF and transparent refresh; ICU i18n from the shared catalogs; dark and e-ink themes with accessible components (48 px targets, visible focus, labelled errors).
@@ -33,6 +33,7 @@ All notable changes to this project are documented here. The format follows
 - Upload books from the web app (resumable, with import status), linked from the library (ADR-0037).
 - Playwright end-to-end test of the brief's journey (sign-up → approval → upload → share → play → sync to a second device), run in CI (ADR-0037).
 - API: `POST /auth/password-reset/request`, `Instance.email_password_reset`; `openapi.yaml` 0.12.0.
+- The Fern accent colour and the Open book icon (decision #9, ADR-0038): web theme and favicon now, plus an e-ink version and Android adaptive icon layers in `branding/`.
 
 ### Fixed (Phase 2)
 - The book page now reports `has_cover` (it was always false there).

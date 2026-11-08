@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later
  *
  * Design tokens. Two first-class themes (brief §11):
- *   dark  — default, own accent (placeholder until decision #9)
+ *   dark  — default, Fern accent (decision #9, ADR-0038)
  *   eink  — pure black on white, hairlines only, no shadows/gradients/animation
  * Components use only these tokens, so swapping the accent is one line.
  */
@@ -14,8 +14,8 @@
   --border: #2c313b;
   --text: #ecebe8;
   --text-muted: #a8acb5;
-  --accent: #8fb3ff; /* placeholder: chosen on real screens (decision #9) */
-  --accent-text: #0b1020;
+  --accent: #94d68f; /* Fern (decision #9): 11:1 on --bg */
+  --accent-text: #0b230c;
   --danger: #ff8a8a;
   --danger-bg: #3a1c1f;
   --ok: #7fd6a2;

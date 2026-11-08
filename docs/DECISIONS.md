@@ -725,6 +725,17 @@ limits stay on and apply per profile. Online metadata lookups are switched off f
 suite runs serially with no retries (a retry would meet the accounts the first try created). CI
 runs it as the `e2e` job and keeps the report and traces when it fails.
 
+## ADR-0038 — Accent colour and icon
+
+**Decision (Jacob, decision #9).** The accent is **Fern** (`#94d68f`, with `#0b230c` for text on it),
+chosen from four options shown on real screens (Tide, Dusk, Fern, Ink). On the dark background it
+has an 11:1 contrast, the highest of the four, and text on Fern buttons has about 9.7:1. In e-ink
+the accent stays plain black. The icon is **Open book**: an open book with sound rising from it,
+which says "audiobook" at a glance and stays readable at 24 px. It comes in colour, an e-ink
+version (black on white) and Android adaptive layers (`branding/`), with the foreground scaled to
+stay inside the 66 dp safe zone and a monochrome layer for themed icons. The web favicon uses it
+now; the Android app adopts it in Phase 3.
+
 ---
 
 ## Open questions for Jacob
@@ -736,7 +747,7 @@ runs it as the `e2e` job and keeps the report and traces when it fails.
 | Q3 | Commit the Gradle wrapper now, or when the Android app starts (Phase 3)? | CI installs Gradle 9.1 directly; wrapper added in Phase 3 |
 | Q4 | ~~Review the schema and API outline~~ **Approved** (Phase 0 accepted) | — |
 | Q8 | ~~Web framework (brief #8)~~ **Answered: Svelte** (ADR-0026) | — |
-| Q9 | Accent colour and icon (brief #9): four accents (Tide, Dusk, Fern, Ink) shown on real screens and four icon ideas, waiting for the pick | Placeholder accent (Ink) |
+| Q9 | ~~Accent colour and icon (brief #9)~~ **Answered: Fern accent, Open book icon** (ADR-0038) | — |
 | Q10 | Copyright/takedown contact in the footer (brief #3) | Yes, admin-editable (proposed default) |
 | Q5 | ~~TOTP replay protection~~ **Answered: yes** (ADR-0027) | — |
 | Q7 | ~~AAC-LC instead of HE-AAC~~ **Answered: AAC-LC is fine** (ADR-0018) | — |

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <!-- Simple APB "Open book" icon (decision #9, ADR-0038): e-ink version, black on white. -->
+  <rect width="108" height="108" rx="24" fill="#ffffff"/>
+  <g transform="translate(0 6)">
+    <path d="M22 72C33 66 44 66 54 72V42C44 36 33 36 22 42Z M86 72C75 66 64 66 54 72V42C64 36 75 36 86 42Z" fill="#000000"/>
+    <path d="M54 42V72" stroke="#ffffff" stroke-width="3"/>
+    <path d="M44 31a14 14 0 0 1 20 0 M38 24a24 24 0 0 1 32 0" fill="none" stroke="#000000" stroke-width="5" stroke-linecap="round"/>
+  </g>
+</svg>
