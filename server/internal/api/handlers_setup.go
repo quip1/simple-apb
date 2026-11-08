@@ -145,7 +145,16 @@ func (s *Server) CompleteSetup(ctx context.Context, req CompleteSetupRequestObje
 	if err != nil {
 		return nil, err
 	}
-	s.SetApp(NewApp(res.DB, s.Secrets, s.log()))
+	app, err := NewApp(ctx, res.DB, s.Secrets, s.log(), s.AppOptions)
+	if err != nil {
+		return nil, err
+	}
+	base := s.BaseCtx
+	if base == nil {
+		base = context.Background()
+	}
+	app.Start(base)
+	s.SetApp(app)
 	s.log().InfoContext(ctx, "setup complete; server is now in normal mode", "db", string(res.DB.Dialect()))
 	return CompleteSetup200JSONResponse{AdminId: mustUUID(res.AdminID), RecoveryCodes: res.RecoveryCodes}, nil
 }

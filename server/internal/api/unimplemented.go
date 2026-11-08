@@ -7,38 +7,6 @@ import "context"
 // Operations in the v0 contract that are built in Phase 1. Each returns
 // ErrNotImplemented (→ 501). Move a method out of this file when you implement it.
 
-func (s *Server) ListLibrary(context.Context, ListLibraryRequestObject) (ListLibraryResponseObject, error) {
-	return nil, ErrNotImplemented
-}
-
-func (s *Server) GetBook(context.Context, GetBookRequestObject) (GetBookResponseObject, error) {
-	return nil, ErrNotImplemented
-}
-
-func (s *Server) RemoveFromMyLibrary(context.Context, RemoveFromMyLibraryRequestObject) (RemoveFromMyLibraryResponseObject, error) {
-	return nil, ErrNotImplemented
-}
-
-func (s *Server) RestoreToMyLibrary(context.Context, RestoreToMyLibraryRequestObject) (RestoreToMyLibraryResponseObject, error) {
-	return nil, ErrNotImplemented
-}
-
-func (s *Server) HideInMyLibrary(context.Context, HideInMyLibraryRequestObject) (HideInMyLibraryResponseObject, error) {
-	return nil, ErrNotImplemented
-}
-
-func (s *Server) GetAuthor(context.Context, GetAuthorRequestObject) (GetAuthorResponseObject, error) {
-	return nil, ErrNotImplemented
-}
-
-func (s *Server) GetNarrator(context.Context, GetNarratorRequestObject) (GetNarratorResponseObject, error) {
-	return nil, ErrNotImplemented
-}
-
-func (s *Server) GetSeries(context.Context, GetSeriesRequestObject) (GetSeriesResponseObject, error) {
-	return nil, ErrNotImplemented
-}
-
 func (s *Server) GetProgress(context.Context, GetProgressRequestObject) (GetProgressResponseObject, error) {
 	return nil, ErrNotImplemented
 }

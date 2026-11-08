@@ -1,6 +1,6 @@
 # Architecture (as built)
 
-> Updated as each phase lands. Current state: **Phase 1 — server core, milestones M1–M2** (foundations, setup wizard, accounts/auth/authz).
+> Updated as each phase lands. Current state: **Phase 1 — server core, milestones M1–M3** (foundations, setup wizard, accounts/auth/authz, library).
 
 ## Overview
 
@@ -33,7 +33,9 @@
 | Accounts & auth | `internal/auth`, `internal/api/handlers_auth.go` | sign-up → admin approval, login (+TOTP), rotating refresh, sessions, rate limits, lockout, web cookies + CSRF (ADR-0013) |
 | Authorization | `internal/authz` | single decision point, table-tested |
 | Admin API | `internal/api/handlers_admin.go` | sign-up inbox, users, groups/members, session revocation |
-| Not yet built | `internal/api/unimplemented.go` | library, progress/sync, media — answer `501` until milestones M3–M5 |
+| Library | `internal/library`, `internal/api/handlers_library.go`, `handlers_master.go` | detection + import, scanner, tus uploads, dedup, distribution, Trash (ADR-0015) |
+| Jobs | `internal/jobs` | persisted queue, retries, periodic jobs (ADR-0016) |
+| Not yet built | `internal/api/unimplemented.go` | progress/sync and media/streaming — answer `501` until M4–M5 |
 | TS client | `web/src/api` | generated types + small typed wrapper |
 | Kotlin client | `android/core-api` | generated at build time |
 | CI | `.github/workflows/ci.yml` | spec lint + codegen freshness, Go tests on SQLite and Postgres, golangci-lint, Kotlin client build, Docker image build |

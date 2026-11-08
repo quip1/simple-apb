@@ -2,7 +2,7 @@
 
 > **Generated** from `server/openapi.yaml` by `web/scripts/gen-api-docs.mjs`. Do not edit by hand.
 
-Version **0.2.0** · base path `/api/v1`
+Version **0.3.0** · base path `/api/v1`
 
 REST API for Simple APB. All endpoints live under `/api/v1`.
 
@@ -86,6 +86,13 @@ REST API for Simple APB. All endpoints live under `/api/v1`.
 | POST | `/setup/totp` | Generate the first admin's TOTP secret (enrollment is mandatory) | yes | 200, 401, 409 |
 | POST | `/setup/complete` | Finish the wizard (creates the admin, stores settings, switches the server to normal mode) | yes | 200, 400, 401, 409 |
 
+### uploads
+
+| Method | Path | Summary | Auth | Responses |
+|---|---|---|---|---|
+| GET | `/me/uploads` | My recent uploads and their processing status | yes | 200, 401 |
+| GET | `/jobs/{jobId}` | Status of a background job you started (admins can see any) | yes | 200, 401, 404 |
+
 ### admin
 
 | Method | Path | Summary | Auth | Responses |
@@ -101,6 +108,15 @@ REST API for Simple APB. All endpoints live under `/api/v1`.
 | PUT | `/admin/groups/{groupId}/members/{userId}` | Add a user to a group | yes | 204, 401, 403, 404 |
 | DELETE | `/admin/groups/{groupId}/members/{userId}` | Remove a user from a group | yes | 204, 401, 403, 404 |
 | DELETE | `/admin/sessions/{sessionId}` | Revoke any user's session | yes | 204, 401, 403, 404 |
+| GET | `/admin/books` | Browse the master store (every book the server holds) | yes | 200, 401, 403 |
+| GET | `/admin/books/{bookId}` | One master-store book with its distributions | yes | 200, 401, 403, 404 |
+| DELETE | `/admin/books/{bookId}` | Move a book to the Trash (hidden everywhere; purged after 30 days) | yes | 204, 401, 403, 404 |
+| POST | `/admin/books/{bookId}/restore` | Restore a book from the Trash | yes | 204, 401, 403, 404, 409 |
+| POST | `/admin/books/{bookId}/purge` | Permanently delete one trashed book and its files now | yes | 204, 401, 403, 404, 409 |
+| POST | `/admin/trash/empty` | Permanently delete everything in the Trash | yes | 200, 400, 401, 403 |
+| POST | `/admin/distributions` | Make a master-store book visible to a group or a user | yes | 201, 400, 401, 403, 404 |
+| DELETE | `/admin/distributions/{distributionId}` | Revoke a distribution | yes | 204, 401, 403, 404 |
+| POST | `/admin/library/scan` | Rescan the library folder now | yes | 202, 401, 403 |
 
 ## Schemas
 
@@ -651,4 +667,91 @@ Enum: `low`, `medium`
 |---|---|---|---|
 | `name` | string | yes |  |
 | `high_priority` | boolean |  |  |
+
+### UploadItem
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string | yes |  |
+| `filename` | string | yes |  |
+| `size_bytes` | integer (int64) | yes |  |
+| `received_bytes` | integer (int64) | yes |  |
+| `status` | string: receiving \| processing \| done \| failed \| cancelled | yes |  |
+| `error` | string |  | Why processing failed (shown to the user) |
+| `book_id` | string (uuid) |  |  |
+| `created_at` | string (date-time) | yes |  |
+| `updated_at` | string (date-time) | yes |  |
+
+### JobStatus
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `type` | string | yes |  |
+| `status` | string: queued \| running \| succeeded \| failed \| cancelled | yes |  |
+| `attempts` | integer | yes |  |
+| `last_error` | string |  |  |
+| `result` | object |  |  |
+| `created_at` | string (date-time) | yes |  |
+| `updated_at` | string (date-time) | yes |  |
+
+### BookStatus
+
+Enum: `processing`, `ready`, `quarantined`, `trashed`
+
+### MasterBook
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `title` | string | yes |  |
+| `authors` | array of `PersonRef` | yes |  |
+| `series` | `SeriesRef` |  |  |
+| `status` | `BookStatus` | yes |  |
+| `status_reason` | string |  |  |
+| `origin` | string: scan \| upload \| abs_import | yes |  |
+| `uploader_id` | string (uuid) |  |  |
+| `folder_path` | string | yes | Relative to the library root |
+| `size_bytes` | integer (int64) | yes |  |
+| `duration_ms` | integer (int64) | yes |  |
+| `trashed_at` | string (date-time) |  |  |
+| `purge_at` | string (date-time) |  | When the Trash will purge it automatically |
+| `created_at` | string (date-time) | yes |  |
+| `distributions` | array of `Distribution` | yes |  |
+
+### MasterBookPage
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `items` | array of `MasterBook` | yes |  |
+| `next_cursor` | string |  |  |
+
+### DistributionCreate
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `book_id` | string (uuid) | yes |  |
+| `target_type` | string: group \| user | yes |  |
+| `target_id` | string (uuid) | yes |  |
+| `note` | string |  |  |
+
+### Distribution
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `book_id` | string (uuid) | yes |  |
+| `target_type` | string: group \| user | yes |  |
+| `target_id` | string (uuid) | yes |  |
+| `target_name` | string | yes |  |
+| `note` | string |  |  |
+| `created_at` | string (date-time) | yes |  |
+
+### EmptyTrashRequest
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `confirm_count` | integer | yes | Must equal the number of books in the Trash |
+| `password` | string (password) | yes |  |
+| `totp_code` | string | yes |  |
 

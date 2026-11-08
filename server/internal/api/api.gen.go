@@ -48,6 +48,66 @@ func (e AdminUserPatchStatus) Valid() bool {
 	}
 }
 
+// Defines values for BookStatus.
+const (
+	BookStatusProcessing  BookStatus = "processing"
+	BookStatusQuarantined BookStatus = "quarantined"
+	BookStatusReady       BookStatus = "ready"
+	BookStatusTrashed     BookStatus = "trashed"
+)
+
+// Valid indicates whether the value is a known member of the BookStatus enum.
+func (e BookStatus) Valid() bool {
+	switch e {
+	case BookStatusProcessing:
+		return true
+	case BookStatusQuarantined:
+		return true
+	case BookStatusReady:
+		return true
+	case BookStatusTrashed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DistributionTargetType.
+const (
+	DistributionTargetTypeGroup DistributionTargetType = "group"
+	DistributionTargetTypeUser  DistributionTargetType = "user"
+)
+
+// Valid indicates whether the value is a known member of the DistributionTargetType enum.
+func (e DistributionTargetType) Valid() bool {
+	switch e {
+	case DistributionTargetTypeGroup:
+		return true
+	case DistributionTargetTypeUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DistributionCreateTargetType.
+const (
+	DistributionCreateTargetTypeGroup DistributionCreateTargetType = "group"
+	DistributionCreateTargetTypeUser  DistributionCreateTargetType = "user"
+)
+
+// Valid indicates whether the value is a known member of the DistributionCreateTargetType enum.
+func (e DistributionCreateTargetType) Valid() bool {
+	switch e {
+	case DistributionCreateTargetTypeGroup:
+		return true
+	case DistributionCreateTargetTypeUser:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for HealthStatus.
 const (
 	HealthStatusDegraded HealthStatus = "degraded"
@@ -84,21 +144,48 @@ func (e HlsProfile) Valid() bool {
 	}
 }
 
+// Defines values for JobStatusStatus.
+const (
+	JobStatusStatusCancelled JobStatusStatus = "cancelled"
+	JobStatusStatusFailed    JobStatusStatus = "failed"
+	JobStatusStatusQueued    JobStatusStatus = "queued"
+	JobStatusStatusRunning   JobStatusStatus = "running"
+	JobStatusStatusSucceeded JobStatusStatus = "succeeded"
+)
+
+// Valid indicates whether the value is a known member of the JobStatusStatus enum.
+func (e JobStatusStatus) Valid() bool {
+	switch e {
+	case JobStatusStatusCancelled:
+		return true
+	case JobStatusStatusFailed:
+		return true
+	case JobStatusStatusQueued:
+		return true
+	case JobStatusStatusRunning:
+		return true
+	case JobStatusStatusSucceeded:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LibrarySource.
 const (
-	Distribution   LibrarySource = "distribution"
-	OwnUpload      LibrarySource = "own_upload"
-	Recommendation LibrarySource = "recommendation"
+	LibrarySourceDistribution   LibrarySource = "distribution"
+	LibrarySourceOwnUpload      LibrarySource = "own_upload"
+	LibrarySourceRecommendation LibrarySource = "recommendation"
 )
 
 // Valid indicates whether the value is a known member of the LibrarySource enum.
 func (e LibrarySource) Valid() bool {
 	switch e {
-	case Distribution:
+	case LibrarySourceDistribution:
 		return true
-	case OwnUpload:
+	case LibrarySourceOwnUpload:
 		return true
-	case Recommendation:
+	case LibrarySourceRecommendation:
 		return true
 	default:
 		return false
@@ -117,6 +204,27 @@ func (e LoginResponseStatus) Valid() bool {
 	case LoginResponseStatusOk:
 		return true
 	case LoginResponseStatusTotpRequired:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MasterBookOrigin.
+const (
+	AbsImport MasterBookOrigin = "abs_import"
+	Scan      MasterBookOrigin = "scan"
+	Upload    MasterBookOrigin = "upload"
+)
+
+// Valid indicates whether the value is a known member of the MasterBookOrigin enum.
+func (e MasterBookOrigin) Valid() bool {
+	switch e {
+	case AbsImport:
+		return true
+	case Scan:
+		return true
+	case Upload:
 		return true
 	default:
 		return false
@@ -303,18 +411,45 @@ func (e TombstoneEntity) Valid() bool {
 	}
 }
 
+// Defines values for UploadItemStatus.
+const (
+	UploadItemStatusCancelled  UploadItemStatus = "cancelled"
+	UploadItemStatusDone       UploadItemStatus = "done"
+	UploadItemStatusFailed     UploadItemStatus = "failed"
+	UploadItemStatusProcessing UploadItemStatus = "processing"
+	UploadItemStatusReceiving  UploadItemStatus = "receiving"
+)
+
+// Valid indicates whether the value is a known member of the UploadItemStatus enum.
+func (e UploadItemStatus) Valid() bool {
+	switch e {
+	case UploadItemStatusCancelled:
+		return true
+	case UploadItemStatusDone:
+		return true
+	case UploadItemStatusFailed:
+		return true
+	case UploadItemStatusProcessing:
+		return true
+	case UploadItemStatusReceiving:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UserRole.
 const (
-	Admin UserRole = "admin"
-	User  UserRole = "user"
+	UserRoleAdmin UserRole = "admin"
+	UserRoleUser  UserRole = "user"
 )
 
 // Valid indicates whether the value is a known member of the UserRole enum.
 func (e UserRole) Valid() bool {
 	switch e {
-	case Admin:
+	case UserRoleAdmin:
 		return true
-	case User:
+	case UserRoleUser:
 		return true
 	default:
 		return false
@@ -539,6 +674,9 @@ type BookFile struct {
 	SizeBytes int64  `json:"size_bytes"`
 }
 
+// BookStatus defines model for BookStatus.
+type BookStatus string
+
 // BookSummary defines model for BookSummary.
 type BookSummary struct {
 	AddedAt *time.Time  `json:"added_at,omitempty"`
@@ -587,6 +725,31 @@ type DeviceInfo struct {
 	Platform   Platform           `json:"platform"`
 }
 
+// Distribution defines model for Distribution.
+type Distribution struct {
+	BookId     openapi_types.UUID     `json:"book_id"`
+	CreatedAt  time.Time              `json:"created_at"`
+	Id         openapi_types.UUID     `json:"id"`
+	Note       *string                `json:"note,omitempty"`
+	TargetId   openapi_types.UUID     `json:"target_id"`
+	TargetName string                 `json:"target_name"`
+	TargetType DistributionTargetType `json:"target_type"`
+}
+
+// DistributionTargetType defines model for Distribution.TargetType.
+type DistributionTargetType string
+
+// DistributionCreate defines model for DistributionCreate.
+type DistributionCreate struct {
+	BookId     openapi_types.UUID           `json:"book_id"`
+	Note       *string                      `json:"note,omitempty"`
+	TargetId   openapi_types.UUID           `json:"target_id"`
+	TargetType DistributionCreateTargetType `json:"target_type"`
+}
+
+// DistributionCreateTargetType defines model for DistributionCreate.TargetType.
+type DistributionCreateTargetType string
+
 // EffectivePermissions Result of authz evaluation (status → role → user overrides → tags → instance defaults).
 type EffectivePermissions struct {
 	CanDeleteOwn    bool `json:"can_delete_own"`
@@ -595,6 +758,14 @@ type EffectivePermissions struct {
 	CanReview       bool `json:"can_review"`
 	CanShare        bool `json:"can_share"`
 	CanUpload       bool `json:"can_upload"`
+}
+
+// EmptyTrashRequest defines model for EmptyTrashRequest.
+type EmptyTrashRequest struct {
+	// ConfirmCount Must equal the number of books in the Trash
+	ConfirmCount int    `json:"confirm_count"`
+	Password     string `json:"password"`
+	TotpCode     string `json:"totp_code"`
 }
 
 // Error defines model for Error.
@@ -657,6 +828,21 @@ type Instance struct {
 	Version string `json:"version"`
 }
 
+// JobStatus defines model for JobStatus.
+type JobStatus struct {
+	Attempts  int                     `json:"attempts"`
+	CreatedAt time.Time               `json:"created_at"`
+	Id        openapi_types.UUID      `json:"id"`
+	LastError *string                 `json:"last_error,omitempty"`
+	Result    *map[string]interface{} `json:"result,omitempty"`
+	Status    JobStatusStatus         `json:"status"`
+	Type      string                  `json:"type"`
+	UpdatedAt time.Time               `json:"updated_at"`
+}
+
+// JobStatusStatus defines model for JobStatus.Status.
+type JobStatusStatus string
+
 // LibraryCheck defines model for LibraryCheck.
 type LibraryCheck struct {
 	// Empty True when the folder has no files yet (a warning, not an error)
@@ -696,6 +882,38 @@ type LoginResponse struct {
 
 // LoginResponseStatus defines model for LoginResponse.Status.
 type LoginResponseStatus string
+
+// MasterBook defines model for MasterBook.
+type MasterBook struct {
+	Authors       []PersonRef    `json:"authors"`
+	CreatedAt     time.Time      `json:"created_at"`
+	Distributions []Distribution `json:"distributions"`
+	DurationMs    int64          `json:"duration_ms"`
+
+	// FolderPath Relative to the library root
+	FolderPath string             `json:"folder_path"`
+	Id         openapi_types.UUID `json:"id"`
+	Origin     MasterBookOrigin   `json:"origin"`
+
+	// PurgeAt When the Trash will purge it automatically
+	PurgeAt      *time.Time          `json:"purge_at,omitempty"`
+	Series       *SeriesRef          `json:"series,omitempty"`
+	SizeBytes    int64               `json:"size_bytes"`
+	Status       BookStatus          `json:"status"`
+	StatusReason *string             `json:"status_reason,omitempty"`
+	Title        string              `json:"title"`
+	TrashedAt    *time.Time          `json:"trashed_at,omitempty"`
+	UploaderId   *openapi_types.UUID `json:"uploader_id,omitempty"`
+}
+
+// MasterBookOrigin defines model for MasterBook.Origin.
+type MasterBookOrigin string
+
+// MasterBookPage defines model for MasterBookPage.
+type MasterBookPage struct {
+	Items      []MasterBook `json:"items"`
+	NextCursor *string      `json:"next_cursor,omitempty"`
+}
 
 // Me defines model for Me.
 type Me struct {
@@ -1058,6 +1276,24 @@ type TotpVerifyRequest struct {
 	TotpChallenge string  `json:"totp_challenge"`
 }
 
+// UploadItem defines model for UploadItem.
+type UploadItem struct {
+	BookId    *openapi_types.UUID `json:"book_id,omitempty"`
+	CreatedAt time.Time           `json:"created_at"`
+
+	// Error Why processing failed (shown to the user)
+	Error         *string          `json:"error,omitempty"`
+	Filename      string           `json:"filename"`
+	Id            string           `json:"id"`
+	ReceivedBytes int64            `json:"received_bytes"`
+	SizeBytes     int64            `json:"size_bytes"`
+	Status        UploadItemStatus `json:"status"`
+	UpdatedAt     time.Time        `json:"updated_at"`
+}
+
+// UploadItemStatus defines model for UploadItem.Status.
+type UploadItemStatus string
+
 // UserRole defines model for UserRole.
 type UserRole string
 
@@ -1114,6 +1350,18 @@ type TooManyRequests = Error
 
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = Error
+
+// ListMasterBooksParams defines parameters for ListMasterBooks.
+type ListMasterBooksParams struct {
+	Status *BookStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// Q Title search
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// Cursor Opaque pagination cursor from `next_cursor`
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *Limit  `form:"limit,omitempty" json:"limit,omitempty"`
+}
 
 // ListSignupRequestsParams defines parameters for ListSignupRequests.
 type ListSignupRequestsParams struct {
@@ -1175,16 +1423,27 @@ type GetSyncDeltaParams struct {
 	Limit *Limit  `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// ListMyUploadsParams defines parameters for ListMyUploads.
+type ListMyUploadsParams struct {
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // CreateSetupTotpJSONBody defines parameters for CreateSetupTotp.
 type CreateSetupTotpJSONBody struct {
 	Username string `json:"username"`
 }
+
+// CreateDistributionJSONRequestBody defines body for CreateDistribution for application/json ContentType.
+type CreateDistributionJSONRequestBody = DistributionCreate
 
 // CreateGroupJSONRequestBody defines body for CreateGroup for application/json ContentType.
 type CreateGroupJSONRequestBody = GroupCreate
 
 // DenySignupRequestJSONRequestBody defines body for DenySignupRequest for application/json ContentType.
 type DenySignupRequestJSONRequestBody = ReasonRequest
+
+// EmptyTrashJSONRequestBody defines body for EmptyTrash for application/json ContentType.
+type EmptyTrashJSONRequestBody = EmptyTrashRequest
 
 // PatchUserJSONRequestBody defines body for PatchUser for application/json ContentType.
 type PatchUserJSONRequestBody = AdminUserPatch
@@ -1227,6 +1486,27 @@ type CreateSetupTotpJSONRequestBody CreateSetupTotpJSONBody
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// ListMasterBooks Browse the master store (every book the server holds)
+	// (GET /admin/books)
+	ListMasterBooks(w http.ResponseWriter, r *http.Request, params ListMasterBooksParams)
+	// TrashBook Move a book to the Trash (hidden everywhere; purged after 30 days)
+	// (DELETE /admin/books/{bookId})
+	TrashBook(w http.ResponseWriter, r *http.Request, bookId BookId)
+	// GetMasterBook One master-store book with its distributions
+	// (GET /admin/books/{bookId})
+	GetMasterBook(w http.ResponseWriter, r *http.Request, bookId BookId)
+	// PurgeBook Permanently delete one trashed book and its files now
+	// (POST /admin/books/{bookId}/purge)
+	PurgeBook(w http.ResponseWriter, r *http.Request, bookId BookId)
+	// RestoreBook Restore a book from the Trash
+	// (POST /admin/books/{bookId}/restore)
+	RestoreBook(w http.ResponseWriter, r *http.Request, bookId BookId)
+	// CreateDistribution Make a master-store book visible to a group or a user
+	// (POST /admin/distributions)
+	CreateDistribution(w http.ResponseWriter, r *http.Request)
+	// RevokeDistribution Revoke a distribution
+	// (DELETE /admin/distributions/{distributionId})
+	RevokeDistribution(w http.ResponseWriter, r *http.Request, distributionId openapi_types.UUID)
 	// ListGroups Groups
 	// (GET /admin/groups)
 	ListGroups(w http.ResponseWriter, r *http.Request)
@@ -1242,6 +1522,9 @@ type ServerInterface interface {
 	// AddGroupMember Add a user to a group
 	// (PUT /admin/groups/{groupId}/members/{userId})
 	AddGroupMember(w http.ResponseWriter, r *http.Request, groupId GroupId, userId UserId)
+	// ScanLibrary Rescan the library folder now
+	// (POST /admin/library/scan)
+	ScanLibrary(w http.ResponseWriter, r *http.Request)
 	// AdminRevokeSession Revoke any user's session
 	// (DELETE /admin/sessions/{sessionId})
 	AdminRevokeSession(w http.ResponseWriter, r *http.Request, sessionId SessionId)
@@ -1254,6 +1537,9 @@ type ServerInterface interface {
 	// DenySignupRequest Deny a sign-up
 	// (POST /admin/signup-requests/{requestId}/deny)
 	DenySignupRequest(w http.ResponseWriter, r *http.Request, requestId RequestId)
+	// EmptyTrash Permanently delete everything in the Trash
+	// (POST /admin/trash/empty)
+	EmptyTrash(w http.ResponseWriter, r *http.Request)
 	// ListUsers Users
 	// (GET /admin/users)
 	ListUsers(w http.ResponseWriter, r *http.Request, params ListUsersParams)
@@ -1302,6 +1588,9 @@ type ServerInterface interface {
 	// GetInstance Public instance information
 	// (GET /instance)
 	GetInstance(w http.ResponseWriter, r *http.Request)
+	// GetJob Status of a background job you started (admins can see any)
+	// (GET /jobs/{jobId})
+	GetJob(w http.ResponseWriter, r *http.Request, jobId openapi_types.UUID)
 	// ListLibrary My library (own uploads ∪ distributions, minus removed/hidden/filtered/taken down)
 	// (GET /library)
 	ListLibrary(w http.ResponseWriter, r *http.Request, params ListLibraryParams)
@@ -1332,6 +1621,9 @@ type ServerInterface interface {
 	// GetSyncDelta Everything that changed for me since a cursor
 	// (GET /me/sync)
 	GetSyncDelta(w http.ResponseWriter, r *http.Request, params GetSyncDeltaParams)
+	// ListMyUploads My recent uploads and their processing status
+	// (GET /me/uploads)
+	ListMyUploads(w http.ResponseWriter, r *http.Request, params ListMyUploadsParams)
 	// GetNarrator Narrator page (books visible to me)
 	// (GET /narrators/{personId})
 	GetNarrator(w http.ResponseWriter, r *http.Request, personId PersonId)
@@ -1368,6 +1660,48 @@ type ServerInterface interface {
 
 type Unimplemented struct{}
 
+// ListMasterBooks Browse the master store (every book the server holds)
+// (GET /admin/books)
+func (_ Unimplemented) ListMasterBooks(w http.ResponseWriter, r *http.Request, params ListMasterBooksParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// TrashBook Move a book to the Trash (hidden everywhere; purged after 30 days)
+// (DELETE /admin/books/{bookId})
+func (_ Unimplemented) TrashBook(w http.ResponseWriter, r *http.Request, bookId BookId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetMasterBook One master-store book with its distributions
+// (GET /admin/books/{bookId})
+func (_ Unimplemented) GetMasterBook(w http.ResponseWriter, r *http.Request, bookId BookId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PurgeBook Permanently delete one trashed book and its files now
+// (POST /admin/books/{bookId}/purge)
+func (_ Unimplemented) PurgeBook(w http.ResponseWriter, r *http.Request, bookId BookId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RestoreBook Restore a book from the Trash
+// (POST /admin/books/{bookId}/restore)
+func (_ Unimplemented) RestoreBook(w http.ResponseWriter, r *http.Request, bookId BookId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CreateDistribution Make a master-store book visible to a group or a user
+// (POST /admin/distributions)
+func (_ Unimplemented) CreateDistribution(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RevokeDistribution Revoke a distribution
+// (DELETE /admin/distributions/{distributionId})
+func (_ Unimplemented) RevokeDistribution(w http.ResponseWriter, r *http.Request, distributionId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // ListGroups Groups
 // (GET /admin/groups)
 func (_ Unimplemented) ListGroups(w http.ResponseWriter, r *http.Request) {
@@ -1398,6 +1732,12 @@ func (_ Unimplemented) AddGroupMember(w http.ResponseWriter, r *http.Request, gr
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// ScanLibrary Rescan the library folder now
+// (POST /admin/library/scan)
+func (_ Unimplemented) ScanLibrary(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // AdminRevokeSession Revoke any user's session
 // (DELETE /admin/sessions/{sessionId})
 func (_ Unimplemented) AdminRevokeSession(w http.ResponseWriter, r *http.Request, sessionId SessionId) {
@@ -1419,6 +1759,12 @@ func (_ Unimplemented) ApproveSignupRequest(w http.ResponseWriter, r *http.Reque
 // DenySignupRequest Deny a sign-up
 // (POST /admin/signup-requests/{requestId}/deny)
 func (_ Unimplemented) DenySignupRequest(w http.ResponseWriter, r *http.Request, requestId RequestId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// EmptyTrash Permanently delete everything in the Trash
+// (POST /admin/trash/empty)
+func (_ Unimplemented) EmptyTrash(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1518,6 +1864,12 @@ func (_ Unimplemented) GetInstance(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// GetJob Status of a background job you started (admins can see any)
+// (GET /jobs/{jobId})
+func (_ Unimplemented) GetJob(w http.ResponseWriter, r *http.Request, jobId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // ListLibrary My library (own uploads ∪ distributions, minus removed/hidden/filtered/taken down)
 // (GET /library)
 func (_ Unimplemented) ListLibrary(w http.ResponseWriter, r *http.Request, params ListLibraryParams) {
@@ -1575,6 +1927,12 @@ func (_ Unimplemented) RevokeMySession(w http.ResponseWriter, r *http.Request, s
 // GetSyncDelta Everything that changed for me since a cursor
 // (GET /me/sync)
 func (_ Unimplemented) GetSyncDelta(w http.ResponseWriter, r *http.Request, params GetSyncDeltaParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListMyUploads My recent uploads and their processing status
+// (GET /me/uploads)
+func (_ Unimplemented) ListMyUploads(w http.ResponseWriter, r *http.Request, params ListMyUploadsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1646,6 +2004,222 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// ListMasterBooks operation middleware
+func (siw *ServerInterfaceWrapper) ListMasterBooks(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListMasterBooksParams
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMasterBooks(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// TrashBook operation middleware
+func (siw *ServerInterfaceWrapper) TrashBook(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "bookId" -------------
+	var bookId BookId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bookId", chi.URLParam(r, "bookId"), &bookId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bookId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.TrashBook(w, r, bookId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMasterBook operation middleware
+func (siw *ServerInterfaceWrapper) GetMasterBook(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "bookId" -------------
+	var bookId BookId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bookId", chi.URLParam(r, "bookId"), &bookId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bookId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMasterBook(w, r, bookId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PurgeBook operation middleware
+func (siw *ServerInterfaceWrapper) PurgeBook(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "bookId" -------------
+	var bookId BookId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bookId", chi.URLParam(r, "bookId"), &bookId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bookId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PurgeBook(w, r, bookId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RestoreBook operation middleware
+func (siw *ServerInterfaceWrapper) RestoreBook(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "bookId" -------------
+	var bookId BookId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bookId", chi.URLParam(r, "bookId"), &bookId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bookId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreBook(w, r, bookId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateDistribution operation middleware
+func (siw *ServerInterfaceWrapper) CreateDistribution(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateDistribution(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RevokeDistribution operation middleware
+func (siw *ServerInterfaceWrapper) RevokeDistribution(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "distributionId" -------------
+	var distributionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "distributionId", chi.URLParam(r, "distributionId"), &distributionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "distributionId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RevokeDistribution(w, r, distributionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // ListGroups operation middleware
 func (siw *ServerInterfaceWrapper) ListGroups(w http.ResponseWriter, r *http.Request) {
@@ -1771,6 +2345,20 @@ func (siw *ServerInterfaceWrapper) AddGroupMember(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ScanLibrary operation middleware
+func (siw *ServerInterfaceWrapper) ScanLibrary(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ScanLibrary(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // AdminRevokeSession operation middleware
 func (siw *ServerInterfaceWrapper) AdminRevokeSession(w http.ResponseWriter, r *http.Request) {
 
@@ -1873,6 +2461,20 @@ func (siw *ServerInterfaceWrapper) DenySignupRequest(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DenySignupRequest(w, r, requestId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// EmptyTrash operation middleware
+func (siw *ServerInterfaceWrapper) EmptyTrash(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.EmptyTrash(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2259,6 +2861,32 @@ func (siw *ServerInterfaceWrapper) GetInstance(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// GetJob operation middleware
+func (siw *ServerInterfaceWrapper) GetJob(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "jobId" -------------
+	var jobId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "jobId", chi.URLParam(r, "jobId"), &jobId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "jobId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetJob(w, r, jobId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListLibrary operation middleware
 func (siw *ServerInterfaceWrapper) ListLibrary(w http.ResponseWriter, r *http.Request) {
 
@@ -2630,6 +3258,39 @@ func (siw *ServerInterfaceWrapper) GetSyncDelta(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetSyncDelta(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMyUploads operation middleware
+func (siw *ServerInterfaceWrapper) ListMyUploads(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListMyUploadsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMyUploads(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3102,6 +3763,39 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/admin/sessions/{sessionId}", wrapper.AdminRevokeSession)
 	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/uploads", wrapper.ListMyUploads)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/jobs/{jobId}", wrapper.GetJob)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/books", wrapper.ListMasterBooks)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/admin/books/{bookId}", wrapper.TrashBook)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/books/{bookId}", wrapper.GetMasterBook)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/books/{bookId}/restore", wrapper.RestoreBook)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/books/{bookId}/purge", wrapper.PurgeBook)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/trash/empty", wrapper.EmptyTrash)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/distributions", wrapper.CreateDistribution)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/admin/distributions/{distributionId}", wrapper.RevokeDistribution)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/library/scan", wrapper.ScanLibrary)
+	})
 
 	return r
 }
@@ -3126,6 +3820,458 @@ type TooManyRequestsJSONResponse struct {
 }
 
 type UnauthorizedJSONResponse Error
+
+type ListMasterBooksRequestObject struct {
+	Params ListMasterBooksParams
+}
+
+type ListMasterBooksResponseObject interface {
+	VisitListMasterBooksResponse(w http.ResponseWriter) error
+}
+
+type ListMasterBooks200JSONResponse MasterBookPage
+
+func (response ListMasterBooks200JSONResponse) VisitListMasterBooksResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMasterBooks401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListMasterBooks401JSONResponse) VisitListMasterBooksResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMasterBooks403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListMasterBooks403JSONResponse) VisitListMasterBooksResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TrashBookRequestObject struct {
+	BookId BookId `json:"bookId"`
+}
+
+type TrashBookResponseObject interface {
+	VisitTrashBookResponse(w http.ResponseWriter) error
+}
+
+type TrashBook204Response struct {
+}
+
+func (response TrashBook204Response) VisitTrashBookResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type TrashBook401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response TrashBook401JSONResponse) VisitTrashBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TrashBook403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response TrashBook403JSONResponse) VisitTrashBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TrashBook404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response TrashBook404JSONResponse) VisitTrashBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMasterBookRequestObject struct {
+	BookId BookId `json:"bookId"`
+}
+
+type GetMasterBookResponseObject interface {
+	VisitGetMasterBookResponse(w http.ResponseWriter) error
+}
+
+type GetMasterBook200JSONResponse MasterBook
+
+func (response GetMasterBook200JSONResponse) VisitGetMasterBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMasterBook401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetMasterBook401JSONResponse) VisitGetMasterBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMasterBook403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetMasterBook403JSONResponse) VisitGetMasterBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMasterBook404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetMasterBook404JSONResponse) VisitGetMasterBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PurgeBookRequestObject struct {
+	BookId BookId `json:"bookId"`
+}
+
+type PurgeBookResponseObject interface {
+	VisitPurgeBookResponse(w http.ResponseWriter) error
+}
+
+type PurgeBook204Response struct {
+}
+
+func (response PurgeBook204Response) VisitPurgeBookResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PurgeBook401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response PurgeBook401JSONResponse) VisitPurgeBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PurgeBook403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PurgeBook403JSONResponse) VisitPurgeBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PurgeBook404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response PurgeBook404JSONResponse) VisitPurgeBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PurgeBook409JSONResponse struct{ ConflictJSONResponse }
+
+func (response PurgeBook409JSONResponse) VisitPurgeBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RestoreBookRequestObject struct {
+	BookId BookId `json:"bookId"`
+}
+
+type RestoreBookResponseObject interface {
+	VisitRestoreBookResponse(w http.ResponseWriter) error
+}
+
+type RestoreBook204Response struct {
+}
+
+func (response RestoreBook204Response) VisitRestoreBookResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RestoreBook401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RestoreBook401JSONResponse) VisitRestoreBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RestoreBook403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RestoreBook403JSONResponse) VisitRestoreBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RestoreBook404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response RestoreBook404JSONResponse) VisitRestoreBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RestoreBook409JSONResponse struct{ ConflictJSONResponse }
+
+func (response RestoreBook409JSONResponse) VisitRestoreBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDistributionRequestObject struct {
+	Body *CreateDistributionJSONRequestBody
+}
+
+type CreateDistributionResponseObject interface {
+	VisitCreateDistributionResponse(w http.ResponseWriter) error
+}
+
+type CreateDistribution201JSONResponse Distribution
+
+func (response CreateDistribution201JSONResponse) VisitCreateDistributionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDistribution400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateDistribution400JSONResponse) VisitCreateDistributionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDistribution401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateDistribution401JSONResponse) VisitCreateDistributionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDistribution403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateDistribution403JSONResponse) VisitCreateDistributionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDistribution404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CreateDistribution404JSONResponse) VisitCreateDistributionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RevokeDistributionRequestObject struct {
+	DistributionId openapi_types.UUID `json:"distributionId"`
+}
+
+type RevokeDistributionResponseObject interface {
+	VisitRevokeDistributionResponse(w http.ResponseWriter) error
+}
+
+type RevokeDistribution204Response struct {
+}
+
+func (response RevokeDistribution204Response) VisitRevokeDistributionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RevokeDistribution401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RevokeDistribution401JSONResponse) VisitRevokeDistributionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RevokeDistribution403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RevokeDistribution403JSONResponse) VisitRevokeDistributionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RevokeDistribution404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response RevokeDistribution404JSONResponse) VisitRevokeDistributionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type ListGroupsRequestObject struct {
 }
@@ -3430,6 +4576,57 @@ func (response AddGroupMember404JSONResponse) VisitAddGroupMemberResponse(w http
 	return err
 }
 
+type ScanLibraryRequestObject struct {
+}
+
+type ScanLibraryResponseObject interface {
+	VisitScanLibraryResponse(w http.ResponseWriter) error
+}
+
+type ScanLibrary202JSONResponse struct {
+	JobId openapi_types.UUID `json:"job_id"`
+}
+
+func (response ScanLibrary202JSONResponse) VisitScanLibraryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ScanLibrary401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ScanLibrary401JSONResponse) VisitScanLibraryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ScanLibrary403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ScanLibrary403JSONResponse) VisitScanLibraryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type AdminRevokeSessionRequestObject struct {
 	SessionId SessionId `json:"sessionId"`
 }
@@ -3651,6 +4848,72 @@ func (response DenySignupRequest404JSONResponse) VisitDenySignupRequestResponse(
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EmptyTrashRequestObject struct {
+	Body *EmptyTrashJSONRequestBody
+}
+
+type EmptyTrashResponseObject interface {
+	VisitEmptyTrashResponse(w http.ResponseWriter) error
+}
+
+type EmptyTrash200JSONResponse struct {
+	Purged int `json:"purged"`
+}
+
+func (response EmptyTrash200JSONResponse) VisitEmptyTrashResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EmptyTrash400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response EmptyTrash400JSONResponse) VisitEmptyTrashResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EmptyTrash401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response EmptyTrash401JSONResponse) VisitEmptyTrashResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EmptyTrash403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response EmptyTrash403JSONResponse) VisitEmptyTrashResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -4503,6 +5766,56 @@ func (response GetInstance200JSONResponse) VisitGetInstanceResponse(w http.Respo
 	return err
 }
 
+type GetJobRequestObject struct {
+	JobId openapi_types.UUID `json:"jobId"`
+}
+
+type GetJobResponseObject interface {
+	VisitGetJobResponse(w http.ResponseWriter) error
+}
+
+type GetJob200JSONResponse JobStatus
+
+func (response GetJob200JSONResponse) VisitGetJobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetJob401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetJob401JSONResponse) VisitGetJobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetJob404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetJob404JSONResponse) VisitGetJobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListLibraryRequestObject struct {
 	Params ListLibraryParams
 }
@@ -5002,6 +6315,42 @@ func (response GetSyncDelta410JSONResponse) VisitGetSyncDeltaResponse(w http.Res
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(410)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMyUploadsRequestObject struct {
+	Params ListMyUploadsParams
+}
+
+type ListMyUploadsResponseObject interface {
+	VisitListMyUploadsResponse(w http.ResponseWriter) error
+}
+
+type ListMyUploads200JSONResponse []UploadItem
+
+func (response ListMyUploads200JSONResponse) VisitListMyUploadsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMyUploads401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListMyUploads401JSONResponse) VisitListMyUploadsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -5508,6 +6857,27 @@ func (response GetHlsSegment404JSONResponse) VisitGetHlsSegmentResponse(w http.R
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// ListMasterBooks Browse the master store (every book the server holds)
+	// (GET /admin/books)
+	ListMasterBooks(ctx context.Context, request ListMasterBooksRequestObject) (ListMasterBooksResponseObject, error)
+	// TrashBook Move a book to the Trash (hidden everywhere; purged after 30 days)
+	// (DELETE /admin/books/{bookId})
+	TrashBook(ctx context.Context, request TrashBookRequestObject) (TrashBookResponseObject, error)
+	// GetMasterBook One master-store book with its distributions
+	// (GET /admin/books/{bookId})
+	GetMasterBook(ctx context.Context, request GetMasterBookRequestObject) (GetMasterBookResponseObject, error)
+	// PurgeBook Permanently delete one trashed book and its files now
+	// (POST /admin/books/{bookId}/purge)
+	PurgeBook(ctx context.Context, request PurgeBookRequestObject) (PurgeBookResponseObject, error)
+	// RestoreBook Restore a book from the Trash
+	// (POST /admin/books/{bookId}/restore)
+	RestoreBook(ctx context.Context, request RestoreBookRequestObject) (RestoreBookResponseObject, error)
+	// CreateDistribution Make a master-store book visible to a group or a user
+	// (POST /admin/distributions)
+	CreateDistribution(ctx context.Context, request CreateDistributionRequestObject) (CreateDistributionResponseObject, error)
+	// RevokeDistribution Revoke a distribution
+	// (DELETE /admin/distributions/{distributionId})
+	RevokeDistribution(ctx context.Context, request RevokeDistributionRequestObject) (RevokeDistributionResponseObject, error)
 	// ListGroups Groups
 	// (GET /admin/groups)
 	ListGroups(ctx context.Context, request ListGroupsRequestObject) (ListGroupsResponseObject, error)
@@ -5523,6 +6893,9 @@ type StrictServerInterface interface {
 	// AddGroupMember Add a user to a group
 	// (PUT /admin/groups/{groupId}/members/{userId})
 	AddGroupMember(ctx context.Context, request AddGroupMemberRequestObject) (AddGroupMemberResponseObject, error)
+	// ScanLibrary Rescan the library folder now
+	// (POST /admin/library/scan)
+	ScanLibrary(ctx context.Context, request ScanLibraryRequestObject) (ScanLibraryResponseObject, error)
 	// AdminRevokeSession Revoke any user's session
 	// (DELETE /admin/sessions/{sessionId})
 	AdminRevokeSession(ctx context.Context, request AdminRevokeSessionRequestObject) (AdminRevokeSessionResponseObject, error)
@@ -5535,6 +6908,9 @@ type StrictServerInterface interface {
 	// DenySignupRequest Deny a sign-up
 	// (POST /admin/signup-requests/{requestId}/deny)
 	DenySignupRequest(ctx context.Context, request DenySignupRequestRequestObject) (DenySignupRequestResponseObject, error)
+	// EmptyTrash Permanently delete everything in the Trash
+	// (POST /admin/trash/empty)
+	EmptyTrash(ctx context.Context, request EmptyTrashRequestObject) (EmptyTrashResponseObject, error)
 	// ListUsers Users
 	// (GET /admin/users)
 	ListUsers(ctx context.Context, request ListUsersRequestObject) (ListUsersResponseObject, error)
@@ -5583,6 +6959,9 @@ type StrictServerInterface interface {
 	// GetInstance Public instance information
 	// (GET /instance)
 	GetInstance(ctx context.Context, request GetInstanceRequestObject) (GetInstanceResponseObject, error)
+	// GetJob Status of a background job you started (admins can see any)
+	// (GET /jobs/{jobId})
+	GetJob(ctx context.Context, request GetJobRequestObject) (GetJobResponseObject, error)
 	// ListLibrary My library (own uploads ∪ distributions, minus removed/hidden/filtered/taken down)
 	// (GET /library)
 	ListLibrary(ctx context.Context, request ListLibraryRequestObject) (ListLibraryResponseObject, error)
@@ -5613,6 +6992,9 @@ type StrictServerInterface interface {
 	// GetSyncDelta Everything that changed for me since a cursor
 	// (GET /me/sync)
 	GetSyncDelta(ctx context.Context, request GetSyncDeltaRequestObject) (GetSyncDeltaResponseObject, error)
+	// ListMyUploads My recent uploads and their processing status
+	// (GET /me/uploads)
+	ListMyUploads(ctx context.Context, request ListMyUploadsRequestObject) (ListMyUploadsResponseObject, error)
 	// GetNarrator Narrator page (books visible to me)
 	// (GET /narrators/{personId})
 	GetNarrator(ctx context.Context, request GetNarratorRequestObject) (GetNarratorResponseObject, error)
@@ -5682,6 +7064,193 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// ListMasterBooks operation middleware
+func (sh *strictHandler) ListMasterBooks(w http.ResponseWriter, r *http.Request, params ListMasterBooksParams) {
+	var request ListMasterBooksRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListMasterBooks(ctx, request.(ListMasterBooksRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListMasterBooks")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListMasterBooksResponseObject); ok {
+		if err := validResponse.VisitListMasterBooksResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// TrashBook operation middleware
+func (sh *strictHandler) TrashBook(w http.ResponseWriter, r *http.Request, bookId BookId) {
+	var request TrashBookRequestObject
+
+	request.BookId = bookId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.TrashBook(ctx, request.(TrashBookRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "TrashBook")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(TrashBookResponseObject); ok {
+		if err := validResponse.VisitTrashBookResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMasterBook operation middleware
+func (sh *strictHandler) GetMasterBook(w http.ResponseWriter, r *http.Request, bookId BookId) {
+	var request GetMasterBookRequestObject
+
+	request.BookId = bookId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMasterBook(ctx, request.(GetMasterBookRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMasterBook")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMasterBookResponseObject); ok {
+		if err := validResponse.VisitGetMasterBookResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PurgeBook operation middleware
+func (sh *strictHandler) PurgeBook(w http.ResponseWriter, r *http.Request, bookId BookId) {
+	var request PurgeBookRequestObject
+
+	request.BookId = bookId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PurgeBook(ctx, request.(PurgeBookRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PurgeBook")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PurgeBookResponseObject); ok {
+		if err := validResponse.VisitPurgeBookResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RestoreBook operation middleware
+func (sh *strictHandler) RestoreBook(w http.ResponseWriter, r *http.Request, bookId BookId) {
+	var request RestoreBookRequestObject
+
+	request.BookId = bookId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RestoreBook(ctx, request.(RestoreBookRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RestoreBook")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RestoreBookResponseObject); ok {
+		if err := validResponse.VisitRestoreBookResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateDistribution operation middleware
+func (sh *strictHandler) CreateDistribution(w http.ResponseWriter, r *http.Request) {
+	var request CreateDistributionRequestObject
+
+	var body CreateDistributionJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateDistribution(ctx, request.(CreateDistributionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateDistribution")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateDistributionResponseObject); ok {
+		if err := validResponse.VisitCreateDistributionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RevokeDistribution operation middleware
+func (sh *strictHandler) RevokeDistribution(w http.ResponseWriter, r *http.Request, distributionId openapi_types.UUID) {
+	var request RevokeDistributionRequestObject
+
+	request.DistributionId = distributionId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RevokeDistribution(ctx, request.(RevokeDistributionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RevokeDistribution")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RevokeDistributionResponseObject); ok {
+		if err := validResponse.VisitRevokeDistributionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // ListGroups operation middleware
@@ -5819,6 +7388,30 @@ func (sh *strictHandler) AddGroupMember(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
+// ScanLibrary operation middleware
+func (sh *strictHandler) ScanLibrary(w http.ResponseWriter, r *http.Request) {
+	var request ScanLibraryRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ScanLibrary(ctx, request.(ScanLibraryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ScanLibrary")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ScanLibraryResponseObject); ok {
+		if err := validResponse.VisitScanLibraryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // AdminRevokeSession operation middleware
 func (sh *strictHandler) AdminRevokeSession(w http.ResponseWriter, r *http.Request, sessionId SessionId) {
 	var request AdminRevokeSessionRequestObject
@@ -5926,6 +7519,37 @@ func (sh *strictHandler) DenySignupRequest(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(DenySignupRequestResponseObject); ok {
 		if err := validResponse.VisitDenySignupRequestResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// EmptyTrash operation middleware
+func (sh *strictHandler) EmptyTrash(w http.ResponseWriter, r *http.Request) {
+	var request EmptyTrashRequestObject
+
+	var body EmptyTrashJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.EmptyTrash(ctx, request.(EmptyTrashRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "EmptyTrash")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(EmptyTrashResponseObject); ok {
+		if err := validResponse.VisitEmptyTrashResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -6389,6 +8013,32 @@ func (sh *strictHandler) GetInstance(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetJob operation middleware
+func (sh *strictHandler) GetJob(w http.ResponseWriter, r *http.Request, jobId openapi_types.UUID) {
+	var request GetJobRequestObject
+
+	request.JobId = jobId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetJob(ctx, request.(GetJobRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetJob")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetJobResponseObject); ok {
+		if err := validResponse.VisitGetJobResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListLibrary operation middleware
 func (sh *strictHandler) ListLibrary(w http.ResponseWriter, r *http.Request, params ListLibraryParams) {
 	var request ListLibraryRequestObject
@@ -6645,6 +8295,32 @@ func (sh *strictHandler) GetSyncDelta(w http.ResponseWriter, r *http.Request, pa
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetSyncDeltaResponseObject); ok {
 		if err := validResponse.VisitGetSyncDeltaResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListMyUploads operation middleware
+func (sh *strictHandler) ListMyUploads(w http.ResponseWriter, r *http.Request, params ListMyUploadsParams) {
+	var request ListMyUploadsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListMyUploads(ctx, request.(ListMyUploadsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListMyUploads")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListMyUploadsResponseObject); ok {
+		if err := validResponse.VisitListMyUploadsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -6943,158 +8619,181 @@ func (sh *strictHandler) GetHlsSegment(w http.ResponseWriter, r *http.Request, b
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
-	"5bxQn2/+7wA=",
+	"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",
+	"bZyvy6YBYT1MIkWyrkDmjFofL//vAA==",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

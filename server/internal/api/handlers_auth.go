@@ -219,13 +219,17 @@ func (s *Server) ConfirmTotp(ctx context.Context, req ConfirmTotpRequestObject) 
 
 // ── Me ──
 
-func (s *Server) meFor(_ context.Context, p *auth.Principal) (*Me, error) {
+func (s *Server) meFor(ctx context.Context, p *auth.Principal) (*Me, error) {
+	used, err := store.UsedBytes(ctx, s.App().DB, p.User.ID)
+	if err != nil {
+		return nil, err
+	}
 	u := p.User
 	eff := authz.Effective(p.Subject)
 	me := &Me{
 		Id: mustUUID(u.ID), Username: u.Username, DisplayName: u.DisplayName,
 		Role: UserRole(u.Role), Status: UserStatus(u.Status), TotpEnabled: u.TOTPSecretEnc != "",
-		QuotaBytes: u.QuotaBytes, UsedBytes: 0, Locale: u.Locale, Notice: strPtr(u.Notice),
+		QuotaBytes: u.QuotaBytes, UsedBytes: used, Locale: u.Locale, Notice: strPtr(u.Notice),
 		Permissions: EffectivePermissions{
 			CanUpload: eff[authz.Upload], CanEditMetadata: eff[authz.EditMetadata], CanDeleteOwn: eff[authz.DeleteOwn],
 			CanShare: eff[authz.Share], CanReview: eff[authz.Review], CanPostPublic: eff[authz.PostPublic],

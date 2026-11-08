@@ -23,6 +23,7 @@ import (
 
 	"github.com/quip1/simple-apb/server/internal/auth"
 	"github.com/quip1/simple-apb/server/internal/config"
+	"github.com/quip1/simple-apb/server/internal/media"
 	"github.com/quip1/simple-apb/server/internal/setup"
 	"github.com/quip1/simple-apb/server/internal/store"
 )
@@ -85,12 +86,18 @@ func newHarness(t *testing.T) *harness {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bg, cancel := context.WithCancel(context.Background())
 	srv := &Server{Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Secrets: secrets,
-		Setup: &setup.Service{Paths: paths, Secrets: secrets, Token: "test-setup-token"}}
+		Setup:      &setup.Service{Paths: paths, Secrets: secrets, Token: "test-setup-token"},
+		AppOptions: AppOptions{Paths: paths, Tools: media.DefaultTools()},
+		BaseCtx:    bg,
+	}
 	ts := httptest.NewServer(srv.Router())
 	t.Cleanup(func() {
 		ts.Close()
+		cancel()
 		if a := srv.App(); a != nil {
+			a.Jobs.Wait()
 			_ = a.DB.Close()
 		}
 	})
@@ -438,3 +445,5 @@ func TestUnknownPathIs404JSON(t *testing.T) {
 		t.Fatalf("status %d body %s", r.status, r.raw)
 	}
 }
+
+func totpCode(secret string) (string, error) { return totp.GenerateCode(secret, time.Now()) }

@@ -205,6 +205,71 @@ creating anything) and the admin gets 10 recovery codes once.
 
 ---
 
+## ADR-0014 — Opaque cursors, offset inside (for now)
+
+`/library` and `/admin/books` return an opaque `next_cursor` that currently wraps an offset. Keyset
+pagination is more robust when rows change between pages, but our sorts include "recently
+played" (a nullable join) and author name (a join), where keyset cursors get complicated. At the
+library sizes we target (10,000 books, pages of 50) offset is fast enough. Because the cursor is
+opaque, switching to keyset later is not an API change.
+
+## ADR-0015 — Book detection, covers, and the upload pipeline
+
+**What counts as one book on disk** (`library.Detect`):
+- a folder containing mp3 files is one book (all its audio, natural sort: "2" before "10");
+- a folder with exactly one m4b/m4a is one book; several m4b files in one folder are one book each
+  (`books.folder_path` is then the file's path);
+- a folder with no audio whose audio subfolders are all named like `CD 1`, `Disc 2`, `Part 3` is one
+  multi-disc book;
+- dot-folders (including `.incoming`) are ignored.
+
+**Metadata on import** comes from tags first (album/title, album_artist/artist, composer/narrator,
+series/mvnm, series-part/mvin, genre, date, ASIN/ISBN), then the folder layout
+`/<Author>/<Series?>/<Title>/`. Online providers and "needs review" arrive with the metadata
+pipeline in Phase 2. A folder must be unchanged for 30 s before it is imported (half-copied books
+are skipped and rescanned).
+
+**Covers:** a `cover.jpg`/`folder.jpg` in the book folder wins; otherwise the embedded cover is
+extracted to `/cache/covers/<book-id>/cover.jpg`. The server does not write into folders it didn't
+create, so external managers (Chaptarr, LazyLibrarian) keep full ownership of their layout.
+`books.cover_path` carries a `library:`/`cache:` prefix so volumes can move.
+
+**Scanned books** belong to the admin (`uploader_id` NULL, `origin = scan`) and are visible to nobody
+until distributed. A book whose folder disappears is quarantined ("files missing") rather than
+deleted, and returns to `ready` when the files come back — the master store never loses a record
+because a disk was unmounted.
+
+**Uploads** use tus (resumable) into `/library/.incoming/` — inside the library volume so the final
+move is an atomic same-filesystem rename. Processing is a job with this crash-safe order:
+1. stage the file (or safely unzip: no paths outside the folder, only known file types, bounded size
+   and entry count against zip bombs) into `<id>.d`, verifying the optional client `sha256`;
+2. probe every file with ffprobe — any invalid file fails the upload with a clear message and
+   deletes the partial data;
+3. **dedup:** an identical whole-book checksum links the uploader to the existing book (no second
+   copy; it counts against the original uploader's quota only);
+4. insert the book (`processing`) and the uploader's library entry in one transaction, with a small
+   "move note" in the staging folder;
+5. rename into `/<Author>/<Series?>/<Title>/` (suffix ` (2)` if taken), then mark `ready`.
+A crash between 4 and 5 is finished by the retried job, which redoes the rename from the note.
+
+**Quota** = sum of sizes of books the user uploaded whose entry isn't removed, checked (with
+in-flight uploads) before an upload starts.
+
+**Deferred to Phase 2 (moderation):** users with `can_share` sharing their own uploads, and the
+Public review queue. Admin distribution (including directly to Public) is in.
+
+## ADR-0016 — Background jobs
+
+One process, a `jobs` table, N workers (default 2). Claiming is a single
+`UPDATE … WHERE status='queued' AND id=(SELECT … LIMIT 1) RETURNING …`, which is atomic on both
+SQLite and Postgres. Failures retry with backoff 15 s, 1 m, 4 m, 16 m (max 5 attempts); handlers
+mark validation failures `Permanent`. Jobs left `running` by a crash are requeued at startup.
+Periodic jobs (hourly library scan, daily Trash purge, daily removal of 30-day-old "Recently
+removed" entries) are deduplicated so they never pile up. fsnotify triggers a debounced scan; the
+hourly scan is the fallback for mounts where inotify is unreliable.
+
+---
+
 ## Open questions for Jacob
 
 | # | Question | Current choice (until answered) |

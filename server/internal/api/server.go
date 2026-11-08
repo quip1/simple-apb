@@ -3,6 +3,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -13,33 +14,14 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/quip1/simple-apb/server/internal/auth"
 	"github.com/quip1/simple-apb/server/internal/config"
-	"github.com/quip1/simple-apb/server/internal/settings"
 	"github.com/quip1/simple-apb/server/internal/setup"
-	"github.com/quip1/simple-apb/server/internal/store"
 	"github.com/quip1/simple-apb/server/internal/version"
 )
 
 // ErrNotImplemented is returned by operations that exist in the contract but
 // are not built yet. It maps to 501 with code "not_implemented".
 var ErrNotImplemented = errors.New("not implemented")
-
-// App is everything that exists once the instance is set up.
-type App struct {
-	DB   *store.DB
-	Auth *auth.Service
-}
-
-// Settings returns a settings store on the app DB.
-func (a *App) Settings() settings.Store { return settings.Store{Q: a.DB, Enc: a.Auth.Enc} }
-
-// NewApp wires the services for an open, set-up database.
-func NewApp(db *store.DB, secrets *config.Secrets, log *slog.Logger) *App {
-	return &App{DB: db, Auth: &auth.Service{
-		DB: db, Enc: secrets, Tokens: auth.NewTokens(secrets.Derive("jwt")), Limits: auth.DefaultLimits(), Log: log,
-	}}
-}
 
 // Server implements StrictServerInterface. Before setup it runs in "setup
 // mode": only health, instance and /setup endpoints answer.
@@ -48,8 +30,11 @@ type Server struct {
 	Setup          *setup.Service
 	Secrets        *config.Secrets
 	TrustedProxies []netip.Prefix
-	app            atomic.Pointer[App]
-	completing     atomic.Bool
+	AppOptions     AppOptions
+	// BaseCtx bounds background work started after setup completes.
+	BaseCtx    context.Context
+	app        atomic.Pointer[App]
+	completing atomic.Bool
 }
 
 var _ StrictServerInterface = (*Server)(nil)
@@ -69,6 +54,9 @@ func (s *Server) Router() http.Handler {
 	r.Use(s.clientIPMiddleware)
 	r.Use(s.setupGate)
 	r.Use(s.authenticate)
+	uploads := func(w http.ResponseWriter, r *http.Request) { s.App().Uploads.ServeHTTP(w, r) }
+	r.HandleFunc(strings.TrimSuffix(uploadsBase, "/"), uploads)
+	r.HandleFunc(uploadsBase+"*", uploads)
 
 	strict := NewStrictHandlerWithOptions(s, []StrictMiddlewareFunc{withRequest}, StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, _ *http.Request, err error) {

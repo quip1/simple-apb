@@ -11,7 +11,7 @@
 openapi: 3.0.3
 info:
   title: Simple APB API
-  version: 0.2.0
+  version: 0.3.0
   description: |
     REST API for Simple APB. All endpoints live under `/api/v1`.
 
@@ -48,6 +48,8 @@ tags:
     description: Audio files, HLS streams, covers and signed cast URLs
   - name: setup
     description: First-run setup wizard (needs the one-time setup token from the server log)
+  - name: uploads
+    description: Resumable uploads (tus) and background jobs
   - name: admin
     description: Instance administration (admin role only)
 
@@ -915,6 +917,210 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  # ───────────────────────────── Uploads & jobs ───────────────────────
+  /me/uploads:
+    get:
+      tags: [uploads]
+      operationId: listMyUploads
+      summary: My recent uploads and their processing status
+      description: |
+        Files are uploaded with the **tus 1.0 resumable protocol** at `/api/v1/uploads/`
+        (not described operation-by-operation here). Create an upload with
+        `POST /api/v1/uploads/` and headers `Tus-Resumable: 1.0.0`, `Upload-Length`, and
+        `Upload-Metadata` containing `filename` (required) and optionally `sha256`
+        (hex, verified after the last chunk). Accepted: `.m4b`, `.m4a`, `.mp3`, or a `.zip`
+        of one book's mp3 files. Quota is checked before the upload starts.
+        After the final chunk the server imports the book in the background; poll this
+        endpoint (or wait for the push notification) for the result.
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Uploads, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/UploadItem" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /jobs/{jobId}:
+    get:
+      tags: [uploads]
+      operationId: getJob
+      summary: Status of a background job you started (admins can see any)
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Job
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/JobStatus" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ─────────────────────── Admin: master store ────────────────────────
+  /admin/books:
+    get:
+      tags: [admin]
+      operationId: listMasterBooks
+      summary: Browse the master store (every book the server holds)
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/BookStatus" }
+        - { name: q, in: query, description: Title search, schema: { type: string, maxLength: 200 } }
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: A page of books
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MasterBookPage" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/books/{bookId}:
+    get:
+      tags: [admin]
+      operationId: getMasterBook
+      summary: One master-store book with its distributions
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "200":
+          description: Book
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MasterBook" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [admin]
+      operationId: trashBook
+      summary: Move a book to the Trash (hidden everywhere; purged after 30 days)
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "204": { description: Trashed }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/books/{bookId}/restore:
+    post:
+      tags: [admin]
+      operationId: restoreBook
+      summary: Restore a book from the Trash
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "204": { description: Restored }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /admin/books/{bookId}/purge:
+    post:
+      tags: [admin]
+      operationId: purgeBook
+      summary: Permanently delete one trashed book and its files now
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "204": { description: Purged }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /admin/trash/empty:
+    post:
+      tags: [admin]
+      operationId: emptyTrash
+      summary: Permanently delete everything in the Trash
+      description: "Requires typing the number of trashed books, plus the admin password and a TOTP code."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EmptyTrashRequest" }
+      responses:
+        "200":
+          description: Purged
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [purged]
+                properties:
+                  purged: { type: integer }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/distributions:
+    post:
+      tags: [admin]
+      operationId: createDistribution
+      summary: Make a master-store book visible to a group or a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DistributionCreate" }
+      responses:
+        "201":
+          description: Distributed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Distribution" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/distributions/{distributionId}:
+    delete:
+      tags: [admin]
+      operationId: revokeDistribution
+      summary: Revoke a distribution
+      parameters:
+        - name: distributionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Revoked }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/library/scan:
+    post:
+      tags: [admin]
+      operationId: scanLibrary
+      summary: Rescan the library folder now
+      responses:
+        "202":
+          description: Scan queued
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [job_id]
+                properties:
+                  job_id: { type: string, format: uuid }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1624,3 +1830,94 @@ components:
       properties:
         name: { type: string, minLength: 1, maxLength: 64 }
         high_priority: { type: boolean, default: false }
+
+    # ── uploads & jobs ──
+    UploadItem:
+      type: object
+      required: [id, filename, size_bytes, received_bytes, status, created_at, updated_at]
+      properties:
+        id: { type: string }
+        filename: { type: string }
+        size_bytes: { type: integer, format: int64 }
+        received_bytes: { type: integer, format: int64 }
+        status: { type: string, enum: [receiving, processing, done, failed, cancelled] }
+        error: { type: string, description: "Why processing failed (shown to the user)" }
+        book_id: { type: string, format: uuid }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    JobStatus:
+      type: object
+      required: [id, type, status, attempts, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string }
+        status: { type: string, enum: [queued, running, succeeded, failed, cancelled] }
+        attempts: { type: integer }
+        last_error: { type: string }
+        result: { type: object, additionalProperties: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    # ── master store ──
+    BookStatus:
+      type: string
+      enum: [processing, ready, quarantined, trashed]
+
+    MasterBook:
+      type: object
+      required: [id, title, authors, status, origin, folder_path, size_bytes, duration_ms, created_at, distributions]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        authors: { type: array, items: { $ref: "#/components/schemas/PersonRef" } }
+        series: { $ref: "#/components/schemas/SeriesRef" }
+        status: { $ref: "#/components/schemas/BookStatus" }
+        status_reason: { type: string }
+        origin: { type: string, enum: [scan, upload, abs_import] }
+        uploader_id: { type: string, format: uuid }
+        folder_path: { type: string, description: "Relative to the library root" }
+        size_bytes: { type: integer, format: int64 }
+        duration_ms: { type: integer, format: int64 }
+        trashed_at: { type: string, format: date-time }
+        purge_at: { type: string, format: date-time, description: "When the Trash will purge it automatically" }
+        created_at: { type: string, format: date-time }
+        distributions:
+          type: array
+          items: { $ref: "#/components/schemas/Distribution" }
+
+    MasterBookPage:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/MasterBook" } }
+        next_cursor: { type: string }
+
+    DistributionCreate:
+      type: object
+      required: [book_id, target_type, target_id]
+      properties:
+        book_id: { type: string, format: uuid }
+        target_type: { type: string, enum: [group, user] }
+        target_id: { type: string, format: uuid }
+        note: { type: string, maxLength: 500 }
+
+    Distribution:
+      type: object
+      required: [id, book_id, target_type, target_id, target_name, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        book_id: { type: string, format: uuid }
+        target_type: { type: string, enum: [group, user] }
+        target_id: { type: string, format: uuid }
+        target_name: { type: string }
+        note: { type: string }
+        created_at: { type: string, format: date-time }
+
+    EmptyTrashRequest:
+      type: object
+      required: [confirm_count, password, totp_code]
+      properties:
+        confirm_count: { type: integer, minimum: 0, description: "Must equal the number of books in the Trash" }
+        password: { type: string, format: password }
+        totp_code: { type: string, pattern: '^[0-9]{6}$' }

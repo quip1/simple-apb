@@ -19,6 +19,7 @@ import (
 
 	"github.com/quip1/simple-apb/server/internal/api"
 	"github.com/quip1/simple-apb/server/internal/config"
+	"github.com/quip1/simple-apb/server/internal/media"
 	"github.com/quip1/simple-apb/server/internal/setup"
 	"github.com/quip1/simple-apb/server/internal/version"
 )
@@ -53,11 +54,17 @@ func run(log *slog.Logger) error {
 		return err
 	}
 
+	tools := media.DefaultTools()
+	if !tools.Available() {
+		log.Warn("ffprobe/ffmpeg not found; imports will fail until they are installed")
+	}
 	srv := &api.Server{
 		Log:            log,
 		Secrets:        secrets,
 		TrustedProxies: proxies,
 		Setup:          &setup.Service{Paths: paths, Secrets: secrets, Token: setup.NewToken()},
+		AppOptions:     api.AppOptions{Paths: paths, Tools: tools, TrustedProxies: len(proxies) > 0},
+		BaseCtx:        ctx,
 	}
 
 	db, done, err := setup.LoadExisting(ctx, paths, secrets)
@@ -66,7 +73,13 @@ func run(log *slog.Logger) error {
 	}
 	switch {
 	case done:
-		srv.SetApp(api.NewApp(db, secrets, log))
+		app, err := api.NewApp(ctx, db, secrets, log, srv.AppOptions)
+		if err != nil {
+			_ = db.Close()
+			return err
+		}
+		app.Start(ctx)
+		srv.SetApp(app)
 		log.Info("instance ready", "db", string(db.Dialect()))
 	default:
 		if db != nil {
@@ -77,6 +90,7 @@ func run(log *slog.Logger) error {
 	}
 	defer func() {
 		if app := srv.App(); app != nil {
+			app.Jobs.Wait() // let running jobs reach a safe point (ctx is cancelled)
 			if err := app.DB.Close(); err != nil {
 				log.Error("closing database", "err", err)
 			}
