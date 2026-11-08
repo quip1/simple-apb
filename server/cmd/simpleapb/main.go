@@ -2,8 +2,9 @@
 
 // Command simpleapb is the Simple APB server.
 //
-// Phase 0: opens the database, applies migrations and serves the API skeleton.
-// The first-run wizard, lock file / startup check and jobs arrive in Phase 1.
+// On first start (no /config/config.json, or the wizard never finished) it
+// runs in setup mode and prints a one-time setup token to the log. Once the
+// wizard completes it switches to normal mode without a restart.
 package main
 
 import (
@@ -13,12 +14,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 
 	"github.com/quip1/simple-apb/server/internal/api"
-	"github.com/quip1/simple-apb/server/internal/store"
+	"github.com/quip1/simple-apb/server/internal/config"
+	"github.com/quip1/simple-apb/server/internal/setup"
 	"github.com/quip1/simple-apb/server/internal/version"
 )
 
@@ -31,58 +32,66 @@ func main() {
 	}
 }
 
-func env(key, def string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return def
-}
-
 func run(log *slog.Logger) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	configDir := env("SIMPLEAPB_CONFIG_DIR", "/config")
-	listen := env("SIMPLEAPB_LISTEN", ":8080")
-	dialect, err := store.ParseDialect(env("SIMPLEAPB_DB_DIALECT", "sqlite"))
+	paths := config.PathsFromEnv()
+	listen := os.Getenv("SIMPLEAPB_LISTEN")
+	if listen == "" {
+		listen = ":8080"
+	}
+	if err := os.MkdirAll(paths.Config, 0o750); err != nil {
+		return err
+	}
+	secrets, err := config.LoadOrCreateSecrets(paths.Config)
 	if err != nil {
 		return err
 	}
-	dsn := os.Getenv("SIMPLEAPB_DB_DSN")
-	if dialect == store.SQLite && dsn == "" {
-		if err := os.MkdirAll(configDir, 0o750); err != nil {
-			return err
-		}
-		dsn = filepath.Join(configDir, "simpleapb.db")
-	}
-
-	db, err := store.Open(ctx, dialect, dsn)
+	proxies, err := api.ParseTrustedProxies(os.Getenv("SIMPLEAPB_TRUSTED_PROXIES"))
 	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := db.Close(); err != nil {
-			log.Error("closing database", "err", err)
-		}
-	}()
-	if err := store.MigrateUp(ctx, db, dialect); err != nil {
 		return err
 	}
 
 	srv := &api.Server{
-		Instance: api.InstanceInfo{Name: "Simple APB", SetupRequired: true},
-		Log:      log,
+		Log:            log,
+		Secrets:        secrets,
+		TrustedProxies: proxies,
+		Setup:          &setup.Service{Paths: paths, Secrets: secrets, Token: setup.NewToken()},
 	}
+
+	db, done, err := setup.LoadExisting(ctx, paths, secrets)
+	if err != nil {
+		return err
+	}
+	switch {
+	case done:
+		srv.SetApp(api.NewApp(db, secrets, log))
+		log.Info("instance ready", "db", string(db.Dialect()))
+	default:
+		if db != nil {
+			_ = db.Close() // the wizard reopens it
+		}
+		log.Warn("SETUP REQUIRED: open the setup wizard and enter this one-time token",
+			"setup_token", srv.Setup.Token, "url_path", "/setup")
+	}
+	defer func() {
+		if app := srv.App(); app != nil {
+			if err := app.DB.Close(); err != nil {
+				log.Error("closing database", "err", err)
+			}
+		}
+	}()
+
 	httpSrv := &http.Server{
 		Addr:              listen,
 		Handler:           srv.Router(),
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       120 * time.Second,
 	}
-
 	errc := make(chan error, 1)
 	go func() {
-		log.Info("listening", "addr", listen, "version", version.Version, "db", string(dialect))
+		log.Info("listening", "addr", listen, "version", version.Version)
 		errc <- httpSrv.ListenAndServe()
 	}()
 

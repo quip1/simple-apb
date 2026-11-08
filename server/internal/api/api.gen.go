@@ -24,6 +24,30 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for AdminUserPatchStatus.
+const (
+	AdminUserPatchStatusActive     AdminUserPatchStatus = "active"
+	AdminUserPatchStatusBanned     AdminUserPatchStatus = "banned"
+	AdminUserPatchStatusRestricted AdminUserPatchStatus = "restricted"
+	AdminUserPatchStatusSuspended  AdminUserPatchStatus = "suspended"
+)
+
+// Valid indicates whether the value is a known member of the AdminUserPatchStatus enum.
+func (e AdminUserPatchStatus) Valid() bool {
+	switch e {
+	case AdminUserPatchStatusActive:
+		return true
+	case AdminUserPatchStatusBanned:
+		return true
+	case AdminUserPatchStatusRestricted:
+		return true
+	case AdminUserPatchStatusSuspended:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for HealthStatus.
 const (
 	HealthStatusDegraded HealthStatus = "degraded"
@@ -141,6 +165,24 @@ func (e ProgressConflictCode) Valid() bool {
 	}
 }
 
+// Defines values for SetupDatabaseDialect.
+const (
+	Postgres SetupDatabaseDialect = "postgres"
+	Sqlite   SetupDatabaseDialect = "sqlite"
+)
+
+// Valid indicates whether the value is a known member of the SetupDatabaseDialect enum.
+func (e SetupDatabaseDialect) Valid() bool {
+	switch e {
+	case Postgres:
+		return true
+	case Sqlite:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SignupAcceptedStatus.
 const (
 	SignupAcceptedStatusPending SignupAcceptedStatus = "pending"
@@ -150,6 +192,48 @@ const (
 func (e SignupAcceptedStatus) Valid() bool {
 	switch e {
 	case SignupAcceptedStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SignupRequestItemStatus.
+const (
+	SignupRequestItemStatusApproved SignupRequestItemStatus = "approved"
+	SignupRequestItemStatusDenied   SignupRequestItemStatus = "denied"
+	SignupRequestItemStatusPending  SignupRequestItemStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the SignupRequestItemStatus enum.
+func (e SignupRequestItemStatus) Valid() bool {
+	switch e {
+	case SignupRequestItemStatusApproved:
+		return true
+	case SignupRequestItemStatusDenied:
+		return true
+	case SignupRequestItemStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SmtpSettingsTls.
+const (
+	None     SmtpSettingsTls = "none"
+	Starttls SmtpSettingsTls = "starttls"
+	Tls      SmtpSettingsTls = "tls"
+)
+
+// Valid indicates whether the value is a known member of the SmtpSettingsTls enum.
+func (e SmtpSettingsTls) Valid() bool {
+	switch e {
+	case None:
+		return true
+	case Starttls:
+		return true
+	case Tls:
 		return true
 	default:
 		return false
@@ -267,6 +351,27 @@ func (e UserStatus) Valid() bool {
 	}
 }
 
+// Defines values for ListSignupRequestsParamsStatus.
+const (
+	ListSignupRequestsParamsStatusApproved ListSignupRequestsParamsStatus = "approved"
+	ListSignupRequestsParamsStatusDenied   ListSignupRequestsParamsStatus = "denied"
+	ListSignupRequestsParamsStatusPending  ListSignupRequestsParamsStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the ListSignupRequestsParamsStatus enum.
+func (e ListSignupRequestsParamsStatus) Valid() bool {
+	switch e {
+	case ListSignupRequestsParamsStatusApproved:
+		return true
+	case ListSignupRequestsParamsStatusDenied:
+		return true
+	case ListSignupRequestsParamsStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetBookCoverParamsSize.
 const (
 	N1024 GetBookCoverParamsSize = 1024
@@ -350,6 +455,39 @@ func (e ListLibraryParamsSort) Valid() bool {
 		return false
 	}
 }
+
+// AdminUser defines model for AdminUser.
+type AdminUser struct {
+	CreatedAt    time.Time          `json:"created_at"`
+	DisplayName  string             `json:"display_name"`
+	Email        *string            `json:"email,omitempty"`
+	Id           openapi_types.UUID `json:"id"`
+	QuotaBytes   int64              `json:"quota_bytes"`
+	Role         UserRole           `json:"role"`
+	Status       UserStatus         `json:"status"`
+	StatusReason *string            `json:"status_reason,omitempty"`
+	StatusUntil  *time.Time         `json:"status_until,omitempty"`
+	TotpEnabled  bool               `json:"totp_enabled"`
+	Username     string             `json:"username"`
+}
+
+// AdminUserPatch defines model for AdminUserPatch.
+type AdminUserPatch struct {
+	// Notice Warning shown to the user on next login; empty clears it
+	Notice     *string `json:"notice,omitempty"`
+	QuotaBytes *int64  `json:"quota_bytes,omitempty"`
+
+	// Reason Why; written to the audit log
+	Reason string                `json:"reason"`
+	Role   *UserRole             `json:"role,omitempty"`
+	Status *AdminUserPatchStatus `json:"status,omitempty"`
+
+	// StatusUntil Suspension end (status = suspended)
+	StatusUntil *time.Time `json:"status_until,omitempty"`
+}
+
+// AdminUserPatchStatus defines model for AdminUserPatch.Status.
+type AdminUserPatchStatus string
 
 // BookDetail defines model for BookDetail.
 type BookDetail struct {
@@ -469,6 +607,23 @@ type Error struct {
 	Message string `json:"message"`
 }
 
+// Group defines model for Group.
+type Group struct {
+	Builtin bool `json:"builtin"`
+
+	// HighPriority Bandwidth priority class
+	HighPriority bool               `json:"high_priority"`
+	Id           openapi_types.UUID `json:"id"`
+	Members      int                `json:"members"`
+	Name         string             `json:"name"`
+}
+
+// GroupCreate defines model for GroupCreate.
+type GroupCreate struct {
+	HighPriority *bool  `json:"high_priority,omitempty"`
+	Name         string `json:"name"`
+}
+
 // Health defines model for Health.
 type Health struct {
 	Status  HealthStatus `json:"status"`
@@ -500,6 +655,15 @@ type Instance struct {
 
 	// Version Server semver
 	Version string `json:"version"`
+}
+
+// LibraryCheck defines model for LibraryCheck.
+type LibraryCheck struct {
+	// Empty True when the folder has no files yet (a warning, not an error)
+	Empty    bool    `json:"empty"`
+	Exists   bool    `json:"exists"`
+	Message  *string `json:"message,omitempty"`
+	Writable bool    `json:"writable"`
 }
 
 // LibraryPage defines model for LibraryPage.
@@ -555,6 +719,18 @@ type Me struct {
 	TotpEnabled bool       `json:"totp_enabled"`
 	UsedBytes   int64      `json:"used_bytes"`
 	Username    string     `json:"username"`
+}
+
+// NtfySettings defines model for NtfySettings.
+type NtfySettings struct {
+	// InternalUrl How the server reaches ntfy, e.g. http://ntfy:80
+	InternalUrl *string `json:"internal_url,omitempty"`
+
+	// PublicUrl How devices reach ntfy
+	PublicUrl *string `json:"public_url,omitempty"`
+
+	// Token Access token; generated automatically when empty
+	Token *string `json:"token,omitempty"`
 }
 
 // OidcProvider defines model for OidcProvider.
@@ -627,6 +803,11 @@ type ProgressWriteResult struct {
 	Progress Progress `json:"progress"`
 }
 
+// ReasonRequest defines model for ReasonRequest.
+type ReasonRequest struct {
+	Reason *string `json:"reason,omitempty"`
+}
+
 // RecoveryCodes defines model for RecoveryCodes.
 type RecoveryCodes struct {
 	Codes []string `json:"codes"`
@@ -667,6 +848,72 @@ type Session struct {
 	Platform   Platform           `json:"platform"`
 }
 
+// SetupAdmin defines model for SetupAdmin.
+type SetupAdmin struct {
+	DisplayName *string              `json:"display_name,omitempty"`
+	Email       *openapi_types.Email `json:"email,omitempty"`
+	Password    string               `json:"password"`
+	TotpCode    string               `json:"totp_code"`
+
+	// TotpSecret Secret from POST /setup/totp
+	TotpSecret string `json:"totp_secret"`
+	Username   string `json:"username"`
+}
+
+// SetupCheckResult defines model for SetupCheckResult.
+type SetupCheckResult struct {
+	Message *string `json:"message,omitempty"`
+	Ok      bool    `json:"ok"`
+}
+
+// SetupDatabase defines model for SetupDatabase.
+type SetupDatabase struct {
+	Dialect SetupDatabaseDialect `json:"dialect"`
+
+	// Dsn Postgres connection string. Ignored for SQLite (stored at /config/simpleapb.db).
+	Dsn *string `json:"dsn,omitempty"`
+}
+
+// SetupDatabaseDialect defines model for SetupDatabase.Dialect.
+type SetupDatabaseDialect string
+
+// SetupLibrary defines model for SetupLibrary.
+type SetupLibrary struct {
+	Path string `json:"path"`
+}
+
+// SetupRequest defines model for SetupRequest.
+type SetupRequest struct {
+	Admin SetupAdmin `json:"admin"`
+
+	// BaseUrl Public base URL, e.g. https://books.example.com
+	BaseUrl      string        `json:"base_url"`
+	Database     SetupDatabase `json:"database"`
+	EgressMbps   *int          `json:"egress_mbps,omitempty"`
+	InstanceName string        `json:"instance_name"`
+	LibraryPath  string        `json:"library_path"`
+	Ntfy         *NtfySettings `json:"ntfy,omitempty"`
+	PrivacyText  *string       `json:"privacy_text,omitempty"`
+	SignupOpen   *bool         `json:"signup_open,omitempty"`
+	Smtp         *SmtpSettings `json:"smtp,omitempty"`
+	TermsText    *string       `json:"terms_text,omitempty"`
+}
+
+// SetupResult defines model for SetupResult.
+type SetupResult struct {
+	AdminId openapi_types.UUID `json:"admin_id"`
+
+	// RecoveryCodes The admin's one-time recovery codes. Shown once.
+	RecoveryCodes []string `json:"recovery_codes"`
+}
+
+// SetupStatus defines model for SetupStatus.
+type SetupStatus struct {
+	// DatabaseConfigured A database is already chosen (config.json exists); the wizard will reuse it
+	DatabaseConfigured *bool `json:"database_configured,omitempty"`
+	SetupRequired      bool  `json:"setup_required"`
+}
+
 // SignupAccepted defines model for SignupAccepted.
 type SignupAccepted struct {
 	Status SignupAcceptedStatus `json:"status"`
@@ -685,6 +932,40 @@ type SignupRequest struct {
 	Password      string  `json:"password"`
 	TermsAccepted bool    `json:"terms_accepted"`
 	Username      string  `json:"username"`
+}
+
+// SignupRequestItem defines model for SignupRequestItem.
+type SignupRequestItem struct {
+	CreatedAt time.Time               `json:"created_at"`
+	DecidedAt *time.Time              `json:"decided_at,omitempty"`
+	Email     *string                 `json:"email,omitempty"`
+	Id        openapi_types.UUID      `json:"id"`
+	Message   *string                 `json:"message,omitempty"`
+	Status    SignupRequestItemStatus `json:"status"`
+	UserId    openapi_types.UUID      `json:"user_id"`
+	Username  string                  `json:"username"`
+}
+
+// SignupRequestItemStatus defines model for SignupRequestItem.Status.
+type SignupRequestItemStatus string
+
+// SmtpSettings defines model for SmtpSettings.
+type SmtpSettings struct {
+	From     openapi_types.Email `json:"from"`
+	Host     string              `json:"host"`
+	Password *string             `json:"password,omitempty"`
+	Port     int                 `json:"port"`
+	Tls      SmtpSettingsTls     `json:"tls"`
+	Username *string             `json:"username,omitempty"`
+}
+
+// SmtpSettingsTls defines model for SmtpSettings.Tls.
+type SmtpSettingsTls string
+
+// SmtpTestRequest defines model for SmtpTestRequest.
+type SmtpTestRequest struct {
+	Smtp SmtpSettings        `json:"smtp"`
+	To   openapi_types.Email `json:"to"`
 }
 
 // StreamUrlRequest defines model for StreamUrlRequest.
@@ -795,14 +1076,23 @@ type BookId = openapi_types.UUID
 // Cursor defines model for Cursor.
 type Cursor = string
 
+// GroupId defines model for GroupId.
+type GroupId = openapi_types.UUID
+
 // Limit defines model for Limit.
 type Limit = int
 
 // PersonId defines model for PersonId.
 type PersonId = openapi_types.UUID
 
+// RequestId defines model for RequestId.
+type RequestId = openapi_types.UUID
+
 // SessionId defines model for SessionId.
 type SessionId = openapi_types.UUID
+
+// UserId defines model for UserId.
+type UserId = openapi_types.UUID
 
 // BadRequest defines model for BadRequest.
 type BadRequest = Error
@@ -824,6 +1114,20 @@ type TooManyRequests = Error
 
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = Error
+
+// ListSignupRequestsParams defines parameters for ListSignupRequests.
+type ListSignupRequestsParams struct {
+	Status *ListSignupRequestsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+}
+
+// ListSignupRequestsParamsStatus defines parameters for ListSignupRequests.
+type ListSignupRequestsParamsStatus string
+
+// ListUsersParams defines parameters for ListUsers.
+type ListUsersParams struct {
+	Status *UserStatus `form:"status,omitempty" json:"status,omitempty"`
+	Limit  *Limit      `form:"limit,omitempty" json:"limit,omitempty"`
+}
 
 // GetBookCoverParams defines parameters for GetBookCover.
 type GetBookCoverParams struct {
@@ -871,6 +1175,20 @@ type GetSyncDeltaParams struct {
 	Limit *Limit  `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// CreateSetupTotpJSONBody defines parameters for CreateSetupTotp.
+type CreateSetupTotpJSONBody struct {
+	Username string `json:"username"`
+}
+
+// CreateGroupJSONRequestBody defines body for CreateGroup for application/json ContentType.
+type CreateGroupJSONRequestBody = GroupCreate
+
+// DenySignupRequestJSONRequestBody defines body for DenySignupRequest for application/json ContentType.
+type DenySignupRequestJSONRequestBody = ReasonRequest
+
+// PatchUserJSONRequestBody defines body for PatchUser for application/json ContentType.
+type PatchUserJSONRequestBody = AdminUserPatch
+
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequest
 
@@ -892,8 +1210,56 @@ type CreateStreamUrlJSONRequestBody = StreamUrlRequest
 // PutProgressJSONRequestBody defines body for PutProgress for application/json ContentType.
 type PutProgressJSONRequestBody = ProgressUpdate
 
+// CompleteSetupJSONRequestBody defines body for CompleteSetup for application/json ContentType.
+type CompleteSetupJSONRequestBody = SetupRequest
+
+// TestSetupDatabaseJSONRequestBody defines body for TestSetupDatabase for application/json ContentType.
+type TestSetupDatabaseJSONRequestBody = SetupDatabase
+
+// TestSetupLibraryJSONRequestBody defines body for TestSetupLibrary for application/json ContentType.
+type TestSetupLibraryJSONRequestBody = SetupLibrary
+
+// TestSetupSmtpJSONRequestBody defines body for TestSetupSmtp for application/json ContentType.
+type TestSetupSmtpJSONRequestBody = SmtpTestRequest
+
+// CreateSetupTotpJSONRequestBody defines body for CreateSetupTotp for application/json ContentType.
+type CreateSetupTotpJSONRequestBody CreateSetupTotpJSONBody
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// ListGroups Groups
+	// (GET /admin/groups)
+	ListGroups(w http.ResponseWriter, r *http.Request)
+	// CreateGroup Create a group
+	// (POST /admin/groups)
+	CreateGroup(w http.ResponseWriter, r *http.Request)
+	// DeleteGroup Delete a group (the built-in Public group cannot be deleted)
+	// (DELETE /admin/groups/{groupId})
+	DeleteGroup(w http.ResponseWriter, r *http.Request, groupId GroupId)
+	// RemoveGroupMember Remove a user from a group
+	// (DELETE /admin/groups/{groupId}/members/{userId})
+	RemoveGroupMember(w http.ResponseWriter, r *http.Request, groupId GroupId, userId UserId)
+	// AddGroupMember Add a user to a group
+	// (PUT /admin/groups/{groupId}/members/{userId})
+	AddGroupMember(w http.ResponseWriter, r *http.Request, groupId GroupId, userId UserId)
+	// AdminRevokeSession Revoke any user's session
+	// (DELETE /admin/sessions/{sessionId})
+	AdminRevokeSession(w http.ResponseWriter, r *http.Request, sessionId SessionId)
+	// ListSignupRequests Sign-up requests (moderation inbox)
+	// (GET /admin/signup-requests)
+	ListSignupRequests(w http.ResponseWriter, r *http.Request, params ListSignupRequestsParams)
+	// ApproveSignupRequest Approve a sign-up (user becomes active and joins Public)
+	// (POST /admin/signup-requests/{requestId}/approve)
+	ApproveSignupRequest(w http.ResponseWriter, r *http.Request, requestId RequestId)
+	// DenySignupRequest Deny a sign-up
+	// (POST /admin/signup-requests/{requestId}/deny)
+	DenySignupRequest(w http.ResponseWriter, r *http.Request, requestId RequestId)
+	// ListUsers Users
+	// (GET /admin/users)
+	ListUsers(w http.ResponseWriter, r *http.Request, params ListUsersParams)
+	// PatchUser Change a user's status, role, quota or notice (a reason is required)
+	// (PATCH /admin/users/{userId})
+	PatchUser(w http.ResponseWriter, r *http.Request, userId UserId)
 	// Login Log in with username + password
 	// (POST /auth/login)
 	Login(w http.ResponseWriter, r *http.Request)
@@ -972,6 +1338,24 @@ type ServerInterface interface {
 	// GetSeries Series page (books in order, visible to me)
 	// (GET /series/{seriesId})
 	GetSeries(w http.ResponseWriter, r *http.Request, seriesId openapi_types.UUID)
+	// CompleteSetup Finish the wizard (creates the admin, stores settings, switches the server to normal mode)
+	// (POST /setup/complete)
+	CompleteSetup(w http.ResponseWriter, r *http.Request)
+	// TestSetupDatabase Check that a database can be opened
+	// (POST /setup/database/test)
+	TestSetupDatabase(w http.ResponseWriter, r *http.Request)
+	// TestSetupLibrary Check the library path exists and is writable (warns if empty)
+	// (POST /setup/library/test)
+	TestSetupLibrary(w http.ResponseWriter, r *http.Request)
+	// TestSetupSmtp Send a test email with the given SMTP settings
+	// (POST /setup/smtp/test)
+	TestSetupSmtp(w http.ResponseWriter, r *http.Request)
+	// GetSetupStatus Whether the first-run wizard still needs to run
+	// (GET /setup/status)
+	GetSetupStatus(w http.ResponseWriter, r *http.Request)
+	// CreateSetupTotp Generate the first admin's TOTP secret (enrollment is mandatory)
+	// (POST /setup/totp)
+	CreateSetupTotp(w http.ResponseWriter, r *http.Request)
 	// GetHlsPlaylist Low-bitrate HLS playlist for the whole book (generated on demand)
 	// (GET /stream/{bookId}/hls/{profile}/index.m3u8)
 	GetHlsPlaylist(w http.ResponseWriter, r *http.Request, bookId BookId, profile HlsProfile)
@@ -983,6 +1367,72 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
+
+// ListGroups Groups
+// (GET /admin/groups)
+func (_ Unimplemented) ListGroups(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CreateGroup Create a group
+// (POST /admin/groups)
+func (_ Unimplemented) CreateGroup(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteGroup Delete a group (the built-in Public group cannot be deleted)
+// (DELETE /admin/groups/{groupId})
+func (_ Unimplemented) DeleteGroup(w http.ResponseWriter, r *http.Request, groupId GroupId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RemoveGroupMember Remove a user from a group
+// (DELETE /admin/groups/{groupId}/members/{userId})
+func (_ Unimplemented) RemoveGroupMember(w http.ResponseWriter, r *http.Request, groupId GroupId, userId UserId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// AddGroupMember Add a user to a group
+// (PUT /admin/groups/{groupId}/members/{userId})
+func (_ Unimplemented) AddGroupMember(w http.ResponseWriter, r *http.Request, groupId GroupId, userId UserId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// AdminRevokeSession Revoke any user's session
+// (DELETE /admin/sessions/{sessionId})
+func (_ Unimplemented) AdminRevokeSession(w http.ResponseWriter, r *http.Request, sessionId SessionId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListSignupRequests Sign-up requests (moderation inbox)
+// (GET /admin/signup-requests)
+func (_ Unimplemented) ListSignupRequests(w http.ResponseWriter, r *http.Request, params ListSignupRequestsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ApproveSignupRequest Approve a sign-up (user becomes active and joins Public)
+// (POST /admin/signup-requests/{requestId}/approve)
+func (_ Unimplemented) ApproveSignupRequest(w http.ResponseWriter, r *http.Request, requestId RequestId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DenySignupRequest Deny a sign-up
+// (POST /admin/signup-requests/{requestId}/deny)
+func (_ Unimplemented) DenySignupRequest(w http.ResponseWriter, r *http.Request, requestId RequestId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListUsers Users
+// (GET /admin/users)
+func (_ Unimplemented) ListUsers(w http.ResponseWriter, r *http.Request, params ListUsersParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PatchUser Change a user's status, role, quota or notice (a reason is required)
+// (PATCH /admin/users/{userId})
+func (_ Unimplemented) PatchUser(w http.ResponseWriter, r *http.Request, userId UserId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
 
 // Login Log in with username + password
 // (POST /auth/login)
@@ -1140,6 +1590,42 @@ func (_ Unimplemented) GetSeries(w http.ResponseWriter, r *http.Request, seriesI
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// CompleteSetup Finish the wizard (creates the admin, stores settings, switches the server to normal mode)
+// (POST /setup/complete)
+func (_ Unimplemented) CompleteSetup(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// TestSetupDatabase Check that a database can be opened
+// (POST /setup/database/test)
+func (_ Unimplemented) TestSetupDatabase(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// TestSetupLibrary Check the library path exists and is writable (warns if empty)
+// (POST /setup/library/test)
+func (_ Unimplemented) TestSetupLibrary(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// TestSetupSmtp Send a test email with the given SMTP settings
+// (POST /setup/smtp/test)
+func (_ Unimplemented) TestSetupSmtp(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetSetupStatus Whether the first-run wizard still needs to run
+// (GET /setup/status)
+func (_ Unimplemented) GetSetupStatus(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CreateSetupTotp Generate the first admin's TOTP secret (enrollment is mandatory)
+// (POST /setup/totp)
+func (_ Unimplemented) CreateSetupTotp(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // GetHlsPlaylist Low-bitrate HLS playlist for the whole book (generated on demand)
 // (GET /stream/{bookId}/hls/{profile}/index.m3u8)
 func (_ Unimplemented) GetHlsPlaylist(w http.ResponseWriter, r *http.Request, bookId BookId, profile HlsProfile) {
@@ -1160,6 +1646,313 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// ListGroups operation middleware
+func (siw *ServerInterfaceWrapper) ListGroups(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListGroups(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateGroup operation middleware
+func (siw *ServerInterfaceWrapper) CreateGroup(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateGroup(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteGroup operation middleware
+func (siw *ServerInterfaceWrapper) DeleteGroup(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "groupId" -------------
+	var groupId GroupId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "groupId", chi.URLParam(r, "groupId"), &groupId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "groupId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteGroup(w, r, groupId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveGroupMember operation middleware
+func (siw *ServerInterfaceWrapper) RemoveGroupMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "groupId" -------------
+	var groupId GroupId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "groupId", chi.URLParam(r, "groupId"), &groupId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "groupId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "userId" -------------
+	var userId UserId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", chi.URLParam(r, "userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveGroupMember(w, r, groupId, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AddGroupMember operation middleware
+func (siw *ServerInterfaceWrapper) AddGroupMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "groupId" -------------
+	var groupId GroupId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "groupId", chi.URLParam(r, "groupId"), &groupId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "groupId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "userId" -------------
+	var userId UserId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", chi.URLParam(r, "userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddGroupMember(w, r, groupId, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AdminRevokeSession operation middleware
+func (siw *ServerInterfaceWrapper) AdminRevokeSession(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "sessionId" -------------
+	var sessionId SessionId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "sessionId", chi.URLParam(r, "sessionId"), &sessionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sessionId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AdminRevokeSession(w, r, sessionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSignupRequests operation middleware
+func (siw *ServerInterfaceWrapper) ListSignupRequests(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListSignupRequestsParams
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSignupRequests(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ApproveSignupRequest operation middleware
+func (siw *ServerInterfaceWrapper) ApproveSignupRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "requestId" -------------
+	var requestId RequestId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "requestId", chi.URLParam(r, "requestId"), &requestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "requestId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApproveSignupRequest(w, r, requestId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DenySignupRequest operation middleware
+func (siw *ServerInterfaceWrapper) DenySignupRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "requestId" -------------
+	var requestId RequestId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "requestId", chi.URLParam(r, "requestId"), &requestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "requestId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DenySignupRequest(w, r, requestId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListUsers operation middleware
+func (siw *ServerInterfaceWrapper) ListUsers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListUsersParams
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListUsers(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PatchUser operation middleware
+func (siw *ServerInterfaceWrapper) PatchUser(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "userId" -------------
+	var userId UserId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", chi.URLParam(r, "userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchUser(w, r, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // Login operation middleware
 func (siw *ServerInterfaceWrapper) Login(w http.ResponseWriter, r *http.Request) {
@@ -1898,6 +2691,90 @@ func (siw *ServerInterfaceWrapper) GetSeries(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// CompleteSetup operation middleware
+func (siw *ServerInterfaceWrapper) CompleteSetup(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CompleteSetup(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// TestSetupDatabase operation middleware
+func (siw *ServerInterfaceWrapper) TestSetupDatabase(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.TestSetupDatabase(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// TestSetupLibrary operation middleware
+func (siw *ServerInterfaceWrapper) TestSetupLibrary(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.TestSetupLibrary(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// TestSetupSmtp operation middleware
+func (siw *ServerInterfaceWrapper) TestSetupSmtp(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.TestSetupSmtp(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSetupStatus operation middleware
+func (siw *ServerInterfaceWrapper) GetSetupStatus(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSetupStatus(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateSetupTotp operation middleware
+func (siw *ServerInterfaceWrapper) CreateSetupTotp(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateSetupTotp(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetHlsPlaylist operation middleware
 func (siw *ServerInterfaceWrapper) GetHlsPlaylist(w http.ResponseWriter, r *http.Request) {
 
@@ -2174,6 +3051,57 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/books/{bookId}/cover", wrapper.GetBookCover)
 	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/setup/status", wrapper.GetSetupStatus)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/setup/database/test", wrapper.TestSetupDatabase)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/setup/library/test", wrapper.TestSetupLibrary)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/setup/smtp/test", wrapper.TestSetupSmtp)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/setup/totp", wrapper.CreateSetupTotp)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/setup/complete", wrapper.CompleteSetup)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/signup-requests", wrapper.ListSignupRequests)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/signup-requests/{requestId}/approve", wrapper.ApproveSignupRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/signup-requests/{requestId}/deny", wrapper.DenySignupRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/users", wrapper.ListUsers)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/admin/users/{userId}", wrapper.PatchUser)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/groups", wrapper.ListGroups)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/groups", wrapper.CreateGroup)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/admin/groups/{groupId}", wrapper.DeleteGroup)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/admin/groups/{groupId}/members/{userId}", wrapper.RemoveGroupMember)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/admin/groups/{groupId}/members/{userId}", wrapper.AddGroupMember)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/admin/sessions/{sessionId}", wrapper.AdminRevokeSession)
+	})
 
 	return r
 }
@@ -2198,6 +3126,663 @@ type TooManyRequestsJSONResponse struct {
 }
 
 type UnauthorizedJSONResponse Error
+
+type ListGroupsRequestObject struct {
+}
+
+type ListGroupsResponseObject interface {
+	VisitListGroupsResponse(w http.ResponseWriter) error
+}
+
+type ListGroups200JSONResponse []Group
+
+func (response ListGroups200JSONResponse) VisitListGroupsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListGroups401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListGroups401JSONResponse) VisitListGroupsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListGroups403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListGroups403JSONResponse) VisitListGroupsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateGroupRequestObject struct {
+	Body *CreateGroupJSONRequestBody
+}
+
+type CreateGroupResponseObject interface {
+	VisitCreateGroupResponse(w http.ResponseWriter) error
+}
+
+type CreateGroup201JSONResponse Group
+
+func (response CreateGroup201JSONResponse) VisitCreateGroupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateGroup400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateGroup400JSONResponse) VisitCreateGroupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateGroup401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateGroup401JSONResponse) VisitCreateGroupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateGroup403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateGroup403JSONResponse) VisitCreateGroupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateGroup409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CreateGroup409JSONResponse) VisitCreateGroupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteGroupRequestObject struct {
+	GroupId GroupId `json:"groupId"`
+}
+
+type DeleteGroupResponseObject interface {
+	VisitDeleteGroupResponse(w http.ResponseWriter) error
+}
+
+type DeleteGroup204Response struct {
+}
+
+func (response DeleteGroup204Response) VisitDeleteGroupResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteGroup401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteGroup401JSONResponse) VisitDeleteGroupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteGroup403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteGroup403JSONResponse) VisitDeleteGroupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteGroup404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteGroup404JSONResponse) VisitDeleteGroupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveGroupMemberRequestObject struct {
+	GroupId GroupId `json:"groupId"`
+	UserId  UserId  `json:"userId"`
+}
+
+type RemoveGroupMemberResponseObject interface {
+	VisitRemoveGroupMemberResponse(w http.ResponseWriter) error
+}
+
+type RemoveGroupMember204Response struct {
+}
+
+func (response RemoveGroupMember204Response) VisitRemoveGroupMemberResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RemoveGroupMember401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RemoveGroupMember401JSONResponse) VisitRemoveGroupMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveGroupMember403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RemoveGroupMember403JSONResponse) VisitRemoveGroupMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveGroupMember404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response RemoveGroupMember404JSONResponse) VisitRemoveGroupMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddGroupMemberRequestObject struct {
+	GroupId GroupId `json:"groupId"`
+	UserId  UserId  `json:"userId"`
+}
+
+type AddGroupMemberResponseObject interface {
+	VisitAddGroupMemberResponse(w http.ResponseWriter) error
+}
+
+type AddGroupMember204Response struct {
+}
+
+func (response AddGroupMember204Response) VisitAddGroupMemberResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type AddGroupMember401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response AddGroupMember401JSONResponse) VisitAddGroupMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddGroupMember403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response AddGroupMember403JSONResponse) VisitAddGroupMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddGroupMember404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response AddGroupMember404JSONResponse) VisitAddGroupMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminRevokeSessionRequestObject struct {
+	SessionId SessionId `json:"sessionId"`
+}
+
+type AdminRevokeSessionResponseObject interface {
+	VisitAdminRevokeSessionResponse(w http.ResponseWriter) error
+}
+
+type AdminRevokeSession204Response struct {
+}
+
+func (response AdminRevokeSession204Response) VisitAdminRevokeSessionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type AdminRevokeSession401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response AdminRevokeSession401JSONResponse) VisitAdminRevokeSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminRevokeSession403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response AdminRevokeSession403JSONResponse) VisitAdminRevokeSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminRevokeSession404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response AdminRevokeSession404JSONResponse) VisitAdminRevokeSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSignupRequestsRequestObject struct {
+	Params ListSignupRequestsParams
+}
+
+type ListSignupRequestsResponseObject interface {
+	VisitListSignupRequestsResponse(w http.ResponseWriter) error
+}
+
+type ListSignupRequests200JSONResponse []SignupRequestItem
+
+func (response ListSignupRequests200JSONResponse) VisitListSignupRequestsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSignupRequests401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListSignupRequests401JSONResponse) VisitListSignupRequestsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSignupRequests403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListSignupRequests403JSONResponse) VisitListSignupRequestsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveSignupRequestRequestObject struct {
+	RequestId RequestId `json:"requestId"`
+}
+
+type ApproveSignupRequestResponseObject interface {
+	VisitApproveSignupRequestResponse(w http.ResponseWriter) error
+}
+
+type ApproveSignupRequest204Response struct {
+}
+
+func (response ApproveSignupRequest204Response) VisitApproveSignupRequestResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type ApproveSignupRequest401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ApproveSignupRequest401JSONResponse) VisitApproveSignupRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveSignupRequest403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ApproveSignupRequest403JSONResponse) VisitApproveSignupRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveSignupRequest404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ApproveSignupRequest404JSONResponse) VisitApproveSignupRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DenySignupRequestRequestObject struct {
+	RequestId RequestId `json:"requestId"`
+	Body      *DenySignupRequestJSONRequestBody
+}
+
+type DenySignupRequestResponseObject interface {
+	VisitDenySignupRequestResponse(w http.ResponseWriter) error
+}
+
+type DenySignupRequest204Response struct {
+}
+
+func (response DenySignupRequest204Response) VisitDenySignupRequestResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DenySignupRequest401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DenySignupRequest401JSONResponse) VisitDenySignupRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DenySignupRequest403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DenySignupRequest403JSONResponse) VisitDenySignupRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DenySignupRequest404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DenySignupRequest404JSONResponse) VisitDenySignupRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUsersRequestObject struct {
+	Params ListUsersParams
+}
+
+type ListUsersResponseObject interface {
+	VisitListUsersResponse(w http.ResponseWriter) error
+}
+
+type ListUsers200JSONResponse []AdminUser
+
+func (response ListUsers200JSONResponse) VisitListUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUsers401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListUsers401JSONResponse) VisitListUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUsers403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListUsers403JSONResponse) VisitListUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchUserRequestObject struct {
+	UserId UserId `json:"userId"`
+	Body   *PatchUserJSONRequestBody
+}
+
+type PatchUserResponseObject interface {
+	VisitPatchUserResponse(w http.ResponseWriter) error
+}
+
+type PatchUser200JSONResponse AdminUser
+
+func (response PatchUser200JSONResponse) VisitPatchUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchUser400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response PatchUser400JSONResponse) VisitPatchUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchUser401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response PatchUser401JSONResponse) VisitPatchUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchUser403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PatchUser403JSONResponse) VisitPatchUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchUser404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response PatchUser404JSONResponse) VisitPatchUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type LoginRequestObject struct {
 	Body *LoginJSONRequestBody
@@ -3521,6 +5106,291 @@ func (response GetSeries404JSONResponse) VisitGetSeriesResponse(w http.ResponseW
 	return err
 }
 
+type CompleteSetupRequestObject struct {
+	Body *CompleteSetupJSONRequestBody
+}
+
+type CompleteSetupResponseObject interface {
+	VisitCompleteSetupResponse(w http.ResponseWriter) error
+}
+
+type CompleteSetup200JSONResponse SetupResult
+
+func (response CompleteSetup200JSONResponse) VisitCompleteSetupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteSetup400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CompleteSetup400JSONResponse) VisitCompleteSetupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteSetup401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CompleteSetup401JSONResponse) VisitCompleteSetupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteSetup409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CompleteSetup409JSONResponse) VisitCompleteSetupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TestSetupDatabaseRequestObject struct {
+	Body *TestSetupDatabaseJSONRequestBody
+}
+
+type TestSetupDatabaseResponseObject interface {
+	VisitTestSetupDatabaseResponse(w http.ResponseWriter) error
+}
+
+type TestSetupDatabase200JSONResponse SetupCheckResult
+
+func (response TestSetupDatabase200JSONResponse) VisitTestSetupDatabaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TestSetupDatabase401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response TestSetupDatabase401JSONResponse) VisitTestSetupDatabaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TestSetupDatabase409JSONResponse struct{ ConflictJSONResponse }
+
+func (response TestSetupDatabase409JSONResponse) VisitTestSetupDatabaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TestSetupLibraryRequestObject struct {
+	Body *TestSetupLibraryJSONRequestBody
+}
+
+type TestSetupLibraryResponseObject interface {
+	VisitTestSetupLibraryResponse(w http.ResponseWriter) error
+}
+
+type TestSetupLibrary200JSONResponse LibraryCheck
+
+func (response TestSetupLibrary200JSONResponse) VisitTestSetupLibraryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TestSetupLibrary401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response TestSetupLibrary401JSONResponse) VisitTestSetupLibraryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TestSetupLibrary409JSONResponse struct{ ConflictJSONResponse }
+
+func (response TestSetupLibrary409JSONResponse) VisitTestSetupLibraryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TestSetupSmtpRequestObject struct {
+	Body *TestSetupSmtpJSONRequestBody
+}
+
+type TestSetupSmtpResponseObject interface {
+	VisitTestSetupSmtpResponse(w http.ResponseWriter) error
+}
+
+type TestSetupSmtp200JSONResponse SetupCheckResult
+
+func (response TestSetupSmtp200JSONResponse) VisitTestSetupSmtpResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TestSetupSmtp401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response TestSetupSmtp401JSONResponse) VisitTestSetupSmtpResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TestSetupSmtp409JSONResponse struct{ ConflictJSONResponse }
+
+func (response TestSetupSmtp409JSONResponse) VisitTestSetupSmtpResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSetupStatusRequestObject struct {
+}
+
+type GetSetupStatusResponseObject interface {
+	VisitGetSetupStatusResponse(w http.ResponseWriter) error
+}
+
+type GetSetupStatus200JSONResponse SetupStatus
+
+func (response GetSetupStatus200JSONResponse) VisitGetSetupStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateSetupTotpRequestObject struct {
+	Body *CreateSetupTotpJSONRequestBody
+}
+
+type CreateSetupTotpResponseObject interface {
+	VisitCreateSetupTotpResponse(w http.ResponseWriter) error
+}
+
+type CreateSetupTotp200JSONResponse TotpEnrollment
+
+func (response CreateSetupTotp200JSONResponse) VisitCreateSetupTotpResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateSetupTotp401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateSetupTotp401JSONResponse) VisitCreateSetupTotpResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateSetupTotp409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CreateSetupTotp409JSONResponse) VisitCreateSetupTotpResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetHlsPlaylistRequestObject struct {
 	BookId  BookId     `json:"bookId"`
 	Profile HlsProfile `json:"profile"`
@@ -3638,6 +5508,39 @@ func (response GetHlsSegment404JSONResponse) VisitGetHlsSegmentResponse(w http.R
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// ListGroups Groups
+	// (GET /admin/groups)
+	ListGroups(ctx context.Context, request ListGroupsRequestObject) (ListGroupsResponseObject, error)
+	// CreateGroup Create a group
+	// (POST /admin/groups)
+	CreateGroup(ctx context.Context, request CreateGroupRequestObject) (CreateGroupResponseObject, error)
+	// DeleteGroup Delete a group (the built-in Public group cannot be deleted)
+	// (DELETE /admin/groups/{groupId})
+	DeleteGroup(ctx context.Context, request DeleteGroupRequestObject) (DeleteGroupResponseObject, error)
+	// RemoveGroupMember Remove a user from a group
+	// (DELETE /admin/groups/{groupId}/members/{userId})
+	RemoveGroupMember(ctx context.Context, request RemoveGroupMemberRequestObject) (RemoveGroupMemberResponseObject, error)
+	// AddGroupMember Add a user to a group
+	// (PUT /admin/groups/{groupId}/members/{userId})
+	AddGroupMember(ctx context.Context, request AddGroupMemberRequestObject) (AddGroupMemberResponseObject, error)
+	// AdminRevokeSession Revoke any user's session
+	// (DELETE /admin/sessions/{sessionId})
+	AdminRevokeSession(ctx context.Context, request AdminRevokeSessionRequestObject) (AdminRevokeSessionResponseObject, error)
+	// ListSignupRequests Sign-up requests (moderation inbox)
+	// (GET /admin/signup-requests)
+	ListSignupRequests(ctx context.Context, request ListSignupRequestsRequestObject) (ListSignupRequestsResponseObject, error)
+	// ApproveSignupRequest Approve a sign-up (user becomes active and joins Public)
+	// (POST /admin/signup-requests/{requestId}/approve)
+	ApproveSignupRequest(ctx context.Context, request ApproveSignupRequestRequestObject) (ApproveSignupRequestResponseObject, error)
+	// DenySignupRequest Deny a sign-up
+	// (POST /admin/signup-requests/{requestId}/deny)
+	DenySignupRequest(ctx context.Context, request DenySignupRequestRequestObject) (DenySignupRequestResponseObject, error)
+	// ListUsers Users
+	// (GET /admin/users)
+	ListUsers(ctx context.Context, request ListUsersRequestObject) (ListUsersResponseObject, error)
+	// PatchUser Change a user's status, role, quota or notice (a reason is required)
+	// (PATCH /admin/users/{userId})
+	PatchUser(ctx context.Context, request PatchUserRequestObject) (PatchUserResponseObject, error)
 	// Login Log in with username + password
 	// (POST /auth/login)
 	Login(ctx context.Context, request LoginRequestObject) (LoginResponseObject, error)
@@ -3716,6 +5619,24 @@ type StrictServerInterface interface {
 	// GetSeries Series page (books in order, visible to me)
 	// (GET /series/{seriesId})
 	GetSeries(ctx context.Context, request GetSeriesRequestObject) (GetSeriesResponseObject, error)
+	// CompleteSetup Finish the wizard (creates the admin, stores settings, switches the server to normal mode)
+	// (POST /setup/complete)
+	CompleteSetup(ctx context.Context, request CompleteSetupRequestObject) (CompleteSetupResponseObject, error)
+	// TestSetupDatabase Check that a database can be opened
+	// (POST /setup/database/test)
+	TestSetupDatabase(ctx context.Context, request TestSetupDatabaseRequestObject) (TestSetupDatabaseResponseObject, error)
+	// TestSetupLibrary Check the library path exists and is writable (warns if empty)
+	// (POST /setup/library/test)
+	TestSetupLibrary(ctx context.Context, request TestSetupLibraryRequestObject) (TestSetupLibraryResponseObject, error)
+	// TestSetupSmtp Send a test email with the given SMTP settings
+	// (POST /setup/smtp/test)
+	TestSetupSmtp(ctx context.Context, request TestSetupSmtpRequestObject) (TestSetupSmtpResponseObject, error)
+	// GetSetupStatus Whether the first-run wizard still needs to run
+	// (GET /setup/status)
+	GetSetupStatus(ctx context.Context, request GetSetupStatusRequestObject) (GetSetupStatusResponseObject, error)
+	// CreateSetupTotp Generate the first admin's TOTP secret (enrollment is mandatory)
+	// (POST /setup/totp)
+	CreateSetupTotp(ctx context.Context, request CreateSetupTotpRequestObject) (CreateSetupTotpResponseObject, error)
 	// GetHlsPlaylist Low-bitrate HLS playlist for the whole book (generated on demand)
 	// (GET /stream/{bookId}/hls/{profile}/index.m3u8)
 	GetHlsPlaylist(ctx context.Context, request GetHlsPlaylistRequestObject) (GetHlsPlaylistResponseObject, error)
@@ -3761,6 +5682,314 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// ListGroups operation middleware
+func (sh *strictHandler) ListGroups(w http.ResponseWriter, r *http.Request) {
+	var request ListGroupsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListGroups(ctx, request.(ListGroupsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListGroups")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListGroupsResponseObject); ok {
+		if err := validResponse.VisitListGroupsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateGroup operation middleware
+func (sh *strictHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
+	var request CreateGroupRequestObject
+
+	var body CreateGroupJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateGroup(ctx, request.(CreateGroupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateGroup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateGroupResponseObject); ok {
+		if err := validResponse.VisitCreateGroupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteGroup operation middleware
+func (sh *strictHandler) DeleteGroup(w http.ResponseWriter, r *http.Request, groupId GroupId) {
+	var request DeleteGroupRequestObject
+
+	request.GroupId = groupId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteGroup(ctx, request.(DeleteGroupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteGroup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteGroupResponseObject); ok {
+		if err := validResponse.VisitDeleteGroupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RemoveGroupMember operation middleware
+func (sh *strictHandler) RemoveGroupMember(w http.ResponseWriter, r *http.Request, groupId GroupId, userId UserId) {
+	var request RemoveGroupMemberRequestObject
+
+	request.GroupId = groupId
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RemoveGroupMember(ctx, request.(RemoveGroupMemberRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RemoveGroupMember")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RemoveGroupMemberResponseObject); ok {
+		if err := validResponse.VisitRemoveGroupMemberResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AddGroupMember operation middleware
+func (sh *strictHandler) AddGroupMember(w http.ResponseWriter, r *http.Request, groupId GroupId, userId UserId) {
+	var request AddGroupMemberRequestObject
+
+	request.GroupId = groupId
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AddGroupMember(ctx, request.(AddGroupMemberRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AddGroupMember")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AddGroupMemberResponseObject); ok {
+		if err := validResponse.VisitAddGroupMemberResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AdminRevokeSession operation middleware
+func (sh *strictHandler) AdminRevokeSession(w http.ResponseWriter, r *http.Request, sessionId SessionId) {
+	var request AdminRevokeSessionRequestObject
+
+	request.SessionId = sessionId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AdminRevokeSession(ctx, request.(AdminRevokeSessionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AdminRevokeSession")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AdminRevokeSessionResponseObject); ok {
+		if err := validResponse.VisitAdminRevokeSessionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListSignupRequests operation middleware
+func (sh *strictHandler) ListSignupRequests(w http.ResponseWriter, r *http.Request, params ListSignupRequestsParams) {
+	var request ListSignupRequestsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListSignupRequests(ctx, request.(ListSignupRequestsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListSignupRequests")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListSignupRequestsResponseObject); ok {
+		if err := validResponse.VisitListSignupRequestsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ApproveSignupRequest operation middleware
+func (sh *strictHandler) ApproveSignupRequest(w http.ResponseWriter, r *http.Request, requestId RequestId) {
+	var request ApproveSignupRequestRequestObject
+
+	request.RequestId = requestId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ApproveSignupRequest(ctx, request.(ApproveSignupRequestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ApproveSignupRequest")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ApproveSignupRequestResponseObject); ok {
+		if err := validResponse.VisitApproveSignupRequestResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DenySignupRequest operation middleware
+func (sh *strictHandler) DenySignupRequest(w http.ResponseWriter, r *http.Request, requestId RequestId) {
+	var request DenySignupRequestRequestObject
+
+	request.RequestId = requestId
+
+	var body DenySignupRequestJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		if !errors.Is(err, io.EOF) {
+			sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+			return
+		}
+	} else {
+		request.Body = &body
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DenySignupRequest(ctx, request.(DenySignupRequestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DenySignupRequest")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DenySignupRequestResponseObject); ok {
+		if err := validResponse.VisitDenySignupRequestResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListUsers operation middleware
+func (sh *strictHandler) ListUsers(w http.ResponseWriter, r *http.Request, params ListUsersParams) {
+	var request ListUsersRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListUsers(ctx, request.(ListUsersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListUsers")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListUsersResponseObject); ok {
+		if err := validResponse.VisitListUsersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PatchUser operation middleware
+func (sh *strictHandler) PatchUser(w http.ResponseWriter, r *http.Request, userId UserId) {
+	var request PatchUserRequestObject
+
+	request.UserId = userId
+
+	var body PatchUserJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PatchUser(ctx, request.(PatchUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PatchUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PatchUserResponseObject); ok {
+		if err := validResponse.VisitPatchUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // Login operation middleware
@@ -4475,6 +6704,185 @@ func (sh *strictHandler) GetSeries(w http.ResponseWriter, r *http.Request, serie
 	}
 }
 
+// CompleteSetup operation middleware
+func (sh *strictHandler) CompleteSetup(w http.ResponseWriter, r *http.Request) {
+	var request CompleteSetupRequestObject
+
+	var body CompleteSetupJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CompleteSetup(ctx, request.(CompleteSetupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CompleteSetup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CompleteSetupResponseObject); ok {
+		if err := validResponse.VisitCompleteSetupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// TestSetupDatabase operation middleware
+func (sh *strictHandler) TestSetupDatabase(w http.ResponseWriter, r *http.Request) {
+	var request TestSetupDatabaseRequestObject
+
+	var body TestSetupDatabaseJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.TestSetupDatabase(ctx, request.(TestSetupDatabaseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "TestSetupDatabase")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(TestSetupDatabaseResponseObject); ok {
+		if err := validResponse.VisitTestSetupDatabaseResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// TestSetupLibrary operation middleware
+func (sh *strictHandler) TestSetupLibrary(w http.ResponseWriter, r *http.Request) {
+	var request TestSetupLibraryRequestObject
+
+	var body TestSetupLibraryJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.TestSetupLibrary(ctx, request.(TestSetupLibraryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "TestSetupLibrary")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(TestSetupLibraryResponseObject); ok {
+		if err := validResponse.VisitTestSetupLibraryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// TestSetupSmtp operation middleware
+func (sh *strictHandler) TestSetupSmtp(w http.ResponseWriter, r *http.Request) {
+	var request TestSetupSmtpRequestObject
+
+	var body TestSetupSmtpJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.TestSetupSmtp(ctx, request.(TestSetupSmtpRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "TestSetupSmtp")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(TestSetupSmtpResponseObject); ok {
+		if err := validResponse.VisitTestSetupSmtpResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSetupStatus operation middleware
+func (sh *strictHandler) GetSetupStatus(w http.ResponseWriter, r *http.Request) {
+	var request GetSetupStatusRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSetupStatus(ctx, request.(GetSetupStatusRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSetupStatus")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSetupStatusResponseObject); ok {
+		if err := validResponse.VisitGetSetupStatusResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateSetupTotp operation middleware
+func (sh *strictHandler) CreateSetupTotp(w http.ResponseWriter, r *http.Request) {
+	var request CreateSetupTotpRequestObject
+
+	var body CreateSetupTotpJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateSetupTotp(ctx, request.(CreateSetupTotpRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateSetupTotp")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateSetupTotpResponseObject); ok {
+		if err := validResponse.VisitCreateSetupTotpResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetHlsPlaylist operation middleware
 func (sh *strictHandler) GetHlsPlaylist(w http.ResponseWriter, r *http.Request, bookId BookId, profile HlsProfile) {
 	var request GetHlsPlaylistRequestObject
@@ -4535,124 +6943,158 @@ func (sh *strictHandler) GetHlsSegment(w http.ResponseWriter, r *http.Request, b
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"3H3/cts48uerdPGm6uwMJdlxkt1xauoqk0km2UsmLtvZubo4J0FkS8KYBDgAaEWTddX9dXV/X91T3GPt",
-	"k1w1AFKkBFryz+x+/0osgkCju9FofLrR/BolMi+kQGF0dPg1KphiORpU9q+fpDx/m9L/uIgOo4KZWRRH",
-	"guUYHUZj9zCOFP5RcoVpdGhUiXGkkxnmjN6aSJUzEx1GZcmppVkU9KY2iotpdHkZRy9LpaWitinqRPHC",
-	"cElDfSjYHyVCwaZcMPoNEtsSJkrmMBL4xQzdL6ModtT9UaJaLMlzT6MmOevDv8n0kZITnmHHJAv/9KpZ",
-	"fqdwEh1G/2mwZOXAPdWDxgA03juec1MPtUJxZh82e05xwsrMRIdP9+IoZ194XubR4eM9+osL99d+zVYu",
-	"DE5R2YGOUGkpOmVXVI9vJ70T1JpfMYyun99mnEt6WRdSaHRaydJj/KNEbTmZSGFQ2P+yosh4YtVl8Lsm",
-	"Pfq6pZheKSWVG6qth2/FBct4CsoPSCorxSTjyQMMXo0Ec25mtAAUCgPaMINEyGupxjxNUdw/Jb9KAyzL",
-	"5BxTGvkXKfAhBoVMiikqYBeMZ2yc2Wn/Ks1rWYr0YWY9oaFgRyoQ0sAF13ycIRgJC1nuEjmnUr5nYuE1",
-	"Ut8/VcfMIFhbgbRaZshSb66P0ahF78XEoGqPs2YgqNePgpVmJhX/Ex+IlzQeCkM9kx5dVkag3mt+RsN4",
-	"ZinIsg+T6PDT1aPROydlnjO1iC7jr1GhZIHKcGcnmOYiYPbjKJmxotriuMFcb5rVS/cCves7Y0qxRbQ6",
-	"y8BYZPq3H4gm9Jo7PV8dacb0EIty3BhmLGWGTNBTrsdhAjImpiWbYvBhUY4zrmeYDhfIVEhVlm1UsAfN",
-	"/8TheGFQt0w5F+bZkygOdGfYdHt+nLLpMU7WuXHZ3E8+eSY3BOuHaZHX4ODnuj85/h0TE11+voyjmvnr",
-	"3ohAYGXKJdBIfRjJyUSjGeZ6BDkrNHADUhgJZoYwzeSYZUDuERieY8YF9qN4RTnH3ChmcHg+LnSY74lM",
-	"MaFH+IXlRWZnz5L1/TGO0lLZtTrMtxUCT7fYeOOIixS/hKnLeY5D93OLQuLSIC+ehLqrubYllXrGHj99",
-	"dhdqt6IvdrZuck2q2pxcUR4njubEawLX1SmOmqbpcM0ypSmmQ2ZatKfMYI8UJsQ6Z6q3XzjO/wuuHZrK",
-	"BaphqbJ1TT/GjBl+gfDx+N1zYGkKo/9CbPhxdDeKN6sdloAJ204pBc3D3BkzCiWnCvXmTqp2VpdyeVFL",
-	"sM3BEyRbYC2BwgSFyRZD3x70DLNJFG8pc42K40a6TmwrPzktS5Xgplfe8bFianHiGtNr5dhwk4X3iO4n",
-	"ZUH0X0eRQ+vQ9b9U8aaEV1fkUnPrubbICK3EavNek5R/UEkrZLdhhyVKam3tvt5dN+Mo0mtY3W5zqg1T",
-	"17CMXTJZ5a83cRWL61HiivAgwzKOwvwdleZS/FIylQZ4Z9toGGMm5zCqBh1BXmoD40wm5+7UchZ9tOKB",
-	"qslZ9Hz5ViLzHEVKL+qZnAMDLScGxkwIVOvcZiJVkqeb9NuTfsS4ZdbcuzbXemV83Te4SOVcX+utywDz",
-	"f8YLnuBbMZGBbaMohheuA/ozZ1/eoZiaWXR48DhknW1XQx4Q3y8oUNGiASkShAIVcKENy7Io3myBfcfu",
-	"kN+iY39vL9C+yJihTjea2Krdqh4vZ9IevNF13OJOSK1fTSaY0N52hCrnFpjQoQ1Ql5kBObGnlT8BL1hW",
-	"OgRqRxtmSg3//F//B5TM0P6n1GRBLlApnqJ7Rq6n/Y9lKfHX4zghA5IwMUwxQ4NDOe/YGKkNptwMczQs",
-	"ZYZ1NyukNkPrsSfdjRRecJx3P9czprD7cVlkkqWh5ytiazQOTSJenXxz9Bal63MLCtiePddWDTlugW3a",
-	"EJ4AOUtmXGBPIUvtD9Q6BuxP+zDiDvwZJgpTFIazTI9iGLEkkaUwwwJFysWUfrKuvD+Tj/rhNUNH28r7",
-	"40QFy44ahDpUbG1SOWrNpoEJvClzJpZ0vxJTOqWBbw87ibfQ1q6aGXIFci7AKCZ0Zpe+wS8GxgsY0ZxH",
-	"u/2N2zW1i5YkhWTwBllmZutCcEvH7ZiEWn6K5LldzFPFUkyjz2tjx1HD1F1Nl+98+UaQshbU2+blKJPz",
-	"EfwIb171Xrx4CQePgY5lkEshYxjlmPIyp+f08NkT91AbVCijuJ5QJueWOdQ4OJ+33hyEDDtvGvblcepi",
-	"P6RLiSwWik9nZphIYZiDItda5VwMnRI0+74S5ljf+C8rLDcwgORpMiyUvODpdcCUDzxNjvxbYYecX7Bk",
-	"MST1DI6r0ZTFcKkAq9I8VSVCKQzPrF834UqbnioFzPmfTKXAyZ0TFvaI4jUbFkeaT0VZDGXRdVAxqHLd",
-	"TV+D26tHA3WBCjTmF6g2rja/w1W9xS0tCYq3Tfoao9YkFlom/mxwxKYBPa3luzWYtUTn1uTciOGss+rF",
-	"WKOoD1IZ04ZiQVucKCxhV0zspD4h1YZo3tilUk4dj0vj+Fl7qNYDCK7qd3LKRSMe0eaY81Y2carh9NEC",
-	"YFrPpWqfhusfAySQD9KxSlfYU7eMmx16IoNcc7Nz0ZetzbqRpqF3Ia4ZeY5iM/xHrSoP23aazFiWoQht",
-	"iEcKrc7MZyhg5H21H6FFy+g5uHjORCp4CjkXpUHd72LqJvreY9deFOLl+wADU66LjC2GnUYWc4+I15rg",
-	"fglQvCV+ksmEZSuwHYpQSyENTwKcfi9TtAd0mDMluJiCkc7PsKcJKSAjtYmBT4CJRZC9RdsJvzKmEHLc",
-	"L+Poj1IatgQB2zTuwY9QimWYZItDNfn0m2j5qFEdSwfQL5V/0xsnrmWlxCjIZUvDm0upMb0WoL796rf6",
-	"0DABLeXz84+X3lSL1ja7W2TWKtWWamgJtPb+6y8Gnm45yVZPIUIcJBje5QgBurNdbmtQc2sBemk5Krvn",
-	"Rojg+gZ+P9QEqWgc+qvNocJvPCYTW5xliZ3EkTQzVMEN46gB066La7jlxLzDZPT2yHsLRbkuNBIIBzrH",
-	"81rgfyE1vwpmr3NB9oJRlAKxTfwkk8xEjYySg/7TZi/9p3U/oszH3sy0wN6gY6swQYod+HncABCuZNme",
-	"c9wCgJYybBFVTTSoi155mqkbYZCg0tQqKjBMqlc+Bw9i7uEwaJjiiItE5vT/a8QWtOXl9m+Ez+hNyuo+",
-	"GwRdxSUH2AZ4dN+Lpz6VBTdGOgQM9UIkHUr4G/l9ZsY1uFHdqUGXSYJaT8osW4B7GyrhWi/QvkF61z8T",
-	"HzXBIhJSNEhpN4ob1JCzFIG7k4hmOYKcTGxwwNmt/pnYOqRzu5WsUMusNMGz5atkJoHBqCH4kUuWY/Bk",
-	"7wea1USqBN187cyATQwqOy2LYiYzqTHorN2JCVlR1O0W+OY1/RtNxaG2QcQ84yGM4DXLNLqjAs3f8WPO",
-	"NMgsRQU7Fhar6Bjtgpkx11IbqTAlUydVCkyk9i0+FfRzP4gnXD/CuMKqahaNrkIcOUYbHlu8lCnqsIlr",
-	"uzXrkBH78tY93Hcpho2/rkzAcH2HiZoo1LPOA7Jyz4f2QLjZ52g3Dw3o4qH/MT27Zaz3pp5dHYJcOTv7",
-	"xVibOTsQMO1A4h2Lh59F+2dRDGfR4/7Ts2j3vhxHn1S6Mfy1vhsrvGY4Oo58UmUARCQzybXnhqUIcnZu",
-	"D7szrPNBQ+v9bj3GbU/1dndEFNfzLG8bmWuG5LYPz62Q2xLdUiZB5bAA54skwcJguq4j64CUj9IE/Lft",
-	"kRs3aqcNY1O0fiJXeZfzcg0YpzPi86FwUSMQ0tgUVFJEluZcRHEzCPs0HITdgCo2Onj89Jm1/suobqA/",
-	"B4KzhiSCWIYKRIkPHre6PyDijEFFk/wfn1jvzxe9/77X+2HY733+/ruNZ4YwptmWyRq5QSkbhSz/qLJO",
-	"QRfNAJJPzY+k4nRJIWuEgho/bYgKXV5FR3ATb6RurckEvxRcob6WCagTVMNoKrnIo2o+9q5FtXW2CaNu",
-	"tjV5YfIDOZ3OpFDzkLzWEmQzHU5qa82FQn2DKqa3UbkaHA2qzEIkP2Nm2DpDuiIbR0zbjXWkuUhwBBQG",
-	"gU7hlFnWEeCa18cdroEBtQQtWKFn0sCOkNUAu8E9ilJhc9kV5c9crGR9ZHKJaE9kBsaY0FmoyognMJjO",
-	"D1CF9yGZMTHFtKkyt/C2mk70dkl/jTP1amdG5mNtpLhGZvZp9crGZOT64lHN4yVDG/NoURHSLZ/7fFNP",
-	"75y7KxKVTZqisKQkpTYyHKC+vqtqBwkSX0du1ndLeyAf3sRW+Ve7zgpxfTy4SedrJ5GVA3ZemIU1IXMc",
-	"Q5VdsZNIec6R1qBGYzN+kKW7G+1KayZxgCer9ATnFuZ8paiBYGSG13WQURhuFk1F8ro8RGFWNZpOLjlT",
-	"5xaAyjJMOqOmoaS0V3Yo4CnsEJtb49iTdjXSofV8aDDgW/DaTyGunNWaCWH2meKl8xs63YAKLGx6LXu9",
-	"Hz5/fXb53XZJNF0jvxJKZlmOIjCqNAWlpA1LxTvSIhKFgZPMT0zjwWPwjzeRVzdrDtdF7t9R8cnijvjk",
-	"ou0EYAyrF8162Hg1Bnz1bFbah+ZRR/SacQrvVNsYcEh9G0G9wFGD1jPFK+2ipZcSF4PUpS5stistFSYE",
-	"NvQxOEwzWzSAnNTZsx22cJkgswlU8f+PW52uc8tpWam4WZzQvuhRFWQK1YvSzJZ/va6My99+O41W74Lt",
-	"P+25yDs4uwfWxDm00kaOB97W9avbsNY/sR0v9WZmTOFAeLLA1fArmDCOB1aYfXhjTPFBZIsYTliOJ9zg",
-	"j+/Ylz6QGLFnnRU63PuDvQaWaQkCMYXRf+u9PDl+3bN7ms3us1dd3biNy66sGA89VLCkkhX8v+LChYvJ",
-	"raejJDOlCqUk8qnAFFy7Jk9GRx9OTmFgcaHBV3fv+nLg2vVKlS1pWrlRrPl0nZJLCwNN5DoBx69OTuHF",
-	"0Vu7y51wyg2AF0c/9eFFlgGKtJCc9ryMYjylIJx0NGAFH1zsj/pn4kw8evRSigsyt1LoR4/ORA9e0XqG",
-	"6vouJEw5YEkQV13YqOe1fATuKmOf3nv7swamED5+fPvzxV/AKa7uQwVUabshVJcDXFuPlEPOs4xrTKRI",
-	"te3slOeoDcsL1+749Us4ODj4AT6evrTPbeKoJhDcbiwj+/cInOvn0tgZ6I6EUZc9aft5x7Vp8In6k+4e",
-	"u7+83rjOvjNyv42Ai7h9oR1kaXZth1WWffPiZEXPT3Y5tFfQDisKvQs2qoFnAmDUVMoReGelyEq9otWe",
-	"97Azx/Gui2hkPEGf9OPV6cUvR+96B/29nlS9jBm7GO2By65FfTgYzOfz/lSUfammA/++HrBpkdFr/ZnJ",
-	"s8bthWipYqR1jVy3w2ivv9/fo7ayQMEKHh1G1MOBPeSbmbU7A2LLwBoM+rOQOrD7HaMplfAM0jHxZtRO",
-	"CaoFPJPK9Ei5U6i3DDASCmYZfCb8OrTDUh+DC7v/jfpw5Cz/IEXBMSXJKw1TNPBk76Dqn/TEHp3OhGYL",
-	"DVo6PpNNZ8Zfo3cJV/66PGrzk0wXd3Y5t5WqdtneBYwqcfWi/eO9vbse2/UeuiD8Tk6nmNrVIBW45QsT",
-	"lhiprBl2N8+f7O13jVSTPmjdbLYvHWx+aXmbnt54/MPmN1Zvfje3x+jw02fa8P0FQJodYetWFSrACr6H",
-	"ZlafvRf7yV6Dij5TX7V+y9I0FXxNYej5muierK8Fz2JqfjNWXjan9Eqk1lxWdQl81LWxA3bMyG/u3Wv2",
-	"dIYUhwPf0Bs3QjpcQj5BxX04xlLTjs0EsIzM8aKnJG3m9Ytnwr2p8EKeo8Py5zOZ4QqtsGNmODE+7Mul",
-	"2O3Db8tD3pnQKFIQEsYyXTz3+L8jbXn8o4So0IL2ATBrZvU9LeyVINvl5eV9LuVGVmbgnj/Ova29hY51",
-	"LKJXXxymBGxFNchfYSCqoaFgXMGO1QYuprtX6KJLmO5eXQ75vyextcMKWxnkx3c8eB1JCRWacIRVaT3p",
-	"c7vUyJt2t/xYQankCNybk73Nom6UbrmZXd7bwi7XWT73YcgrphAr3D0g2HHRK0Jh/QnQ5VOwOeOkf55n",
-	"jl0su0odrVfhwxbdSunxCTqB35NmBlCQB/YX2skMAe08/XB6BP6cfVP1u90G6BkElhKskZvnoCqfc4aw",
-	"vwdSOHgNKnwDXLrEBjVwPXZrgcOKaiW4N2PfQqUCglg+BXu/mAyFV+G26yuduHz1oht6ctda/y1xnRBx",
-	"q8KCnUpYDviC78EDX/Dx+O3GpeoOAN0ycgDZPS/UNgr3L+vX31zod23DX0o6dxp0YFOlpFYzrKZab6K1",
-	"WLv1QCo9+FqVU7skOqcYUIRf0LywraO4VWOvo8DRssmgruR2+fkexdjIhw/I0JN+81X7ZPNLdVmv9qp1",
-	"Q9vLX7BjEbBmEa4cm0u0irI56bThsqskQ6HHa8vF10a8V6k0amIFpEJPv4lMaGBwF5phx+YPxFCVXooh",
-	"X9SBmm2FM7BLbZOIXtpGN5VT/LUDIv0TO2ou7j+uMzr2H/81pqwY+m1/7/GTz4ESQ5sVgedsioPfC5y2",
-	"VaCOxI25cFHiQAnEtuz/dvTqF3Bce0ANWNrTNur/6TOxtwnEu1/WIO9Pny9XLDHdG7B8oZ2YhJHCBVOc",
-	"CdNUHkrXYGHVsfo3+Er/tJf5ugmjy+72gDhwpFqkabwg7M9B7yPNp6NrYO5BNX3t6oXeTkvbdTTd5G5X",
-	"rNN37HDeZdfHdKBuLYDlrUB7vevHvd7+3pO/Pv3L00CvWxg/WxDs0a0V/jeL2/harI2ah+4A27PT0O1R",
-	"/Np10wjlXtEoj/ee3RPFR0wZzjKoum6R/dL96OgOFmtsUfkQCzyOnuw/CwDoRKEtfqmZ4XrCXR3OezEH",
-	"H3yeWaPYHuzosiikMhrenJ4egSVnS9OwXK3dWONPNHlyJeyR/XubVfAcXI6FvyDxDGZ9eMm0Pcs75FDD",
-	"BE0y83SSAylLC4h47GvdOLy0GEGd2nc7d+MeoKjV3Md7xhDr8YJnex8J/Xj8Tn8TB8eNH7dCQj4sSzRZ",
-	"vDHxCmGYmqLRHRo5q+uhdHk2vmLKPfLajxDis7u3R+h1cXX4gl+gQK0hmWFyDjsEdtPOSfQxLlCBm6h9",
-	"3HL7qhpInh+8UQMluE//ynKMwQcCYw/BV3/DlIqSxHa77pWFK4UcQ4ZTltmbCrE/0knbnQ7u0XUZlntk",
-	"eT1GsKS0ewY2CH8V149srSPgzRdoG2qHV1Y43MjdDKocBanfLdMR20Yo6CH7ooUBFzlyBcPqtBn7FxfD",
-	"RkqYkGboYaGoccMvjphKZrSwrBjadRKDedIdxLkaiTfxhFZ6YtXx/NY9VeULr9vXWok2ZaEIl7Dp6xKy",
-	"KdjXQ+MaNr0L8huZe7eawOsyy3r2+pBGEratkgY29u+Rk0HFqUEtxhBBf7ToaN5T2NsL0hFUFKk6aut7",
-	"9RvaoqwNbV752f9JZQVwvWxlFC9VscpK6VDjDRu9/yLCFi3dxwTuFYBoVgMK4UIOl5ETcHfWvg0O/35R",
-	"5YrCDpU4c8V8NPzzf/8/aNbzIWyCi1KDNzMDV4yWTpAGFaYDwyh4mMq56AYucrxqM39/r7vK+6AQXvr4",
-	"u01WvAN2njZi+rbPpmdTc6HaZ1oAm8tlXOfMsWX4ayXz94vOvefGeNuTUNaPlbA7yue1fnwTZ9LRAsxZ",
-	"8IoiqmtoIQ8jlc0jI5/yYA9SttDPIWfaoIJEFgvyzs6xMFep5JowSLWxOyzxhqf4VjyQLF5UG/03gY/d",
-	"4LBDDNmthMBFUymuw1cnsCtYe+wanMoH03Q7Xho9IEqwhYW3XwhZXQeW0tZCOIuOve9XGWW6YSwVlKLn",
-	"HUTg5ioJVa7mVkD/0dIv/dcD+xvX/9expPrZN1hD7xdV1YNW4Qwnx4ZslsUJ7FcjgnVihAG0UbX9p6Bh",
-	"PiOEh1wqLqYxSAEFKzUOtJHFQCOe2yxfaXMnYMyS86ki+p6fiT9KLG1UERjY6lMgSzOWX3yXVYUOen2S",
-	"lXrm2krl8ovPxKm75E4e6TlioX2ZQePzXaRKoV0Cog9vJ7ZRVULlTFQVLCDlkwkq7VS6USRCCqRectL6",
-	"uoAEban/WUNVp+NMmJlCPaN8tx3vk8IBOSq78OgRE+mjR/Y1M5dVPRJ7786O5QZGYc5EhUsRFtVdqyQG",
-	"s5w4E3pOZD969GTvh0eP7KtnYizNDBImUptnp/tg/QF3DGf6XNeTsH0JUNjTKFL3uy0hIhqsoT5htCxc",
-	"MrLXpPzdZRd6J9y9WbXkuU+S9TVKsjkly865T/nmmo7403Cu3VF5R0v87gG2leI6DxylDxVLCeFBTm/p",
-	"a0e+ognUJVE6KqD883/+X9CIMPJFSka7D3cKuMnmtffDnTO1kW+ybrirhVBpOIzRzJGOGW7BPq/Xk0uq",
-	"S2ZS6vWts5DKWENJVhCq5RU2vn5n9Mmt+kok6P3ipGp2S/Xb6hatHyxwh3ZdF3FZ6fEOTojtjF/dcaip",
-	"Hg++1p+u23CwoczimonXNjrLD+ht6+3ReOk3OsfQ2HZTkxPynzfxciGSTpjX7r9cTDOEhGVZfZ82Z3YI",
-	"a12EwMT04UPOTX1b3jkedNn9TFS33SkV3OVwVTCAzRDhGd0mdRnDOq59l9huI8u712dip7q2qgdL7EvD",
-	"75LbejhHM6YR9nf7QDCI39Fa93Wsz3EmRtWF7xHtUmTSnztj6ctQU2DLvRLau35Bs6wmsKZHwa9jNj+J",
-	"yaCgYvnSwhtOkp2Xwhz4fcV3Mf8VoKclMwLGwT94wI1mf+8Bvvfo5GmktNcfdny2eyanUKhSYLr7HFJZ",
-	"F3tYiKQOPfr1sXpFg1xtM3NFi5ipSjLYVZTbBZjQeayuWNCxmdTf49ky0+3XJQD+75frVhP/LWxsNfhN",
-	"8t0c/jz46v7dIKKTCqwOBYBWP+Lq+rtV+sm9WoplxbdwjJNm+k3CyHboliyrQ2i8tVRt2LkB7GW0Cl0d",
-	"osuBLefWzw/Kv14ZYs70UcYWGdfmNolJG1o2P3V8PXFfiLRPf2M/L3Dq0zWuSIhZFfGbdydgg+5QVNP8",
-	"d06KeyfnPf95SKCpVZPy5UqrO2wWRduZNr7kBCnmTKRd2TFXq9JXjdMchbncoEknrtkDKVLcYZIqGrot",
-	"UqPohMbpsCo8cXbW3zH6H/kT/Q/Gkt3vbm2rZGLQ9Bxvb50zVjH331l96WOp+3ugre4uJbWmkdce/HNV",
-	"yNjpm7UTkS9AYE2OH2Kt4lYgjcIeAmZV6o1XK15nbcSh2gy9soirLxu4NC/bi5nLnr+nzMpmd/avyzh8",
-	"9KEEox4X/qaYu0rLVeCY6jvLQ1T9pORcVyUp15yFClhofmG+CoOtXQ3m2qD9lEON8RJRKfnZ1tNsfRK/",
-	"wqLXk2yrtD0dO/FbZdGxS1V2fbq52/wpl+HVmCOpxuXny/8/AA==",
+	"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",
+	"5bxQn2/+7wA=",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

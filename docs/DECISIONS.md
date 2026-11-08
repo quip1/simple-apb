@@ -148,6 +148,61 @@ sessions) come from `X-Forwarded-For` only when the request arrives from a confi
 **Why.** `RealIP` believes whatever `X-Forwarded-For`/`X-Real-IP` header a client sends, so anyone
 could dodge per-IP rate limits or forge audit-log IPs. It is deprecated upstream for this reason.
 
+## ADR-0011 — Default user capabilities
+
+Until an admin changes them (setting `permission_defaults`), approved users get:
+upload **yes**, edit metadata **yes** (only ever on their own uploads), delete own **yes**,
+review **yes**, share **no**, post to Public **no**. Sharing and Public posting are the two
+capabilities that put content in front of other people, so they start off and are granted per
+user or per user tag (e.g. `trusted`). Restricted/banned/suspended users are limited by authz rule
+order regardless of these defaults.
+
+## ADR-0012 — Setup wizard: one transaction, config.json first, no restart
+
+**Decision.** `/config/config.json` holds only where the database is (dialect, and the Postgres DSN
+encrypted with `secret.key`). Everything else is in the DB `settings` table. The "instance is set
+up" truth is the `setup_completed_at` setting, written in the **same transaction** as the admin
+account, the Public group and all wizard settings. `config.json` is written *before* that
+transaction. On start: no config → setup mode; config but no marker → setup mode reusing that DB;
+marker → normal mode. After `POST /setup/complete` the server swaps from setup mode to normal mode
+in-process (an atomic pointer), so no restart is needed.
+
+**Why.** Any power cut leaves exactly one of two states: "not set up" (wizard runs again, nothing
+half-created is visible) or "set up". Writing config.json last (the first draft) had a bad window:
+commit, then power loss before the file is written → the wizard would come back but the DB would
+refuse a second setup.
+
+The setup token is random per process start and only printed to the log; it is compared in
+constant time. The first admin's TOTP enrollment is mandatory (the wizard verifies a code before
+creating anything) and the admin gets 10 recovery codes once.
+
+## ADR-0013 — Authentication design
+
+- **Access tokens:** HS256 JWTs, 15 min, key derived from `secret.key` via HKDF (purpose `jwt`).
+  Every request still checks the session row, so revoking a session takes effect immediately rather
+  than after 15 minutes. (Cost: one indexed lookup per request; fine for our scale.)
+- **Refresh tokens:** 32 random bytes, stored as SHA-256 (high-entropy tokens don't need a slow
+  hash), one session per device, 90-day sliding expiry. Rotation keeps the previous hash; presenting
+  it again **revokes the session** (theft detection) unless it's within 30 s of the rotation, which
+  is treated as two requests refreshing at once.
+- **Web:** access token in `sapb_session` (HttpOnly, SameSite=Lax), refresh token in `sapb_refresh`
+  (HttpOnly, path-scoped to `/api/v1/auth`, never in the JSON body), and a readable `sapb_csrf`
+  cookie that must be echoed in `X-CSRF-Token` on state-changing cookie-authenticated requests
+  (double-submit). Bearer-token requests are exempt (not sent automatically by browsers). The CSRF
+  value stays stable across refreshes so several tabs keep working.
+- **Passwords:** argon2id at OWASP's minimum (19 MiB, t=2, p=1) to respect the 150 MB RAM target;
+  ≥ 10 characters, not containing the username, not in a bundled list of ~9,200 common passwords of
+  that length (SecLists NCSC 100k, MIT).
+- **Login lockout:** after 10 consecutive failures the account locks for 1, 2, 4 … minutes (cap
+  24 h). Unknown usernames are verified against a dummy hash so timing doesn't reveal them.
+- **Status at login:** pending → `account_pending`; denied sign-ups keep their user row (status
+  `deleted`, reason `signup_denied`) so the next login can say so; suspended/banned users *can* sign
+  in, because authz still lets them export their data, delete their account and log out (brief §6.7).
+- **TOTP required but not enrolled** (admins, a tag with `require_totp`, or the instance-wide
+  setting): the session works only for `/me`, TOTP enrollment and logout until enrolled.
+- **TOTP enrollment** keeps the pending secret in memory for 10 minutes; a restart just means
+  starting enrollment again.
+
 ---
 
 ## Open questions for Jacob
@@ -157,4 +212,6 @@ could dodge per-IP rate limits or forge audit-log IPs. It is deprecated upstream
 | Q1 | ~~GitHub owner~~ **Answered:** `quip1` — `github.com/quip1/simple-apb`, image `ghcr.io/quip1/simple-apb-server` | — |
 | Q2 | License identifier: `AGPL-3.0-or-later` or `AGPL-3.0-only`? | `AGPL-3.0-or-later` (GNU's recommendation) in SPDX headers |
 | Q3 | Commit the Gradle wrapper now, or when the Android app starts (Phase 3)? | CI installs Gradle 9.1 directly; wrapper added in Phase 3 |
-| Q4 | Review the schema (`server/internal/store/migrations/sqlite/00001_init.sql`) and API outline (`docs/API.md`) — Phase 0 acceptance | — |
+| Q4 | ~~Review the schema and API outline~~ **Approved** (Phase 0 accepted) | — |
+| Q5 | TOTP replay protection (reject a code already used in its 30 s window)? Adds a column per user. | Not yet; rate limits + lockout bound guessing |
+| Q6 | Brief says the wizard is "served at `/setup`". Phase 1 ships the wizard **API**; the wizard **page** comes with the web SPA in Phase 2 (until then: curl, see `docs/SETUP-API.md`). OK? | As described |

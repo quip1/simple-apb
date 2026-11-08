@@ -11,7 +11,7 @@
 openapi: 3.0.3
 info:
   title: Simple APB API
-  version: 0.1.0
+  version: 0.2.0
   description: |
     REST API for Simple APB. All endpoints live under `/api/v1`.
 
@@ -46,6 +46,10 @@ tags:
     description: Listening progress and delta sync
   - name: media
     description: Audio files, HLS streams, covers and signed cast URLs
+  - name: setup
+    description: First-run setup wizard (needs the one-time setup token from the server log)
+  - name: admin
+    description: Instance administration (admin role only)
 
 paths:
   # ───────────────────────────── Instance ─────────────────────────────
@@ -604,6 +608,313 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  # ───────────────────────────── Setup wizard ─────────────────────────
+  /setup/status:
+    get:
+      tags: [setup]
+      operationId: getSetupStatus
+      summary: Whether the first-run wizard still needs to run
+      security: []
+      responses:
+        "200":
+          description: Status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SetupStatus" }
+
+  /setup/database/test:
+    post:
+      tags: [setup]
+      operationId: testSetupDatabase
+      summary: Check that a database can be opened
+      security:
+        - setupToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SetupDatabase" }
+      responses:
+        "200":
+          description: Result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SetupCheckResult" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /setup/library/test:
+    post:
+      tags: [setup]
+      operationId: testSetupLibrary
+      summary: Check the library path exists and is writable (warns if empty)
+      security:
+        - setupToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SetupLibrary" }
+      responses:
+        "200":
+          description: Result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LibraryCheck" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /setup/smtp/test:
+    post:
+      tags: [setup]
+      operationId: testSetupSmtp
+      summary: Send a test email with the given SMTP settings
+      security:
+        - setupToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SmtpTestRequest" }
+      responses:
+        "200":
+          description: Result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SetupCheckResult" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /setup/totp:
+    post:
+      tags: [setup]
+      operationId: createSetupTotp
+      summary: Generate the first admin's TOTP secret (enrollment is mandatory)
+      security:
+        - setupToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username]
+              properties:
+                username: { type: string }
+      responses:
+        "200":
+          description: Secret to show as a QR code
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TotpEnrollment" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /setup/complete:
+    post:
+      tags: [setup]
+      operationId: completeSetup
+      summary: Finish the wizard (creates the admin, stores settings, switches the server to normal mode)
+      security:
+        - setupToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SetupRequest" }
+      responses:
+        "200":
+          description: Instance is set up; sign in as the admin
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SetupResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  # ─────────────────────────────── Admin ──────────────────────────────
+  /admin/signup-requests:
+    get:
+      tags: [admin]
+      operationId: listSignupRequests
+      summary: Sign-up requests (moderation inbox)
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, approved, denied], default: pending }
+      responses:
+        "200":
+          description: Requests, oldest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SignupRequestItem" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/signup-requests/{requestId}/approve:
+    post:
+      tags: [admin]
+      operationId: approveSignupRequest
+      summary: Approve a sign-up (user becomes active and joins Public)
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      responses:
+        "204": { description: Approved }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/signup-requests/{requestId}/deny:
+    post:
+      tags: [admin]
+      operationId: denySignupRequest
+      summary: Deny a sign-up
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReasonRequest" }
+      responses:
+        "204": { description: Denied }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/users:
+    get:
+      tags: [admin]
+      operationId: listUsers
+      summary: Users
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/UserStatus" }
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AdminUser" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/users/{userId}:
+    patch:
+      tags: [admin]
+      operationId: patchUser
+      summary: Change a user's status, role, quota or notice (a reason is required)
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdminUserPatch" }
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminUser" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/groups:
+    get:
+      tags: [admin]
+      operationId: listGroups
+      summary: Groups
+      responses:
+        "200":
+          description: Groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Group" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [admin]
+      operationId: createGroup
+      summary: Create a group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GroupCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Group" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /admin/groups/{groupId}:
+    delete:
+      tags: [admin]
+      operationId: deleteGroup
+      summary: Delete a group (the built-in Public group cannot be deleted)
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/groups/{groupId}/members/{userId}:
+    put:
+      tags: [admin]
+      operationId: addGroupMember
+      summary: Add a user to a group
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "204": { description: Added }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [admin]
+      operationId: removeGroupMember
+      summary: Remove a user from a group
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "204": { description: Removed }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/sessions/{sessionId}:
+    delete:
+      tags: [admin]
+      operationId: adminRevokeSession
+      summary: Revoke any user's session
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      responses:
+        "204": { description: Revoked }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -616,6 +927,11 @@ components:
       in: cookie
       name: sapb_session
       description: Web/admin. HttpOnly, SameSite=Lax. State-changing requests also need `X-CSRF-Token`.
+    setupToken:
+      type: apiKey
+      in: header
+      name: X-Setup-Token
+      description: One-time token printed to the server log on first start.
     streamSignature:
       type: apiKey
       in: query
@@ -643,6 +959,21 @@ components:
       in: path
       required: true
       schema: { $ref: "#/components/schemas/HlsProfile" }
+    RequestId:
+      name: requestId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    GroupId:
+      name: groupId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
     Cursor:
       name: cursor
       in: query
@@ -1125,3 +1456,171 @@ components:
               url: { type: string }
         hls_url: { type: string, description: "Present for `low`/`medium`" }
         cover_url: { type: string }
+
+    # ── setup ──
+    SetupStatus:
+      type: object
+      required: [setup_required]
+      properties:
+        setup_required: { type: boolean }
+        database_configured:
+          type: boolean
+          description: "A database is already chosen (config.json exists); the wizard will reuse it"
+
+    SetupDatabase:
+      type: object
+      required: [dialect]
+      properties:
+        dialect: { type: string, enum: [sqlite, postgres], default: sqlite }
+        dsn:
+          type: string
+          description: "Postgres connection string. Ignored for SQLite (stored at /config/simpleapb.db)."
+
+    SetupCheckResult:
+      type: object
+      required: [ok]
+      properties:
+        ok: { type: boolean }
+        message: { type: string }
+
+    SetupLibrary:
+      type: object
+      required: [path]
+      properties:
+        path: { type: string, default: /library }
+
+    LibraryCheck:
+      type: object
+      required: [exists, writable, empty]
+      properties:
+        exists: { type: boolean }
+        writable: { type: boolean }
+        empty: { type: boolean, description: "True when the folder has no files yet (a warning, not an error)" }
+        message: { type: string }
+
+    SmtpSettings:
+      type: object
+      required: [host, port, tls, from]
+      properties:
+        host: { type: string }
+        port: { type: integer, minimum: 1, maximum: 65535 }
+        tls: { type: string, enum: [starttls, tls, none] }
+        username: { type: string }
+        password: { type: string, format: password }
+        from: { type: string, format: email }
+
+    SmtpTestRequest:
+      type: object
+      required: [smtp, to]
+      properties:
+        smtp: { $ref: "#/components/schemas/SmtpSettings" }
+        to: { type: string, format: email }
+
+    NtfySettings:
+      type: object
+      properties:
+        internal_url: { type: string, description: "How the server reaches ntfy, e.g. http://ntfy:80" }
+        public_url: { type: string, description: "How devices reach ntfy" }
+        token: { type: string, description: "Access token; generated automatically when empty" }
+
+    SetupAdmin:
+      type: object
+      required: [username, password, totp_secret, totp_code]
+      properties:
+        username: { type: string, minLength: 3, maxLength: 32, pattern: '^[a-zA-Z0-9_.-]+$' }
+        password: { type: string, minLength: 10, maxLength: 256, format: password }
+        display_name: { type: string, maxLength: 100 }
+        email: { type: string, format: email }
+        totp_secret: { type: string, description: "Secret from POST /setup/totp" }
+        totp_code: { type: string, pattern: '^[0-9]{6}$' }
+
+    SetupRequest:
+      type: object
+      required: [admin, database, library_path, base_url, instance_name]
+      properties:
+        admin: { $ref: "#/components/schemas/SetupAdmin" }
+        database: { $ref: "#/components/schemas/SetupDatabase" }
+        library_path: { type: string, default: /library }
+        base_url: { type: string, description: "Public base URL, e.g. https://books.example.com" }
+        smtp: { $ref: "#/components/schemas/SmtpSettings" }
+        ntfy: { $ref: "#/components/schemas/NtfySettings" }
+        instance_name: { type: string, minLength: 1, maxLength: 80 }
+        privacy_text: { type: string }
+        terms_text: { type: string }
+        signup_open: { type: boolean, default: true }
+        egress_mbps: { type: integer, minimum: 1, maximum: 100000, default: 80 }
+
+    SetupResult:
+      type: object
+      required: [admin_id, recovery_codes]
+      properties:
+        admin_id: { type: string, format: uuid }
+        recovery_codes:
+          type: array
+          description: "The admin's one-time recovery codes. Shown once."
+          items: { type: string }
+
+    # ── admin ──
+    SignupRequestItem:
+      type: object
+      required: [id, user_id, username, status, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        username: { type: string }
+        email: { type: string }
+        message: { type: string }
+        status: { type: string, enum: [pending, approved, denied] }
+        created_at: { type: string, format: date-time }
+        decided_at: { type: string, format: date-time }
+
+    ReasonRequest:
+      type: object
+      properties:
+        reason: { type: string, maxLength: 1000 }
+
+    AdminUser:
+      type: object
+      required: [id, username, display_name, role, status, totp_enabled, quota_bytes, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        display_name: { type: string }
+        email: { type: string }
+        role: { $ref: "#/components/schemas/UserRole" }
+        status: { $ref: "#/components/schemas/UserStatus" }
+        status_reason: { type: string }
+        status_until: { type: string, format: date-time }
+        totp_enabled: { type: boolean }
+        quota_bytes: { type: integer, format: int64 }
+        created_at: { type: string, format: date-time }
+
+    AdminUserPatch:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 1000, description: "Why; written to the audit log" }
+        status:
+          type: string
+          enum: [active, restricted, suspended, banned]
+        status_until: { type: string, format: date-time, description: "Suspension end (status = suspended)" }
+        role: { $ref: "#/components/schemas/UserRole" }
+        quota_bytes: { type: integer, format: int64, minimum: 0 }
+        notice: { type: string, maxLength: 1000, description: "Warning shown to the user on next login; empty clears it" }
+
+    Group:
+      type: object
+      required: [id, name, builtin, high_priority, members]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        builtin: { type: boolean }
+        high_priority: { type: boolean, description: "Bandwidth priority class" }
+        members: { type: integer }
+
+    GroupCreate:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 64 }
+        high_priority: { type: boolean, default: false }

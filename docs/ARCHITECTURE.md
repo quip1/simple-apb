@@ -1,6 +1,6 @@
 # Architecture (as built)
 
-> Updated as each phase lands. Current state: **Phase 0 — foundations**.
+> Updated as each phase lands. Current state: **Phase 1 — server core, milestones M1–M2** (foundations, setup wizard, accounts/auth/authz).
 
 ## Overview
 
@@ -29,10 +29,19 @@
 | API reference | `docs/API.md` | generated from the spec |
 | DB schema | `server/internal/store/migrations/{sqlite,postgres}/00001_init.sql` | full v1 logical model, both dialects |
 | Migrations runner | `server/internal/store` | goose, embedded; tests for both dialects + parity |
-| Go server skeleton | `server/cmd/simpleapb`, `server/internal/api` | serves `/api/v1/health` and `/api/v1/instance`; every other operation answers `501 not_implemented` |
+| Server modes | `server/cmd/simpleapb`, `internal/setup` | **setup mode** (only health, instance, `/setup/*`) until the wizard finishes, then **normal mode** in-process (ADR-0012) |
+| Accounts & auth | `internal/auth`, `internal/api/handlers_auth.go` | sign-up → admin approval, login (+TOTP), rotating refresh, sessions, rate limits, lockout, web cookies + CSRF (ADR-0013) |
+| Authorization | `internal/authz` | single decision point, table-tested |
+| Admin API | `internal/api/handlers_admin.go` | sign-up inbox, users, groups/members, session revocation |
+| Not yet built | `internal/api/unimplemented.go` | library, progress/sync, media — answer `501` until milestones M3–M5 |
 | TS client | `web/src/api` | generated types + small typed wrapper |
 | Kotlin client | `android/core-api` | generated at build time |
 | CI | `.github/workflows/ci.yml` | spec lint + codegen freshness, Go tests on SQLite and Postgres, golangci-lint, Kotlin client build, Docker image build |
+
+## Request path
+
+`RequestID → Recoverer → X-Server-Version → client IP (trusted proxies only) → setup gate → authenticate (Bearer or cookie; CSRF on cookie writes) → generated strict handler → handler asks authz → store`.
+Errors are typed (`httpError`, `auth.Error`, `setup.Error`, `store.ErrNotFound`…) and mapped to the `Error` schema in one place (`internal/api/errors.go`); unknown errors become a logged 500 with no detail leaked.
 
 ## Server packages
 
@@ -50,7 +59,11 @@
 | `push`, `mail` | ntfy publisher, SMTP |
 | `moderation` | queue, reports, takedowns, audit log |
 | `stats`, `backup`, `jobs` | stats, backups/scrubs, job queue |
-| `store` | DB connections, migrations, repositories |
+| `store` | DB connections, migrations, `?`→`$n` rebinding, transactions, repositories, settings, audit log |
+| `fsutil` | crash-safe writes (temp → fsync → rename → fsync dir) |
+| `config` | `config.json` bootstrap, `secret.key`, HKDF-derived keys, AES-GCM for secret settings |
+| `settings` | typed instance settings with defaults |
+| `setup` | first-run wizard |
 | `version` | build version (ldflags) |
 | `web` | embedded SPA build (Phase 2) |
 

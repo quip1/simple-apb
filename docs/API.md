@@ -2,7 +2,7 @@
 
 > **Generated** from `server/openapi.yaml` by `web/scripts/gen-api-docs.mjs`. Do not edit by hand.
 
-Version **0.1.0** · base path `/api/v1`
+Version **0.2.0** · base path `/api/v1`
 
 REST API for Simple APB. All endpoints live under `/api/v1`.
 
@@ -74,6 +74,33 @@ REST API for Simple APB. All endpoints live under `/api/v1`.
 | GET | `/stream/{bookId}/hls/{profile}/{segment}` | One 10 s HLS segment | yes | 200, 401, 404 |
 | POST | `/books/{bookId}/stream-url` | Signed, short-lived stream URLs for casting targets | yes | 200, 401, 404 |
 | GET | `/books/{bookId}/cover` | Cover image (resized variant) | yes | 200, 401, 404 |
+
+### setup
+
+| Method | Path | Summary | Auth | Responses |
+|---|---|---|---|---|
+| GET | `/setup/status` | Whether the first-run wizard still needs to run | public | 200 |
+| POST | `/setup/database/test` | Check that a database can be opened | yes | 200, 401, 409 |
+| POST | `/setup/library/test` | Check the library path exists and is writable (warns if empty) | yes | 200, 401, 409 |
+| POST | `/setup/smtp/test` | Send a test email with the given SMTP settings | yes | 200, 401, 409 |
+| POST | `/setup/totp` | Generate the first admin's TOTP secret (enrollment is mandatory) | yes | 200, 401, 409 |
+| POST | `/setup/complete` | Finish the wizard (creates the admin, stores settings, switches the server to normal mode) | yes | 200, 400, 401, 409 |
+
+### admin
+
+| Method | Path | Summary | Auth | Responses |
+|---|---|---|---|---|
+| GET | `/admin/signup-requests` | Sign-up requests (moderation inbox) | yes | 200, 401, 403 |
+| POST | `/admin/signup-requests/{requestId}/approve` | Approve a sign-up (user becomes active and joins Public) | yes | 204, 401, 403, 404 |
+| POST | `/admin/signup-requests/{requestId}/deny` | Deny a sign-up | yes | 204, 401, 403, 404 |
+| GET | `/admin/users` | Users | yes | 200, 401, 403 |
+| PATCH | `/admin/users/{userId}` | Change a user's status, role, quota or notice (a reason is required) | yes | 200, 400, 401, 403, 404 |
+| GET | `/admin/groups` | Groups | yes | 200, 401, 403 |
+| POST | `/admin/groups` | Create a group | yes | 201, 400, 401, 403, 409 |
+| DELETE | `/admin/groups/{groupId}` | Delete a group (the built-in Public group cannot be deleted) | yes | 204, 401, 403, 404 |
+| PUT | `/admin/groups/{groupId}/members/{userId}` | Add a user to a group | yes | 204, 401, 403, 404 |
+| DELETE | `/admin/groups/{groupId}/members/{userId}` | Remove a user from a group | yes | 204, 401, 403, 404 |
+| DELETE | `/admin/sessions/{sessionId}` | Revoke any user's session | yes | 204, 401, 403, 404 |
 
 ## Schemas
 
@@ -465,4 +492,163 @@ Enum: `low`, `medium`
 | `files` | array of object |  | Present for `original` |
 | `hls_url` | string |  | Present for `low`/`medium` |
 | `cover_url` | string |  |  |
+
+### SetupStatus
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `setup_required` | boolean | yes |  |
+| `database_configured` | boolean |  | A database is already chosen (config.json exists); the wizard will reuse it |
+
+### SetupDatabase
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `dialect` | string: sqlite \| postgres | yes |  |
+| `dsn` | string |  | Postgres connection string. Ignored for SQLite (stored at /config/simpleapb.db). |
+
+### SetupCheckResult
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `ok` | boolean | yes |  |
+| `message` | string |  |  |
+
+### SetupLibrary
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `path` | string | yes |  |
+
+### LibraryCheck
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `exists` | boolean | yes |  |
+| `writable` | boolean | yes |  |
+| `empty` | boolean | yes | True when the folder has no files yet (a warning, not an error) |
+| `message` | string |  |  |
+
+### SmtpSettings
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `host` | string | yes |  |
+| `port` | integer | yes |  |
+| `tls` | string: starttls \| tls \| none | yes |  |
+| `username` | string |  |  |
+| `password` | string (password) |  |  |
+| `from` | string (email) | yes |  |
+
+### SmtpTestRequest
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `smtp` | `SmtpSettings` | yes |  |
+| `to` | string (email) | yes |  |
+
+### NtfySettings
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `internal_url` | string |  | How the server reaches ntfy, e.g. http://ntfy:80 |
+| `public_url` | string |  | How devices reach ntfy |
+| `token` | string |  | Access token; generated automatically when empty |
+
+### SetupAdmin
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `username` | string | yes |  |
+| `password` | string (password) | yes |  |
+| `display_name` | string |  |  |
+| `email` | string (email) |  |  |
+| `totp_secret` | string | yes | Secret from POST /setup/totp |
+| `totp_code` | string | yes |  |
+
+### SetupRequest
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `admin` | `SetupAdmin` | yes |  |
+| `database` | `SetupDatabase` | yes |  |
+| `library_path` | string | yes |  |
+| `base_url` | string | yes | Public base URL, e.g. https://books.example.com |
+| `smtp` | `SmtpSettings` |  |  |
+| `ntfy` | `NtfySettings` |  |  |
+| `instance_name` | string | yes |  |
+| `privacy_text` | string |  |  |
+| `terms_text` | string |  |  |
+| `signup_open` | boolean |  |  |
+| `egress_mbps` | integer |  |  |
+
+### SetupResult
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `admin_id` | string (uuid) | yes |  |
+| `recovery_codes` | array of string | yes | The admin's one-time recovery codes. Shown once. |
+
+### SignupRequestItem
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `user_id` | string (uuid) | yes |  |
+| `username` | string | yes |  |
+| `email` | string |  |  |
+| `message` | string |  |  |
+| `status` | string: pending \| approved \| denied | yes |  |
+| `created_at` | string (date-time) | yes |  |
+| `decided_at` | string (date-time) |  |  |
+
+### ReasonRequest
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `reason` | string |  |  |
+
+### AdminUser
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `username` | string | yes |  |
+| `display_name` | string | yes |  |
+| `email` | string |  |  |
+| `role` | `UserRole` | yes |  |
+| `status` | `UserStatus` | yes |  |
+| `status_reason` | string |  |  |
+| `status_until` | string (date-time) |  |  |
+| `totp_enabled` | boolean | yes |  |
+| `quota_bytes` | integer (int64) | yes |  |
+| `created_at` | string (date-time) | yes |  |
+
+### AdminUserPatch
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `reason` | string | yes | Why; written to the audit log |
+| `status` | string: active \| restricted \| suspended \| banned |  |  |
+| `status_until` | string (date-time) |  | Suspension end (status = suspended) |
+| `role` | `UserRole` |  |  |
+| `quota_bytes` | integer (int64) |  |  |
+| `notice` | string |  | Warning shown to the user on next login; empty clears it |
+
+### Group
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `name` | string | yes |  |
+| `builtin` | boolean | yes |  |
+| `high_priority` | boolean | yes | Bandwidth priority class |
+| `members` | integer | yes |  |
+
+### GroupCreate
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `name` | string | yes |  |
+| `high_priority` | boolean |  |  |
 

@@ -5,7 +5,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-**Current phase: 0 — Foundations.**
+**Current phase: 1 — Server core** (milestones M1–M2 done: foundations, setup wizard, accounts, auth, authz).
+
+### Added (Phase 1)
+- Crash-safe file writes (`fsutil`: temp → fsync → rename → fsync dir), bootstrap `config.json`, `secret.key` with HKDF-derived keys and AES-GCM encryption for secret settings.
+- DB access layer with `?`→`$n` rebinding, transactions, typed settings, append-only audit log; repositories for users, sessions, groups, sign-up requests, recovery codes.
+- `authz` package: status → role → user overrides → user tags → instance defaults, with table-driven tests.
+- Auth: argon2id passwords + common-password check, 15-min JWT access tokens, rotating refresh tokens with reuse detection, TOTP + recovery codes, per-IP/per-account rate limits, exponential login lockout, web cookies with double-submit CSRF.
+- Setup wizard API (`/setup/*`): DB/library/SMTP checks, mandatory admin TOTP, single-transaction completion, in-process switch to normal mode.
+- Admin API: sign-up approval/denial, users (status/role/quota/notice with required reason), groups and members, session revocation.
+- Client IP from `X-Forwarded-For` only via `SIMPLEAPB_TRUSTED_PROXIES`.
+
+## Phase 0
 
 ### Fixed
 - CI: Kotlin client build (JDK toolchain, `Any` serialization, duplicate generated imports) and golangci-lint findings.
