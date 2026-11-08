@@ -157,7 +157,9 @@ func splitPassword(dsn string) (string, []string) {
 		sort.Strings(opts)
 		q.Set("options", strings.Join(opts, " "))
 	}
-	u.RawQuery = q.Encode()
+	// libpq decodes %XX but treats "+" literally, while url.Values encodes
+	// spaces as "+": re-encode spaces as %20 (a literal "+" is already %2B).
+	u.RawQuery = strings.ReplaceAll(q.Encode(), "+", "%20")
 	return u.String(), env
 }
 

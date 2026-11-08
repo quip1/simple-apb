@@ -88,7 +88,7 @@ func TestSplitPassword(t *testing.T) {
 	}
 	// pgx runtime parameters become libpq options.
 	dsn, _ = splitPassword("postgres://u@db/x?sslmode=disable&search_path=t_1")
-	if dsn != "postgres://u@db/x?options=-c+search_path%3Dt_1&sslmode=disable" {
+	if dsn != "postgres://u@db/x?options=-c%20search_path%3Dt_1&sslmode=disable" {
 		t.Fatalf("runtime params: %s", dsn)
 	}
 }
