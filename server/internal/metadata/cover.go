@@ -66,7 +66,7 @@ func (e Endpoints) FetchCover(ctx context.Context, u string) ([]byte, error) {
 	hc.CheckRedirect = func(r *http.Request, via []*http.Request) error {
 		// Open Library redirects to its archive.org image storage.
 		archive := r.URL.Scheme == "https" && strings.HasSuffix(strings.ToLower(r.URL.Hostname()), ".archive.org")
-		if len(via) > 3 || !(archive || AllowedCoverURL(r.URL.String(), e.OpenLibraryCovers, e.GoogleBooks, e.Audnexus)) {
+		if len(via) > 3 || !archive && !AllowedCoverURL(r.URL.String(), e.OpenLibraryCovers, e.GoogleBooks, e.Audnexus) {
 			return ErrCoverHost
 		}
 		return nil
