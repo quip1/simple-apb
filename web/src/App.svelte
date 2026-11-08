@@ -14,6 +14,7 @@
   import Library from "./pages/Library.svelte";
   import Login from "./pages/Login.svelte";
   import PersonPage from "./pages/PersonPage.svelte";
+  import ResetPassword from "./pages/ResetPassword.svelte";
   import Player from "./pages/Player.svelte";
   import Security from "./pages/Security.svelte";
   import Settings from "./pages/Settings.svelte";
@@ -22,6 +23,9 @@
   import Signup from "./pages/Signup.svelte";
 
   const PUBLIC = ["/login", "/signup"];
+  // Reachable signed in or out.
+  const OPEN = ["/reset-password"];
+  const loadAdmin = () => import("./pages/admin/AdminRoutes.svelte");
 
   onMount(loadSession);
 
@@ -33,6 +37,7 @@
       if (route.path !== "/setup") navigate("/setup", { replace: true });
       return;
     }
+    if (OPEN.includes(route.path)) return;
     if (route.path === "/setup") navigate("/", { replace: true });
     else if (!session.me && !PUBLIC.includes(route.path)) {
       const next = route.path === "/" ? "" : `?next=${encodeURIComponent(route.path + location.search)}`;
@@ -80,6 +85,8 @@
   <main class="loading"><p role="alert">{t("error.server_unreachable")}</p></main>
 {:else if route.path === "/setup"}
   <Setup />
+{:else if match("/reset-password", route.path)}
+  <ResetPassword />
 {:else if match("/login", route.path)}
   <Login />
 {:else if match("/signup", route.path)}
@@ -100,6 +107,16 @@
       <Security />
     {:else if match("/stats", route.path)}
       <Stats />
+    {:else if route.path === "/admin" || route.path.startsWith("/admin/")}
+      {#if session.me.role === "admin"}
+        {#await loadAdmin()}
+          <p class="muted" role="status">{t("common.loading")}</p>
+        {:then m}
+          <m.default />
+        {/await}
+      {:else}
+        <div class="loading"><h1>{t("error.not_found_title")}</h1></div>
+      {/if}
     {:else if params?.pattern === "/books/:id"}
       {#key params.id}<BookDetail id={params.id} />{/key}
     {:else if params?.pattern === "/authors/:id"}

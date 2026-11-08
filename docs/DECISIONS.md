@@ -551,6 +551,43 @@ book finished offline (and synced later) on the wrong day or even year. It's now
 
 **Known limit.** Below 1× speed the formula undercounts a little (events don't store speed).
 
+## ADR-0032 — The admin panel
+
+**Decision.** One admin section in the web app (brief §6.23), loaded on demand so listeners never
+download it: dashboard, inbox, users, groups, user tags, library (master store), Trash, audit log,
+backups and settings. New API: `GET /admin/dashboard`, `GET /admin/growth`, user detail with
+tags/groups/permission overrides/devices, user-tag CRUD, group rename/priority/members, book
+takedowns, `GET /admin/audit` (+ CSV export), `GET/PATCH /admin/settings` and an SMTP test.
+
+**Dashboard health is what the host can tell us, never guessed.** Disk space comes from
+`statfs`/`GetDiskFreeSpaceEx` per volume; memory and load from `/proc` on Linux (shown as unknown
+elsewhere); the ZFS pool is always "unknown" — a container can't query `zpool` without extra
+privileges, and the brief allows "unknown". "Jobs waiting" counts running and *due* jobs only, not
+the nightly backup scheduled for later. Live streams are the shaper's open responses with their
+average rate since they started.
+
+**Settings.** Secrets (SMTP password, ntfy token) are write-only: the API reports only whether they
+are set, and the audit log records which groups changed, never values. Changing the bandwidth cap
+applies immediately. A new `quotas.default_quota_bytes` setting gives newly approved accounts their
+quota (brief §6.11). The copyright contact (Q10) is shown in the app footer when set.
+
+**Audit CSV** cells that start with `= + - @` are prefixed with `'` so spreadsheet apps don't run
+them as formulas.
+
+**Not yet:** the review queue, reports and duplicates (moderation milestone), book tools
+(Phase 5), updates and crash reports (Phase 6), OIDC and metadata-provider settings (Phase 6 and
+the metadata milestone).
+
+## ADR-0033 — Password reset links without a table
+
+**Decision.** An admin can make a one-time reset link (brief §6.6, for instances without SMTP).
+The token is `userID.expiry.HMAC(key, userID, expiry, current password hash)`, with a key derived
+from `secret.key`. It needs no table and is single-use by construction: setting the password
+changes the hash, so the same token (and any other outstanding link) stops matching. Links work
+for 24 hours, are rate-limited per IP, and using one signs the account out everywhere and clears a
+lockout. The token sits in the URL fragment (`/reset-password#…`), so it never reaches server logs
+or `Referer` headers. Email-based reset (when SMTP is configured) comes with the mail templates.
+
 ---
 
 ## Open questions for Jacob

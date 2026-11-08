@@ -5,7 +5,7 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-**Current phase: 2 — Admin panel + web player** (milestones 1–3 done: web foundation, player screens, account and stats). Phase 1 accepted 2026-11-08.
+**Current phase: 2 — Admin panel + web player** (milestones 1–4 done: web foundation, player screens, account and stats, admin panel). Phase 1 accepted 2026-11-08.
 
 ### Added (Phase 2)
 - Web app foundation: Svelte 5 + Vite + TypeScript, embedded in the server binary with SPA fallback, strict CSP and caching; cookie auth with CSRF and transparent refresh; ICU i18n from the shared catalogs; dark and e-ink themes with accessible components (48 px targets, visible focus, labelled errors).
@@ -20,6 +20,10 @@ All notable changes to this project are documented here. The format follows
 - Account pages (milestone 3): Settings (profile, appearance, playback, sync conflict threshold, privacy) and Security (change password, turn 2FA on/off, new recovery codes, signed-in devices with sign-out). Playback preferences sync through the account; theme and quality stay per device (ADR-0030).
 - Stats page (milestone 3): time listened, books finished, active days, longest run of days, most listened book and author, last-30-days and weekly charts with table views, time per book, top authors, books finished (ADR-0031).
 - API: `PATCH /me`, `POST /me/password`, `POST /me/totp/disable`, `POST /me/recovery-codes`, `DELETE /me/sessions`, `GET /me/stats`; `Me` gains `totp_required`, `conflict_threshold_minutes`, `listening_visible`, `prefs`; `openapi.yaml` 0.8.0.
+
+- Admin panel (milestone 4, ADR-0032): dashboard (live streams vs the bandwidth cap, disk/memory/load, DB size, jobs, last backup/scrub, inbox counts, growth), inbox (sign-up requests), users (warn/restrict/suspend/ban/reactivate with reasons, role, quota, tags, groups, permission overrides, devices, reset link), groups, user tags, master-store library (search, filters, bulk share and Trash, library scan), book page (sharing, takedown, Trash), Trash (restore, purge, empty with confirmation), audit log with filters and CSV export, backups and integrity checks, instance settings (instance, sign-up, quotas, permission defaults, bandwidth, SMTP with test, ntfy, privacy/terms, copyright contact). Loaded on demand.
+- Admin password reset links and the public reset page (ADR-0033); copyright contact in the app footer.
+- API: `GET /admin/dashboard`, `GET /admin/growth`, `GET /admin/users/{id}`, `PUT /admin/users/{id}/permissions`, user tags, `GET /admin/users/{id}/sessions`, `POST /admin/users/{id}/reset-link`, `POST /auth/password-reset`, `PATCH /admin/groups/{id}`, `GET /admin/groups/{id}/members`, takedowns, `GET /admin/audit` (+ `/export`), `GET/PATCH /admin/settings`, `POST /admin/settings/smtp/test`; `openapi.yaml` 0.9.0.
 
 ### Fixed (Phase 2)
 - The web client no longer signs you out when the server is briefly unreachable during a token refresh.

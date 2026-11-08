@@ -46,7 +46,9 @@ type App struct {
 	Push    *push.Notifier
 	Backup  *backup.Service
 	hlsCap  int64
-	log     *slog.Logger
+	// StartedAt is when the server started (dashboard uptime).
+	StartedAt time.Time
+	log       *slog.Logger
 }
 
 // Settings returns a settings store on the app DB.
@@ -62,8 +64,9 @@ type AppOptions struct {
 
 // NewApp wires the services for an open, set-up database.
 func NewApp(ctx context.Context, db *store.DB, secrets *config.Secrets, log *slog.Logger, o AppOptions) (*App, error) {
-	a := &App{DB: db, log: log, Auth: &auth.Service{
+	a := &App{DB: db, log: log, StartedAt: time.Now(), Auth: &auth.Service{
 		DB: db, Enc: secrets, Tokens: auth.NewTokens(secrets.Derive("jwt")), Limits: auth.DefaultLimits(), Log: log,
+		ResetKey: secrets.Derive("password-reset"),
 	}}
 	libSet, err := a.Settings().Library(ctx)
 	if err != nil {

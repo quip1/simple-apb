@@ -2,7 +2,7 @@
 
 > **Generated** from `server/openapi.yaml` by `web/scripts/gen-api-docs.mjs`. Do not edit by hand.
 
-Version **0.8.0** · base path `/api/v1`
+Version **0.9.0** · base path `/api/v1`
 
 REST API for Simple APB. All endpoints live under `/api/v1`.
 
@@ -35,6 +35,7 @@ REST API for Simple APB. All endpoints live under `/api/v1`.
 | POST | `/auth/totp/confirm` | Confirm TOTP enrollment; returns the 10 one-time recovery codes | yes | 200, 400, 401 |
 | POST | `/auth/refresh` | Exchange a refresh token for a new token pair (rotating) | public | 200, 401 |
 | POST | `/auth/logout` | End the current device session | yes | 204, 401 |
+| POST | `/auth/password-reset` | Set a new password with a reset token (signs out all sessions) | public | 204, 400, 429 |
 
 ### me
 
@@ -120,13 +121,34 @@ REST API for Simple APB. All endpoints live under `/api/v1`.
 | POST | `/admin/signup-requests/{requestId}/approve` | Approve a sign-up (user becomes active and joins Public) | yes | 204, 401, 403, 404 |
 | POST | `/admin/signup-requests/{requestId}/deny` | Deny a sign-up | yes | 204, 401, 403, 404 |
 | GET | `/admin/users` | Users | yes | 200, 401, 403 |
+| GET | `/admin/users/{userId}` | One user with tags, groups and permissions | yes | 200, 401, 403, 404 |
 | PATCH | `/admin/users/{userId}` | Change a user's status, role, quota or notice (a reason is required) | yes | 200, 400, 401, 403, 404 |
 | GET | `/admin/groups` | Groups | yes | 200, 401, 403 |
 | POST | `/admin/groups` | Create a group | yes | 201, 400, 401, 403, 409 |
+| PATCH | `/admin/groups/{groupId}` | Rename a group or change its bandwidth priority | yes | 200, 400, 401, 403, 404, 409 |
 | DELETE | `/admin/groups/{groupId}` | Delete a group (the built-in Public group cannot be deleted) | yes | 204, 401, 403, 404 |
 | PUT | `/admin/groups/{groupId}/members/{userId}` | Add a user to a group | yes | 204, 401, 403, 404 |
 | DELETE | `/admin/groups/{groupId}/members/{userId}` | Remove a user from a group | yes | 204, 401, 403, 404 |
 | DELETE | `/admin/sessions/{sessionId}` | Revoke any user's session | yes | 204, 401, 403, 404 |
+| GET | `/admin/dashboard` | Live sessions, server health, moderation inbox counts (brief §6.23) | yes | 200, 401, 403 |
+| GET | `/admin/growth` | Users, books, storage and listening per month | yes | 200, 400, 401, 403 |
+| PUT | `/admin/users/{userId}/permissions` | Replace a user's permission overrides (a missing key = use tags/defaults) | yes | 204, 400, 401, 403, 404 |
+| PUT | `/admin/users/{userId}/tags/{tagId}` | Give a user a tag | yes | 204, 401, 403, 404 |
+| DELETE | `/admin/users/{userId}/tags/{tagId}` | Take a tag off a user | yes | 204, 401, 403, 404 |
+| GET | `/admin/users/{userId}/sessions` | A user's signed-in devices | yes | 200, 401, 403, 404 |
+| POST | `/admin/users/{userId}/reset-link` | A one-time password reset link for a user (valid 24 h; stops working once used) | yes | 200, 401, 403, 404 |
+| GET | `/admin/user-tags` | User tags (capability overrides, required 2FA) | yes | 200, 401, 403 |
+| POST | `/admin/user-tags` | Create a user tag | yes | 201, 400, 401, 403, 409 |
+| PATCH | `/admin/user-tags/{tagId}` | Edit a user tag (fields present are changed) | yes | 200, 400, 401, 403, 404, 409 |
+| DELETE | `/admin/user-tags/{tagId}` | Delete a user tag (removes it from everyone) | yes | 204, 401, 403, 404 |
+| GET | `/admin/groups/{groupId}/members` | Members of a group | yes | 200, 401, 403, 404 |
+| POST | `/admin/books/{bookId}/takedown` | Hide a book from everyone now (files are kept; brief §6.5 rule 8) | yes | 204, 400, 401, 403, 404, 409 |
+| DELETE | `/admin/books/{bookId}/takedown` | Lift a takedown (the book is visible again) | yes | 204, 401, 403, 404 |
+| GET | `/admin/audit` | The audit log, newest first | yes | 200, 400, 401, 403 |
+| GET | `/admin/audit/export` | The filtered audit log as CSV (at most 100 000 rows) | yes | 200, 400, 401, 403 |
+| GET | `/admin/settings` | Instance settings (secrets are never returned, only whether they're set) | yes | 200, 401, 403 |
+| PATCH | `/admin/settings` | Change instance settings (groups and fields present are changed) | yes | 200, 400, 401, 403 |
+| POST | `/admin/settings/smtp/test` | Send a test email with the saved SMTP settings | yes | 200, 401, 403 |
 | GET | `/admin/books` | Browse the master store (every book the server holds) | yes | 200, 401, 403 |
 | GET | `/admin/books/{bookId}` | One master-store book with its distributions | yes | 200, 401, 403, 404 |
 | DELETE | `/admin/books/{bookId}` | Move a book to the Trash (hidden everywhere; purged after 30 days) | yes | 204, 401, 403, 404 |
@@ -829,6 +851,7 @@ Enum: `processing`, `ready`, `quarantined`, `trashed`
 | `purge_at` | string (date-time) |  | When the Trash will purge it automatically |
 | `created_at` | string (date-time) | yes |  |
 | `distributions` | array of `Distribution` | yes |  |
+| `takedown` | `Takedown` |  |  |
 
 ### MasterBookPage
 
@@ -865,6 +888,319 @@ Enum: `processing`, `ready`, `quarantined`, `trashed`
 | `confirm_count` | integer | yes | Must equal the number of books in the Trash |
 | `password` | string (password) | yes |  |
 | `totp_code` | string | yes |  |
+
+### AdminDashboard
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `version` | string | yes |  |
+| `started_at` | string (date-time) | yes |  |
+| `uptime_s` | integer (int64) | yes |  |
+| `egress` | `DashboardEgress` | yes |  |
+| `live` | array of `LiveStream` | yes |  |
+| `health` | `ServerHealth` | yes |  |
+| `last_backup` | `OpStatus` |  |  |
+| `last_scrub` | `OpStatus` |  |  |
+| `inbox` | `InboxCounts` | yes |  |
+
+### LiveStream
+
+One open audio response (a stream or a download)
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `user_id` | string (uuid) | yes |  |
+| `username` | string | yes |  |
+| `book_id` | string (uuid) | yes |  |
+| `book_title` | string | yes |  |
+| `kind` | string: live \| download | yes |  |
+| `priority` | string: admin \| priority \| normal | yes |  |
+| `bitrate_kbps` | integer |  |  |
+| `rate_bps` | integer (int64) | yes |  |
+| `sent_bytes` | integer (int64) | yes |  |
+| `since` | string (date-time) | yes |  |
+
+### ServerHealth
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `db_bytes` | integer (int64) | yes |  |
+| `disks` | array of `DiskUsage` | yes |  |
+| `zfs` | string | yes | ZFS pool status, or "unknown" |
+| `job_queue_depth` | integer | yes |  |
+| `process_memory_bytes` | integer (int64) | yes |  |
+| `memory_total_bytes` | integer (int64) |  | Linux only |
+| `memory_available_bytes` | integer (int64) |  | Linux only |
+| `load_average` | number |  | 1-minute load average (Linux only) |
+| `cpus` | integer |  |  |
+
+### GrowthPoint
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `month` | string | yes |  |
+| `users` | integer | yes | Active accounts at the end of the month |
+| `books` | integer | yes | Books in the master store at the end of the month |
+| `storage_bytes` | integer (int64) | yes |  |
+| `listening_ms` | integer (int64) | yes | Listening during the month, all users |
+
+### UserRef
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `username` | string | yes |  |
+| `display_name` | string | yes |  |
+
+### AdminUserDetail
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| _all fields of_ `AdminUser` | | | |
+| `notice` | string |  |  |
+| `used_bytes` | integer (int64) | yes |  |
+| `last_login_at` | string (date-time) |  |  |
+| `tags` | array of `UserTag` | yes |  |
+| `groups` | array of `Group` | yes |  |
+| `permissions` | `PermissionOverridesInput` | yes |  |
+| `effective` | `EffectivePermissions` | yes |  |
+
+### PermissionOverridesInput
+
+Explicit values; a missing key means "not overridden"
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `can_upload` | boolean |  |  |
+| `can_edit_metadata` | boolean |  |  |
+| `can_delete_own` | boolean |  |  |
+| `can_share` | boolean |  |  |
+| `can_review` | boolean |  |  |
+| `can_post_public` | boolean |  |  |
+
+### UserTag
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `name` | string | yes |  |
+| `color` | string |  |  |
+| `require_totp` | boolean | yes |  |
+| `capability_overrides` | `PermissionOverridesInput` | yes |  |
+| `members` | integer | yes |  |
+
+### UserTagInput
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `name` | string | yes |  |
+| `color` | string |  |  |
+| `require_totp` | boolean |  |  |
+| `capability_overrides` | `PermissionOverridesInput` |  |  |
+
+### UserTagPatch
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `name` | string |  |  |
+| `color` | string |  | Empty clears it |
+| `require_totp` | boolean |  |  |
+| `capability_overrides` | `PermissionOverridesInput` |  |  |
+
+### GroupPatch
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `name` | string |  |  |
+| `high_priority` | boolean |  |  |
+
+### ResetLink
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `url` | string | yes |  |
+| `expires_at` | string (date-time) | yes |  |
+
+### PasswordReset
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `token` | string | yes |  |
+| `new_password` | string (password) | yes |  |
+
+### Takedown
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `reason` | string | yes |  |
+| `taken_at` | string (date-time) | yes |  |
+| `taken_by` | string (uuid) |  |  |
+
+### AuditEntry
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `at` | string (date-time) | yes |  |
+| `actor_id` | string (uuid) |  |  |
+| `actor_name` | string |  |  |
+| `action` | string | yes |  |
+| `object_type` | string |  |  |
+| `object_id` | string |  |  |
+| `details` | object | yes |  |
+| `ip` | string |  |  |
+
+### AuditPage
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `items` | array of `AuditEntry` | yes |  |
+| `next_cursor` | string |  |  |
+
+### AdminSettings
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `instance` | `InstanceSettings` | yes |  |
+| `auth` | `AuthSettings` | yes |  |
+| `bandwidth` | `BandwidthSettings` | yes |  |
+| `quotas` | `QuotaSettings` | yes |  |
+| `permission_defaults` | `EffectivePermissions` | yes |  |
+| `smtp` | `SmtpSettingsView` | yes |  |
+| `ntfy` | `NtfySettingsView` | yes |  |
+
+### AdminSettingsPatch
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `instance` | `InstanceSettingsPatch` |  |  |
+| `auth` | `AuthSettingsPatch` |  |  |
+| `bandwidth` | `BandwidthSettingsPatch` |  |  |
+| `quotas` | `QuotaSettingsPatch` |  |  |
+| `permission_defaults` | `PermissionOverridesInput` |  |  |
+| `smtp` | `SmtpSettingsPatch` |  |  |
+| `ntfy` | `NtfySettingsPatch` |  |  |
+
+### DashboardEgress
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `cap_bps` | integer (int64) | yes | Global egress cap |
+| `used_bps` | integer (int64) | yes | Average rate of the open streams |
+
+### InboxCounts
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `signup_requests` | integer | yes |  |
+| `review_queue` | integer | yes |  |
+| `reports` | integer | yes |  |
+
+### InstanceSettings
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `name` | string | yes |  |
+| `base_url` | string | yes |  |
+| `signup_open` | boolean | yes |  |
+| `privacy_text` | string | yes |  |
+| `terms_text` | string | yes |  |
+| `copyright_contact` | string | yes |  |
+
+### AuthSettings
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `require_totp_all` | boolean | yes |  |
+
+### BandwidthSettings
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `egress_mbps` | integer | yes |  |
+| `hls_cache_gb` | integer | yes |  |
+
+### QuotaSettings
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `default_quota_bytes` | integer (int64) | yes | Given to newly approved accounts; 0 = unlimited |
+
+### SmtpSettingsView
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `host` | string | yes |  |
+| `port` | integer | yes |  |
+| `tls` | string: starttls \| tls \| none | yes |  |
+| `username` | string | yes |  |
+| `from` | string | yes |  |
+| `password_set` | boolean | yes |  |
+
+### NtfySettingsView
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `internal_url` | string | yes |  |
+| `public_url` | string | yes |  |
+| `token_set` | boolean | yes |  |
+
+### InstanceSettingsPatch
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `name` | string |  |  |
+| `base_url` | string |  |  |
+| `signup_open` | boolean |  |  |
+| `privacy_text` | string |  |  |
+| `terms_text` | string |  |  |
+| `copyright_contact` | string |  |  |
+
+### AuthSettingsPatch
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `require_totp_all` | boolean |  |  |
+
+### BandwidthSettingsPatch
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `egress_mbps` | integer |  |  |
+| `hls_cache_gb` | integer |  |  |
+
+### QuotaSettingsPatch
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `default_quota_bytes` | integer (int64) |  |  |
+
+### SmtpSettingsPatch
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `host` | string |  |  |
+| `port` | integer |  |  |
+| `tls` | string: starttls \| tls \| none |  |  |
+| `username` | string |  |  |
+| `password` | string (password) |  | Write-only; empty clears it |
+| `from` | string |  |  |
+
+### NtfySettingsPatch
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `internal_url` | string |  |  |
+| `public_url` | string |  |  |
+| `token` | string |  | Write-only; empty clears it |
+
+### DiskUsage
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `name` | string: config \| library \| cache \| backups | yes |  |
+| `free_bytes` | integer (int64) | yes |  |
+| `total_bytes` | integer (int64) | yes |  |
 
 ### Bookmark
 

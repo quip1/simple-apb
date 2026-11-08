@@ -223,16 +223,18 @@ type Flow struct {
 	BookID string
 	Class  Class
 	Live   bool
-	minBps int64
-	want   int64      // guarded by s.mu
-	ready  chan int64 // granted bytes; -1 = shaper stopped
-	sent   int64      // guarded by s.mu
-	opened time.Time
+	// Bitrate is the stream's bitrate in kbps (0 = unknown).
+	Bitrate int
+	minBps  int64
+	want    int64      // guarded by s.mu
+	ready   chan int64 // granted bytes; -1 = shaper stopped
+	sent    int64      // guarded by s.mu
+	opened  time.Time
 }
 
 // Open registers a flow. bitrateKbps sets the live guaranteed minimum (×1.5).
 func (s *Shaper) Open(user, bookID string, class Class, live bool, bitrateKbps int) *Flow {
-	f := &Flow{s: s, User: user, BookID: bookID, Class: class, Live: live, ready: make(chan int64, 1), opened: time.Now()}
+	f := &Flow{s: s, User: user, BookID: bookID, Class: class, Live: live, Bitrate: bitrateKbps, ready: make(chan int64, 1), opened: time.Now()}
 	if live && bitrateKbps > 0 {
 		f.minBps = int64(bitrateKbps) * 1000 / 8 * 3 / 2
 	}
@@ -289,6 +291,7 @@ type FlowStat struct {
 	User, BookID string
 	Class        Class
 	Live         bool
+	BitrateKbps  int
 	SentBytes    int64
 	Since        time.Time
 }
@@ -305,7 +308,7 @@ func (s *Shaper) Snapshot() Stats {
 	defer s.mu.Unlock()
 	st := Stats{RateBps: s.rateBps}
 	for f := range s.flows {
-		st.Flows = append(st.Flows, FlowStat{User: f.User, BookID: f.BookID, Class: f.Class, Live: f.Live, SentBytes: f.sent, Since: f.opened})
+		st.Flows = append(st.Flows, FlowStat{User: f.User, BookID: f.BookID, Class: f.Class, Live: f.Live, BitrateKbps: f.Bitrate, SentBytes: f.sent, Since: f.opened})
 	}
 	sort.Slice(st.Flows, func(i, j int) bool { return st.Flows[i].Since.Before(st.Flows[j].Since) })
 	return st

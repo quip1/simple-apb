@@ -22,6 +22,7 @@ const (
 	KeyBandwidth   = "bandwidth"
 	KeyAuth        = "auth"
 	KeyPermissions = "permission_defaults"
+	KeyQuotas      = "quotas"
 	KeySetupDone   = "setup_completed_at"
 )
 
@@ -65,6 +66,11 @@ type Bandwidth struct {
 	EgressMbps int `json:"egress_mbps"`
 	// HLSCacheGB caps the transcode cache (LRU), default 10.
 	HLSCacheGB int `json:"hls_cache_gb"`
+}
+
+// Quotas: storage given to newly approved accounts (brief §6.11).
+type Quotas struct {
+	DefaultQuotaBytes int64 `json:"default_quota_bytes"` // 0 = unlimited
 }
 
 // Auth settings.
@@ -125,6 +131,12 @@ func (s Store) Bandwidth(ctx context.Context) (Bandwidth, error) {
 func (s Store) Auth(ctx context.Context) (Auth, error) {
 	var v Auth
 	return v, s.get(ctx, KeyAuth, &v)
+}
+
+// Quotas returns quota settings.
+func (s Store) Quotas(ctx context.Context) (Quotas, error) {
+	var v Quotas
+	return v, s.get(ctx, KeyQuotas, &v)
 }
 
 // PermissionDefaults returns the instance capability defaults.

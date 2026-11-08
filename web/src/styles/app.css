@@ -189,3 +189,47 @@ input[type="range"] {
   accent-color: var(--accent);
   margin: 0;
 }
+
+/* Data tables (admin panel). Scroll sideways on small screens. */
+.table-scroll {
+  overflow-x: auto;
+}
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+table.data th,
+table.data td {
+  text-align: start;
+  padding: 0.55rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+table.data th {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+table.data td.num,
+table.data th.num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Small text badges (status, roles). Text carries the meaning, never colour alone. */
+.pill {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.6;
+  padding: 0 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.pill.warn {
+  border-color: var(--danger);
+  color: var(--danger);
+}

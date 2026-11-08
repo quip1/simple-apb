@@ -783,7 +783,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** One user with tags, groups and permissions */
+        get: operations["getAdminUser"];
         put?: never;
         post?: never;
         delete?: never;
@@ -825,7 +826,8 @@ export interface paths {
         delete: operations["deleteGroup"];
         options?: never;
         head?: never;
-        patch?: never;
+        /** Rename a group or change its bandwidth priority */
+        patch: operations["updateGroup"];
         trace?: never;
     };
     "/admin/groups/{groupId}/members/{userId}": {
@@ -901,6 +903,266 @@ export interface paths {
         get: operations["getJob"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Live sessions, server health, moderation inbox counts (brief §6.23) */
+        get: operations["getAdminDashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/growth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Users, books, storage and listening per month */
+        get: operations["getAdminGrowth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{userId}/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace a user's permission overrides (a missing key = use tags/defaults) */
+        put: operations["setUserPermissions"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{userId}/tags/{tagId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Give a user a tag */
+        put: operations["addUserTag"];
+        post?: never;
+        /** Take a tag off a user */
+        delete: operations["removeUserTag"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{userId}/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A user's signed-in devices */
+        get: operations["listUserSessions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{userId}/reset-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A one-time password reset link for a user (valid 24 h; stops working once used) */
+        post: operations["createPasswordResetLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/password-reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set a new password with a reset token (signs out all sessions) */
+        post: operations["resetPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/user-tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** User tags (capability overrides, required 2FA) */
+        get: operations["listUserTags"];
+        put?: never;
+        /** Create a user tag */
+        post: operations["createUserTag"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/user-tags/{tagId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a user tag (removes it from everyone) */
+        delete: operations["deleteUserTag"];
+        options?: never;
+        head?: never;
+        /** Edit a user tag (fields present are changed) */
+        patch: operations["updateUserTag"];
+        trace?: never;
+    };
+    "/admin/groups/{groupId}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Members of a group */
+        get: operations["listGroupMembers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/books/{bookId}/takedown": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hide a book from everyone now (files are kept; brief §6.5 rule 8) */
+        post: operations["takeDownBook"];
+        /** Lift a takedown (the book is visible again) */
+        delete: operations["liftTakedown"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The audit log, newest first */
+        get: operations["listAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/audit/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The filtered audit log as CSV (at most 100 000 rows) */
+        get: operations["exportAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Instance settings (secrets are never returned, only whether they're set) */
+        get: operations["getAdminSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change instance settings (groups and fields present are changed) */
+        patch: operations["updateAdminSettings"];
+        trace?: never;
+    };
+    "/admin/settings/smtp/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a test email with the saved SMTP settings */
+        post: operations["testAdminSmtp"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1898,6 +2160,7 @@ export interface components {
             /** Format: date-time */
             created_at: string;
             distributions: components["schemas"]["Distribution"][];
+            takedown?: components["schemas"]["Takedown"];
         };
         MasterBookPage: {
             items: components["schemas"]["MasterBook"][];
@@ -1932,6 +2195,284 @@ export interface components {
             /** Format: password */
             password: string;
             totp_code: string;
+        };
+        AdminDashboard: {
+            version: string;
+            /** Format: date-time */
+            started_at: string;
+            /** Format: int64 */
+            uptime_s: number;
+            egress: components["schemas"]["DashboardEgress"];
+            live: components["schemas"]["LiveStream"][];
+            health: components["schemas"]["ServerHealth"];
+            last_backup?: components["schemas"]["OpStatus"];
+            last_scrub?: components["schemas"]["OpStatus"];
+            inbox: components["schemas"]["InboxCounts"];
+        };
+        /** @description One open audio response (a stream or a download) */
+        LiveStream: {
+            /** Format: uuid */
+            user_id: string;
+            username: string;
+            /** Format: uuid */
+            book_id: string;
+            book_title: string;
+            /** @enum {string} */
+            kind: "live" | "download";
+            /** @enum {string} */
+            priority: "admin" | "priority" | "normal";
+            bitrate_kbps?: number;
+            /** Format: int64 */
+            rate_bps: number;
+            /** Format: int64 */
+            sent_bytes: number;
+            /** Format: date-time */
+            since: string;
+        };
+        ServerHealth: {
+            /** Format: int64 */
+            db_bytes: number;
+            disks: components["schemas"]["DiskUsage"][];
+            /** @description ZFS pool status, or "unknown" */
+            zfs: string;
+            job_queue_depth: number;
+            /** Format: int64 */
+            process_memory_bytes: number;
+            /**
+             * Format: int64
+             * @description Linux only
+             */
+            memory_total_bytes?: number;
+            /**
+             * Format: int64
+             * @description Linux only
+             */
+            memory_available_bytes?: number;
+            /** @description 1-minute load average (Linux only) */
+            load_average?: number;
+            cpus?: number;
+        };
+        GrowthPoint: {
+            /** @example 2026-03 */
+            month: string;
+            /** @description Active accounts at the end of the month */
+            users: number;
+            /** @description Books in the master store at the end of the month */
+            books: number;
+            /** Format: int64 */
+            storage_bytes: number;
+            /**
+             * Format: int64
+             * @description Listening during the month, all users
+             */
+            listening_ms: number;
+        };
+        UserRef: {
+            /** Format: uuid */
+            id: string;
+            username: string;
+            display_name: string;
+        };
+        AdminUserDetail: components["schemas"]["AdminUser"] & {
+            notice?: string;
+            /** Format: int64 */
+            used_bytes: number;
+            /** Format: date-time */
+            last_login_at?: string;
+            tags: components["schemas"]["UserTag"][];
+            groups: components["schemas"]["Group"][];
+            permissions: components["schemas"]["PermissionOverridesInput"];
+            effective: components["schemas"]["EffectivePermissions"];
+        };
+        /** @description Explicit values; a missing key means "not overridden" */
+        PermissionOverridesInput: {
+            can_upload?: boolean;
+            can_edit_metadata?: boolean;
+            can_delete_own?: boolean;
+            can_share?: boolean;
+            can_review?: boolean;
+            can_post_public?: boolean;
+        };
+        UserTag: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            color?: string;
+            require_totp: boolean;
+            capability_overrides: components["schemas"]["PermissionOverridesInput"];
+            members: number;
+        };
+        UserTagInput: {
+            name: string;
+            color?: string;
+            require_totp?: boolean;
+            capability_overrides?: components["schemas"]["PermissionOverridesInput"];
+        };
+        UserTagPatch: {
+            name?: string;
+            /** @description Empty clears it */
+            color?: string;
+            require_totp?: boolean;
+            capability_overrides?: components["schemas"]["PermissionOverridesInput"];
+        };
+        GroupPatch: {
+            name?: string;
+            high_priority?: boolean;
+        };
+        ResetLink: {
+            url: string;
+            /** Format: date-time */
+            expires_at: string;
+        };
+        PasswordReset: {
+            token: string;
+            /** Format: password */
+            new_password: string;
+        };
+        Takedown: {
+            reason: string;
+            /** Format: date-time */
+            taken_at: string;
+            /** Format: uuid */
+            taken_by?: string;
+        };
+        AuditEntry: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            at: string;
+            /** Format: uuid */
+            actor_id?: string;
+            actor_name?: string;
+            /** @example user.update */
+            action: string;
+            object_type?: string;
+            object_id?: string;
+            details: {
+                [key: string]: unknown;
+            };
+            ip?: string;
+        };
+        AuditPage: {
+            items: components["schemas"]["AuditEntry"][];
+            next_cursor?: string;
+        };
+        AdminSettings: {
+            instance: components["schemas"]["InstanceSettings"];
+            auth: components["schemas"]["AuthSettings"];
+            bandwidth: components["schemas"]["BandwidthSettings"];
+            quotas: components["schemas"]["QuotaSettings"];
+            permission_defaults: components["schemas"]["EffectivePermissions"];
+            smtp: components["schemas"]["SmtpSettingsView"];
+            ntfy: components["schemas"]["NtfySettingsView"];
+        };
+        AdminSettingsPatch: {
+            instance?: components["schemas"]["InstanceSettingsPatch"];
+            auth?: components["schemas"]["AuthSettingsPatch"];
+            bandwidth?: components["schemas"]["BandwidthSettingsPatch"];
+            quotas?: components["schemas"]["QuotaSettingsPatch"];
+            permission_defaults?: components["schemas"]["PermissionOverridesInput"];
+            smtp?: components["schemas"]["SmtpSettingsPatch"];
+            ntfy?: components["schemas"]["NtfySettingsPatch"];
+        };
+        DashboardEgress: {
+            /**
+             * Format: int64
+             * @description Global egress cap
+             */
+            cap_bps: number;
+            /**
+             * Format: int64
+             * @description Average rate of the open streams
+             */
+            used_bps: number;
+        };
+        InboxCounts: {
+            signup_requests: number;
+            review_queue: number;
+            reports: number;
+        };
+        InstanceSettings: {
+            name: string;
+            base_url: string;
+            signup_open: boolean;
+            privacy_text: string;
+            terms_text: string;
+            copyright_contact: string;
+        };
+        AuthSettings: {
+            require_totp_all: boolean;
+        };
+        BandwidthSettings: {
+            egress_mbps: number;
+            hls_cache_gb: number;
+        };
+        QuotaSettings: {
+            /**
+             * Format: int64
+             * @description Given to newly approved accounts; 0 = unlimited
+             */
+            default_quota_bytes: number;
+        };
+        SmtpSettingsView: {
+            host: string;
+            port: number;
+            /** @enum {string} */
+            tls: "starttls" | "tls" | "none";
+            username: string;
+            from: string;
+            password_set: boolean;
+        };
+        NtfySettingsView: {
+            internal_url: string;
+            public_url: string;
+            token_set: boolean;
+        };
+        InstanceSettingsPatch: {
+            name?: string;
+            base_url?: string;
+            signup_open?: boolean;
+            privacy_text?: string;
+            terms_text?: string;
+            copyright_contact?: string;
+        };
+        AuthSettingsPatch: {
+            require_totp_all?: boolean;
+        };
+        BandwidthSettingsPatch: {
+            egress_mbps?: number;
+            hls_cache_gb?: number;
+        };
+        QuotaSettingsPatch: {
+            /** Format: int64 */
+            default_quota_bytes?: number;
+        };
+        SmtpSettingsPatch: {
+            host?: string;
+            port?: number;
+            /** @enum {string} */
+            tls?: "starttls" | "tls" | "none";
+            username?: string;
+            /**
+             * Format: password
+             * @description Write-only; empty clears it
+             */
+            password?: string;
+            from?: string;
+        };
+        NtfySettingsPatch: {
+            internal_url?: string;
+            public_url?: string;
+            /** @description Write-only; empty clears it */
+            token?: string;
+        };
+        DiskUsage: {
+            /** @enum {string} */
+            name: "config" | "library" | "cache" | "backups";
+            /** Format: int64 */
+            free_bytes: number;
+            /** Format: int64 */
+            total_bytes: number;
         };
         Bookmark: {
             /** Format: uuid */
@@ -2104,6 +2645,15 @@ export interface components {
         HlsProfile: components["schemas"]["HlsProfile"];
         RequestId: string;
         UserId: string;
+        TagId: string;
+        /** @description Actor user id */
+        AuditActor: string;
+        /** @description Action, or a prefix ending in "." (e.g. "user.") */
+        AuditAction: string;
+        AuditObjectType: string;
+        AuditObjectId: string;
+        AuditFrom: string;
+        AuditTo: string;
         GroupId: string;
         BookmarkId: string;
         CollectionId: string;
@@ -3269,6 +3819,31 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    getAdminUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: components["parameters"]["UserId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description User */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserDetail"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     patchUser: {
         parameters: {
             query?: never;
@@ -3370,6 +3945,37 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    updateGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: components["parameters"]["GroupId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GroupPatch"];
+            };
+        };
+        responses: {
+            /** @description The group */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Group"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     addGroupMember: {
@@ -3488,6 +4094,531 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getAdminDashboard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dashboard */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminDashboard"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getAdminGrowth: {
+        parameters: {
+            query?: {
+                months?: number;
+                /** @description IANA time zone for month boundaries */
+                tz?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One point per month, oldest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrowthPoint"][];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    setUserPermissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: components["parameters"]["UserId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PermissionOverridesInput"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    addUserTag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: components["parameters"]["UserId"];
+                tagId: components["parameters"]["TagId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Added */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    removeUserTag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: components["parameters"]["UserId"];
+                tagId: components["parameters"]["TagId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listUserSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: components["parameters"]["UserId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sessions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Session"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createPasswordResetLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: components["parameters"]["UserId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Link to hand to the user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResetLink"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    resetPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordReset"];
+            };
+        };
+        responses: {
+            /** @description Password set */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    listUserTags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tags */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserTag"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createUserTag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserTagInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserTag"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    deleteUserTag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tagId: components["parameters"]["TagId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateUserTag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tagId: components["parameters"]["TagId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserTagPatch"];
+            };
+        };
+        responses: {
+            /** @description The tag */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserTag"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listGroupMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: components["parameters"]["GroupId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Members */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserRef"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    takeDownBook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description Taken down */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    liftTakedown: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lifted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listAudit: {
+        parameters: {
+            query?: {
+                /** @description Actor user id */
+                actor?: components["parameters"]["AuditActor"];
+                /** @description Action, or a prefix ending in "." (e.g. "user.") */
+                action?: components["parameters"]["AuditAction"];
+                object_type?: components["parameters"]["AuditObjectType"];
+                object_id?: components["parameters"]["AuditObjectId"];
+                from?: components["parameters"]["AuditFrom"];
+                to?: components["parameters"]["AuditTo"];
+                /** @description Opaque pagination cursor from `next_cursor` */
+                cursor?: components["parameters"]["Cursor"];
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of entries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    exportAudit: {
+        parameters: {
+            query?: {
+                /** @description Actor user id */
+                actor?: components["parameters"]["AuditActor"];
+                /** @description Action, or a prefix ending in "." (e.g. "user.") */
+                action?: components["parameters"]["AuditAction"];
+                object_type?: components["parameters"]["AuditObjectType"];
+                object_id?: components["parameters"]["AuditObjectId"];
+                from?: components["parameters"]["AuditFrom"];
+                to?: components["parameters"]["AuditTo"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description CSV file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getAdminSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSettings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updateAdminSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminSettingsPatch"];
+            };
+        };
+        responses: {
+            /** @description Settings after the change */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSettings"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    testAdminSmtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    to: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetupCheckResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     listMasterBooks: {

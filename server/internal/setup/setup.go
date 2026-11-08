@@ -283,11 +283,11 @@ func validate(r *Request) error {
 	if p := auth.CheckPassword(r.AdminPassword, r.AdminUsername); p != auth.PasswordAcceptable {
 		return invalid(string(p), "admin password does not meet the policy")
 	}
-	u, err := url.Parse(strings.TrimRight(r.BaseURL, "/"))
-	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" || u.Path != "" && u.Path != "/" {
+	base, ok := NormalizeBaseURL(r.BaseURL)
+	if !ok {
 		return invalid("invalid_base_url", "base URL must look like https://books.example.com")
 	}
-	r.BaseURL = u.Scheme + "://" + u.Host
+	r.BaseURL = base
 	if strings.TrimSpace(r.Instance.Name) == "" {
 		return invalid("invalid_instance_name", "instance name is required")
 	}
@@ -334,4 +334,14 @@ func LoadExisting(ctx context.Context, paths config.Paths, secrets *config.Secre
 		return nil, false, err
 	}
 	return db, done, nil
+}
+
+// NormalizeBaseURL checks an instance address ("https://books.example.com",
+// no path) and returns it without a trailing slash.
+func NormalizeBaseURL(raw string) (string, bool) {
+	u, err := url.Parse(strings.TrimRight(strings.TrimSpace(raw), "/"))
+	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" || u.Path != "" && u.Path != "/" {
+		return "", false
+	}
+	return u.Scheme + "://" + u.Host, true
 }

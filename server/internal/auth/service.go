@@ -83,8 +83,10 @@ type Service struct {
 	Enc    store.Encrypter
 	Tokens *Tokens
 	Limits *Limits
-	Log    *slog.Logger
-	Now    func() time.Time
+	// ResetKey signs password reset links.
+	ResetKey []byte
+	Log      *slog.Logger
+	Now      func() time.Time
 	// OnSignup runs inside the sign-up transaction (queues the admin push).
 	OnSignup func(ctx context.Context, q store.Querier, requestID string)
 	pending  sync.Map // userID → pendingTOTP
@@ -407,6 +409,11 @@ func (s *Service) Authenticate(ctx context.Context, access string) (*Principal, 
 		_ = store.TouchSession(ctx, s.DB, sess.ID)
 	}
 	return s.principal(ctx, u, sess.ID)
+}
+
+// PrincipalFor evaluates a user's permissions without a session (admin views).
+func (s *Service) PrincipalFor(ctx context.Context, u *store.User) (*Principal, error) {
+	return s.principal(ctx, u, "")
 }
 
 func (s *Service) principal(ctx context.Context, u *store.User, sessionID string) (*Principal, error) {

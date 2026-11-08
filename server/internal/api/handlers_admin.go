@@ -61,6 +61,16 @@ func (s *Server) ApproveSignupRequest(ctx context.Context, req ApproveSignupRequ
 		if err := store.SetUserStatus(ctx, tx, r.UserID, "active", "signup approved", nil); err != nil {
 			return err
 		}
+		// New accounts get the instance's default quota (brief §6.11).
+		q, err := s.App().Settings().Quotas(ctx)
+		if err != nil {
+			return err
+		}
+		if q.DefaultQuotaBytes > 0 {
+			if err := store.PatchUser(ctx, tx, r.UserID, store.UserPatch{QuotaBytes: &q.DefaultQuotaBytes}); err != nil {
+				return err
+			}
+		}
 		pub, err := store.EnsurePublicGroup(ctx, tx)
 		if err != nil {
 			return err

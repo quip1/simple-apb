@@ -34,6 +34,16 @@ func (s *Server) masterOut(ctx context.Context, b *store.Book, withDist bool) (M
 		t := msTime(*b.TrashedAt).Add(library.TrashRetention)
 		m.PurgeAt = &t
 	}
+	if t, err := store.ActiveTakedown(ctx, db, b.ID); err == nil {
+		td := Takedown{Reason: t.Reason, TakenAt: msTime(t.TakenAt)}
+		if t.TakenBy != "" {
+			by := mustUUID(t.TakenBy)
+			td.TakenBy = &by
+		}
+		m.Takedown = &td
+	} else if !errors.Is(err, store.ErrNotFound) {
+		return MasterBook{}, err
+	}
 	if withDist {
 		ds, err := store.ListDistributions(ctx, db, b.ID)
 		if err != nil {
@@ -74,7 +84,7 @@ func (s *Server) ListMasterBooks(ctx context.Context, req ListMasterBooksRequest
 		page.NextCursor = encodeCursor(offset + limit)
 	}
 	for _, b := range books {
-		m, err := s.masterOut(ctx, b, false)
+		m, err := s.masterOut(ctx, b, true)
 		if err != nil {
 			return nil, err
 		}

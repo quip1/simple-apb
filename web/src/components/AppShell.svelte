@@ -42,6 +42,9 @@
     {#each tabs as tab (tab.href)}
       <a href={tab.href} use:link aria-current={current(tab.href) ? "page" : undefined}>{t(tab.key)}</a>
     {/each}
+    {#if session.me?.role === "admin"}
+      <a href="/admin" use:link aria-current={route.path.startsWith("/admin") ? "page" : undefined}>{t("nav.admin")}</a>
+    {/if}
     {#if player.book}
       <a class="np" href="/player" use:link aria-current={route.path === "/player" ? "page" : undefined}>{t("nav.player")}</a>
     {/if}
@@ -56,6 +59,11 @@
 <main id="main" class="content" class:with-mini={showMini}>
   {@render children()}
 </main>
+{#if session.instance?.copyright_contact}
+  <footer class="foot">
+    <span class="muted">{t("footer.copyright", { contact: session.instance.copyright_contact })}</span>
+  </footer>
+{/if}
 
 {#if showMini}<MiniPlayer />{/if}
 <ConflictPrompt />
@@ -135,6 +143,13 @@
   }
   .with-mini {
     padding-bottom: 7rem;
+  }
+  .foot {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 1rem max(1rem, env(safe-area-inset-left)) 1.5rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.85rem;
   }
   .flash {
     position: fixed;

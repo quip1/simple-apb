@@ -60,3 +60,28 @@ export function hours(ms: number): string {
   if (ms >= 100 * 3600_000) return t("time.hours", { h: Math.round(ms / 3600_000) });
   return duration(ms);
 }
+
+/** 1.2 GB, 340 MB — binary units, locale number format. */
+export function bytes(n: number): string {
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let v = n;
+  let i = 0;
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024;
+    i++;
+  }
+  const num = new Intl.NumberFormat(document.documentElement.lang || "en", { maximumFractionDigits: v < 10 && i > 0 ? 1 : 0 });
+  return `${num.format(v)} ${units[i]}`;
+}
+
+/** 12.5 Mbps — a bit rate. */
+export function bitrate(bps: number): string {
+  const mbps = bps / 1_000_000;
+  const num = new Intl.NumberFormat(document.documentElement.lang || "en", { maximumFractionDigits: mbps < 10 ? 1 : 0 });
+  return mbps >= 1 ? `${num.format(mbps)} Mbps` : `${Math.round(bps / 1000)} kbps`;
+}
+
+/** A date and time in the user's locale. */
+export function dateTime(iso: string): string {
+  return new Intl.DateTimeFormat(document.documentElement.lang || "en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
+}

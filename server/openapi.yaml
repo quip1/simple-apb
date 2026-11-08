@@ -11,7 +11,7 @@
 openapi: 3.0.3
 info:
   title: Simple APB API
-  version: 0.8.0
+  version: 0.9.0
   description: |
     REST API for Simple APB. All endpoints live under `/api/v1`.
 
@@ -945,6 +945,21 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
 
   /admin/users/{userId}:
+    get:
+      tags: [admin]
+      operationId: getAdminUser
+      summary: One user with tags, groups and permissions
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminUserDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
     patch:
       tags: [admin]
       operationId: patchUser
@@ -1003,6 +1018,28 @@ paths:
         "409": { $ref: "#/components/responses/Conflict" }
 
   /admin/groups/{groupId}:
+    patch:
+      tags: [admin]
+      operationId: updateGroup
+      summary: Rename a group or change its bandwidth priority
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GroupPatch" }
+      responses:
+        "200":
+          description: The group
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Group" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
     delete:
       tags: [admin]
       operationId: deleteGroup
@@ -1101,6 +1138,358 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
 
   # ─────────────────────── Admin: master store ────────────────────────
+  /admin/dashboard:
+    get:
+      tags: [admin]
+      operationId: getAdminDashboard
+      summary: Live sessions, server health, moderation inbox counts (brief §6.23)
+      responses:
+        "200":
+          description: Dashboard
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminDashboard" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/growth:
+    get:
+      tags: [admin]
+      operationId: getAdminGrowth
+      summary: Users, books, storage and listening per month
+      parameters:
+        - { name: months, in: query, schema: { type: integer, minimum: 1, maximum: 36, default: 12 } }
+        - { name: tz, in: query, description: "IANA time zone for month boundaries", schema: { type: string, default: UTC, maxLength: 64 } }
+      responses:
+        "200":
+          description: One point per month, oldest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/GrowthPoint" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/users/{userId}/permissions:
+    put:
+      tags: [admin]
+      operationId: setUserPermissions
+      summary: Replace a user's permission overrides (a missing key = use tags/defaults)
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PermissionOverridesInput" }
+      responses:
+        "204": { description: Saved }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/users/{userId}/tags/{tagId}:
+    put:
+      tags: [admin]
+      operationId: addUserTag
+      summary: Give a user a tag
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/TagId"
+      responses:
+        "204": { description: Added }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [admin]
+      operationId: removeUserTag
+      summary: Take a tag off a user
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/TagId"
+      responses:
+        "204": { description: Removed }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/users/{userId}/sessions:
+    get:
+      tags: [admin]
+      operationId: listUserSessions
+      summary: A user's signed-in devices
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: Sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Session" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/users/{userId}/reset-link:
+    post:
+      tags: [admin]
+      operationId: createPasswordResetLink
+      summary: A one-time password reset link for a user (valid 24 h; stops working once used)
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: Link to hand to the user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ResetLink" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /auth/password-reset:
+    post:
+      tags: [auth]
+      operationId: resetPassword
+      summary: Set a new password with a reset token (signs out all sessions)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PasswordReset" }
+      responses:
+        "204": { description: Password set }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /admin/user-tags:
+    get:
+      tags: [admin]
+      operationId: listUserTags
+      summary: User tags (capability overrides, required 2FA)
+      responses:
+        "200":
+          description: Tags
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/UserTag" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [admin]
+      operationId: createUserTag
+      summary: Create a user tag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserTagInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserTag" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /admin/user-tags/{tagId}:
+    patch:
+      tags: [admin]
+      operationId: updateUserTag
+      summary: Edit a user tag (fields present are changed)
+      parameters:
+        - $ref: "#/components/parameters/TagId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserTagPatch" }
+      responses:
+        "200":
+          description: The tag
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserTag" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      tags: [admin]
+      operationId: deleteUserTag
+      summary: Delete a user tag (removes it from everyone)
+      parameters:
+        - $ref: "#/components/parameters/TagId"
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/groups/{groupId}/members:
+    get:
+      tags: [admin]
+      operationId: listGroupMembers
+      summary: Members of a group
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+      responses:
+        "200":
+          description: Members
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/UserRef" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/books/{bookId}/takedown:
+    post:
+      tags: [admin]
+      operationId: takeDownBook
+      summary: Hide a book from everyone now (files are kept; brief §6.5 rule 8)
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReasonRequest" }
+      responses:
+        "204": { description: Taken down }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      tags: [admin]
+      operationId: liftTakedown
+      summary: Lift a takedown (the book is visible again)
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "204": { description: Lifted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/audit:
+    get:
+      tags: [admin]
+      operationId: listAudit
+      summary: The audit log, newest first
+      parameters:
+        - $ref: "#/components/parameters/AuditActor"
+        - $ref: "#/components/parameters/AuditAction"
+        - $ref: "#/components/parameters/AuditObjectType"
+        - $ref: "#/components/parameters/AuditObjectId"
+        - $ref: "#/components/parameters/AuditFrom"
+        - $ref: "#/components/parameters/AuditTo"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: A page of entries
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuditPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/audit/export:
+    get:
+      tags: [admin]
+      operationId: exportAudit
+      summary: The filtered audit log as CSV (at most 100 000 rows)
+      parameters:
+        - $ref: "#/components/parameters/AuditActor"
+        - $ref: "#/components/parameters/AuditAction"
+        - $ref: "#/components/parameters/AuditObjectType"
+        - $ref: "#/components/parameters/AuditObjectId"
+        - $ref: "#/components/parameters/AuditFrom"
+        - $ref: "#/components/parameters/AuditTo"
+      responses:
+        "200":
+          description: CSV file
+          content:
+            text/csv:
+              schema: { type: string }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/settings:
+    get:
+      tags: [admin]
+      operationId: getAdminSettings
+      summary: Instance settings (secrets are never returned, only whether they're set)
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminSettings" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    patch:
+      tags: [admin]
+      operationId: updateAdminSettings
+      summary: Change instance settings (groups and fields present are changed)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdminSettingsPatch" }
+      responses:
+        "200":
+          description: Settings after the change
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminSettings" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/settings/smtp/test:
+    post:
+      tags: [admin]
+      operationId: testAdminSmtp
+      summary: Send a test email with the saved SMTP settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to]
+              properties:
+                to: { type: string, format: email }
+      responses:
+        "200":
+          description: Result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SetupCheckResult" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /admin/books:
     get:
       tags: [admin]
@@ -1552,6 +1941,37 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
+    TagId:
+      name: tagId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    AuditActor:
+      name: actor
+      in: query
+      description: Actor user id
+      schema: { type: string, format: uuid }
+    AuditAction:
+      name: action
+      in: query
+      description: Action, or a prefix ending in "." (e.g. "user.")
+      schema: { type: string, maxLength: 100 }
+    AuditObjectType:
+      name: object_type
+      in: query
+      schema: { type: string, maxLength: 50 }
+    AuditObjectId:
+      name: object_id
+      in: query
+      schema: { type: string, maxLength: 100 }
+    AuditFrom:
+      name: from
+      in: query
+      schema: { type: string, format: date-time }
+    AuditTo:
+      name: to
+      in: query
+      schema: { type: string, format: date-time }
     GroupId:
       name: groupId
       in: path
@@ -2383,6 +2803,7 @@ components:
         distributions:
           type: array
           items: { $ref: "#/components/schemas/Distribution" }
+        takedown: { $ref: "#/components/schemas/Takedown" }
 
     MasterBookPage:
       type: object
@@ -2421,6 +2842,313 @@ components:
         totp_code: { type: string, pattern: '^[0-9]{6}$' }
 
     # ── bookmarks & collections ──
+    # ── admin panel (Phase 2 milestone 4) ──
+    AdminDashboard:
+      type: object
+      required: [version, started_at, uptime_s, egress, live, health, inbox]
+      properties:
+        version: { type: string }
+        started_at: { type: string, format: date-time }
+        uptime_s: { type: integer, format: int64 }
+        egress: { $ref: "#/components/schemas/DashboardEgress" }
+        live:
+          type: array
+          items: { $ref: "#/components/schemas/LiveStream" }
+        health: { $ref: "#/components/schemas/ServerHealth" }
+        last_backup: { $ref: "#/components/schemas/OpStatus" }
+        last_scrub: { $ref: "#/components/schemas/OpStatus" }
+        inbox: { $ref: "#/components/schemas/InboxCounts" }
+
+    LiveStream:
+      type: object
+      description: One open audio response (a stream or a download)
+      required: [user_id, username, book_id, book_title, kind, priority, rate_bps, sent_bytes, since]
+      properties:
+        user_id: { type: string, format: uuid }
+        username: { type: string }
+        book_id: { type: string, format: uuid }
+        book_title: { type: string }
+        kind: { type: string, enum: [live, download] }
+        priority: { type: string, enum: [admin, priority, normal] }
+        bitrate_kbps: { type: integer }
+        rate_bps: { type: integer, format: int64 }
+        sent_bytes: { type: integer, format: int64 }
+        since: { type: string, format: date-time }
+
+    ServerHealth:
+      type: object
+      required: [db_bytes, disks, zfs, job_queue_depth, process_memory_bytes]
+      properties:
+        db_bytes: { type: integer, format: int64 }
+        disks:
+          type: array
+          items: { $ref: "#/components/schemas/DiskUsage" }
+        zfs: { type: string, description: "ZFS pool status, or \"unknown\"" }
+        job_queue_depth: { type: integer }
+        process_memory_bytes: { type: integer, format: int64 }
+        memory_total_bytes: { type: integer, format: int64, description: "Linux only" }
+        memory_available_bytes: { type: integer, format: int64, description: "Linux only" }
+        load_average: { type: number, description: "1-minute load average (Linux only)" }
+        cpus: { type: integer }
+
+    GrowthPoint:
+      type: object
+      required: [month, users, books, storage_bytes, listening_ms]
+      properties:
+        month: { type: string, example: "2026-03" }
+        users: { type: integer, description: "Active accounts at the end of the month" }
+        books: { type: integer, description: "Books in the master store at the end of the month" }
+        storage_bytes: { type: integer, format: int64 }
+        listening_ms: { type: integer, format: int64, description: "Listening during the month, all users" }
+
+    UserRef:
+      type: object
+      required: [id, username, display_name]
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        display_name: { type: string }
+
+    AdminUserDetail:
+      allOf:
+        - $ref: "#/components/schemas/AdminUser"
+        - type: object
+          required: [tags, groups, permissions, effective, used_bytes]
+          properties:
+            notice: { type: string }
+            used_bytes: { type: integer, format: int64 }
+            last_login_at: { type: string, format: date-time }
+            tags: { type: array, items: { $ref: "#/components/schemas/UserTag" } }
+            groups: { type: array, items: { $ref: "#/components/schemas/Group" } }
+            permissions: { $ref: "#/components/schemas/PermissionOverridesInput" }
+            effective: { $ref: "#/components/schemas/EffectivePermissions" }
+
+    PermissionOverridesInput:
+      type: object
+      description: Explicit values; a missing key means "not overridden"
+      properties:
+        can_upload: { type: boolean }
+        can_edit_metadata: { type: boolean }
+        can_delete_own: { type: boolean }
+        can_share: { type: boolean }
+        can_review: { type: boolean }
+        can_post_public: { type: boolean }
+
+    UserTag:
+      type: object
+      required: [id, name, require_totp, capability_overrides, members]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        color: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+        require_totp: { type: boolean }
+        capability_overrides: { $ref: "#/components/schemas/PermissionOverridesInput" }
+        members: { type: integer }
+
+    UserTagInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 50 }
+        color: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+        require_totp: { type: boolean }
+        capability_overrides: { $ref: "#/components/schemas/PermissionOverridesInput" }
+
+    UserTagPatch:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 50 }
+        color: { type: string, description: "Empty clears it" }
+        require_totp: { type: boolean }
+        capability_overrides: { $ref: "#/components/schemas/PermissionOverridesInput" }
+
+    GroupPatch:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        high_priority: { type: boolean }
+
+    ResetLink:
+      type: object
+      required: [url, expires_at]
+      properties:
+        url: { type: string }
+        expires_at: { type: string, format: date-time }
+
+    PasswordReset:
+      type: object
+      required: [token, new_password]
+      properties:
+        token: { type: string, maxLength: 1024 }
+        new_password: { type: string, minLength: 10, maxLength: 256, format: password }
+
+    Takedown:
+      type: object
+      required: [reason, taken_at]
+      properties:
+        reason: { type: string }
+        taken_at: { type: string, format: date-time }
+        taken_by: { type: string, format: uuid }
+
+    AuditEntry:
+      type: object
+      required: [id, at, action, details]
+      properties:
+        id: { type: string, format: uuid }
+        at: { type: string, format: date-time }
+        actor_id: { type: string, format: uuid }
+        actor_name: { type: string }
+        action: { type: string, example: user.update }
+        object_type: { type: string }
+        object_id: { type: string }
+        details: { type: object, additionalProperties: true }
+        ip: { type: string }
+
+    AuditPage:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/AuditEntry" } }
+        next_cursor: { type: string }
+
+    AdminSettings:
+      type: object
+      required: [instance, auth, bandwidth, quotas, permission_defaults, smtp, ntfy]
+      properties:
+        instance: { $ref: "#/components/schemas/InstanceSettings" }
+        auth: { $ref: "#/components/schemas/AuthSettings" }
+        bandwidth: { $ref: "#/components/schemas/BandwidthSettings" }
+        quotas: { $ref: "#/components/schemas/QuotaSettings" }
+        permission_defaults: { $ref: "#/components/schemas/EffectivePermissions" }
+        smtp: { $ref: "#/components/schemas/SmtpSettingsView" }
+        ntfy: { $ref: "#/components/schemas/NtfySettingsView" }
+
+    AdminSettingsPatch:
+      type: object
+      properties:
+        instance: { $ref: "#/components/schemas/InstanceSettingsPatch" }
+        auth: { $ref: "#/components/schemas/AuthSettingsPatch" }
+        bandwidth: { $ref: "#/components/schemas/BandwidthSettingsPatch" }
+        quotas: { $ref: "#/components/schemas/QuotaSettingsPatch" }
+        permission_defaults: { $ref: "#/components/schemas/PermissionOverridesInput" }
+        smtp: { $ref: "#/components/schemas/SmtpSettingsPatch" }
+        ntfy: { $ref: "#/components/schemas/NtfySettingsPatch" }
+
+    DashboardEgress:
+      type: object
+      required: [cap_bps, used_bps]
+      properties:
+        cap_bps: { type: integer, format: int64, description: "Global egress cap" }
+        used_bps: { type: integer, format: int64, description: "Average rate of the open streams" }
+
+    InboxCounts:
+      type: object
+      required: [signup_requests, review_queue, reports]
+      properties:
+        signup_requests: { type: integer }
+        review_queue: { type: integer }
+        reports: { type: integer }
+
+    InstanceSettings:
+      type: object
+      required: [name, base_url, signup_open, privacy_text, terms_text, copyright_contact]
+      properties:
+        name: { type: string }
+        base_url: { type: string }
+        signup_open: { type: boolean }
+        privacy_text: { type: string }
+        terms_text: { type: string }
+        copyright_contact: { type: string }
+
+    AuthSettings:
+      type: object
+      required: [require_totp_all]
+      properties:
+        require_totp_all: { type: boolean }
+
+    BandwidthSettings:
+      type: object
+      required: [egress_mbps, hls_cache_gb]
+      properties:
+        egress_mbps: { type: integer }
+        hls_cache_gb: { type: integer }
+
+    QuotaSettings:
+      type: object
+      required: [default_quota_bytes]
+      properties:
+        default_quota_bytes: { type: integer, format: int64, description: "Given to newly approved accounts; 0 = unlimited" }
+
+    SmtpSettingsView:
+      type: object
+      required: [host, port, tls, username, from, password_set]
+      properties:
+        host: { type: string }
+        port: { type: integer }
+        tls: { type: string, enum: [starttls, tls, none] }
+        username: { type: string }
+        from: { type: string }
+        password_set: { type: boolean }
+
+    NtfySettingsView:
+      type: object
+      required: [internal_url, public_url, token_set]
+      properties:
+        internal_url: { type: string }
+        public_url: { type: string }
+        token_set: { type: boolean }
+
+    InstanceSettingsPatch:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        base_url: { type: string, maxLength: 300 }
+        signup_open: { type: boolean }
+        privacy_text: { type: string, maxLength: 50000 }
+        terms_text: { type: string, maxLength: 50000 }
+        copyright_contact: { type: string, maxLength: 2000 }
+
+    AuthSettingsPatch:
+      type: object
+      properties:
+        require_totp_all: { type: boolean }
+
+    BandwidthSettingsPatch:
+      type: object
+      properties:
+        egress_mbps: { type: integer, minimum: 1, maximum: 100000 }
+        hls_cache_gb: { type: integer, minimum: 1, maximum: 10000 }
+
+    QuotaSettingsPatch:
+      type: object
+      properties:
+        default_quota_bytes: { type: integer, format: int64, minimum: 0 }
+
+    SmtpSettingsPatch:
+      type: object
+      properties:
+        host: { type: string, maxLength: 255 }
+        port: { type: integer, minimum: 1, maximum: 65535 }
+        tls: { type: string, enum: [starttls, tls, none] }
+        username: { type: string, maxLength: 255 }
+        password: { type: string, maxLength: 1024, format: password, description: "Write-only; empty clears it" }
+        from: { type: string, maxLength: 255 }
+
+    NtfySettingsPatch:
+      type: object
+      properties:
+        internal_url: { type: string, maxLength: 300 }
+        public_url: { type: string, maxLength: 300 }
+        token: { type: string, maxLength: 1024, description: "Write-only; empty clears it" }
+
+    DiskUsage:
+      type: object
+      required: [name, free_bytes, total_bytes]
+      properties:
+        name: { type: string, enum: [config, library, cache, backups] }
+        free_bytes: { type: integer, format: int64 }
+        total_bytes: { type: integer, format: int64 }
+
     Bookmark:
       type: object
       required: [id, book_id, position_ms, updated_at]
