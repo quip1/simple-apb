@@ -100,7 +100,7 @@ func (s *Server) summaries(ctx context.Context, items []*store.LibraryItem) ([]B
 		added := msTime(it.AddedAt)
 		out = append(out, BookSummary{
 			Id: mustUUID(b.ID), Title: b.Title, Subtitle: strPtr(b.Subtitle), Authors: personRefs(authors[b.ID]),
-			Narrators: personRefs(narrators[b.ID]), Series: seriesRef(b), DurationMs: b.DurationMS, CoverUrl: coverURL(b.ID),
+			Narrators: personRefs(narrators[b.ID]), Series: seriesRef(b), DurationMs: b.DurationMS, CoverUrl: coverURL(b.ID), HasCover: b.CoverPath != "",
 			Source: LibrarySource(it.Source), Progress: progressOut(b.ID, it), AddedAt: &added, Hidden: &hidden,
 			RemovedAt: msTimePtr(it.RemovedAt), UpdatedAt: msTime(b.UpdatedAt),
 		})
@@ -346,4 +346,28 @@ func (s *Server) GetSeries(ctx context.Context, req GetSeriesRequestObject) (Get
 		return nil, err
 	}
 	return GetSeries200JSONResponse{Id: req.SeriesId, Name: name, Books: books}, nil
+}
+
+func (s *Server) ListLibraryFacets(ctx context.Context, req ListLibraryFacetsRequestObject) (ListLibraryFacetsResponseObject, error) {
+	p, err := requireCan(ctx, authz.Read)
+	if err != nil {
+		return nil, err
+	}
+	if !req.Params.Kind.Valid() {
+		return nil, badRequest("bad_request", "unknown facet kind")
+	}
+	fs, err := store.LibraryFacets(ctx, s.App().DB, p.User.ID, string(req.Params.Kind))
+	if err != nil {
+		return nil, err
+	}
+	out := make(ListLibraryFacets200JSONResponse, 0, len(fs))
+	for _, f := range fs {
+		item := LibraryFacet{Id: mustUUID(f.ID), Name: f.Name, Count: int(f.Count)}
+		if f.Kind != "" {
+			k := LibraryFacetKind(f.Kind)
+			item.Kind = &k
+		}
+		out = append(out, item)
+	}
+	return out, nil
 }

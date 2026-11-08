@@ -160,3 +160,32 @@ code,
   font-family: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, monospace;
   font-size: 0.95em;
 }
+
+/* Form controls outside <Field> (toolbars, dialogs). */
+select,
+input.text,
+textarea.text {
+  min-height: 48px;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0 0.6rem;
+  font: inherit;
+}
+input.text,
+textarea.text {
+  width: 100%;
+}
+textarea.text {
+  padding: 0.6rem;
+  min-height: 6rem;
+  resize: vertical;
+}
+
+input[type="range"] {
+  width: 100%;
+  min-height: 48px;
+  accent-color: var(--accent);
+  margin: 0;
+}

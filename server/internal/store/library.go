@@ -338,3 +338,48 @@ func UserHighPriority(ctx context.Context, q Querier, userID string) (bool, erro
 		WHERE m.user_id = ? AND g.high_priority = ?`, userID, true).Scan(&n)
 	return n > 0, err
 }
+
+// Facet is a series, person or tag with the number of visible books.
+type Facet struct {
+	ID, Name, Kind string
+	Count          int64
+}
+
+// LibraryFacets lists the series, authors, narrators or tags of the books on
+// a user's "all" shelf, by name.
+func LibraryFacets(ctx context.Context, q Querier, userID, kind string) ([]*Facet, error) {
+	var join, cols, group string
+	switch kind {
+	case "series":
+		join, cols, group = `JOIN series x ON x.id = b.series_id`, `x.id, x.name, ''`, `x.id, x.name`
+	case "authors":
+		join = `JOIN book_authors j ON j.book_id = b.id JOIN authors x ON x.id = j.author_id`
+		cols, group = `x.id, x.name, ''`, `x.id, x.name`
+	case "narrators":
+		join = `JOIN book_narrators j ON j.book_id = b.id JOIN narrators x ON x.id = j.narrator_id`
+		cols, group = `x.id, x.name, ''`, `x.id, x.name`
+	case "tags":
+		join = `JOIN book_tag_assignments j ON j.book_id = b.id JOIN book_tags x ON x.id = j.book_tag_id`
+		cols, group = `x.id, x.name, x.kind`, `x.id, x.name, x.kind`
+	default:
+		return nil, fmt.Errorf("unknown facet %q", kind)
+	}
+	query := visibleCTE + ` SELECT ` + cols + `, COUNT(DISTINCT b.id)
+		FROM vis v JOIN books b ON b.id = v.book_id ` + join + `
+		WHERE v.removed_at IS NULL AND v.hidden_at IS NULL AND ` + visibleFilter + `
+		GROUP BY ` + group + ` ORDER BY lower(x.name), x.id LIMIT 5000`
+	rows, err := q.Query(ctx, query, userID, userID, userID, userID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("library facets: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	var out []*Facet
+	for rows.Next() {
+		var f Facet
+		if err := rows.Scan(&f.ID, &f.Name, &f.Kind, &f.Count); err != nil {
+			return nil, err
+		}
+		out = append(out, &f)
+	}
+	return out, rows.Err()
+}

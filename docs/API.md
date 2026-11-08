@@ -2,7 +2,7 @@
 
 > **Generated** from `server/openapi.yaml` by `web/scripts/gen-api-docs.mjs`. Do not edit by hand.
 
-Version **0.6.0** · base path `/api/v1`
+Version **0.7.0** · base path `/api/v1`
 
 REST API for Simple APB. All endpoints live under `/api/v1`.
 
@@ -51,6 +51,7 @@ REST API for Simple APB. All endpoints live under `/api/v1`.
 | Method | Path | Summary | Auth | Responses |
 |---|---|---|---|---|
 | GET | `/library` | My library (own uploads ∪ distributions, minus removed/hidden/filtered/taken down) | yes | 200, 400, 401 |
+| GET | `/library/facets` | Series, authors, narrators or tags in my library, with book counts | yes | 200, 400, 401 |
 | GET | `/books/{bookId}` | Book detail (files, chapters, my progress) | yes | 200, 401, 404 |
 | DELETE | `/me/library/{bookId}` | Remove a book from my view (restorable for 30 days; master copy is kept) | yes | 204, 401, 404 |
 | POST | `/me/library/{bookId}/restore` | Restore a book from "Recently removed", or un-archive it | yes | 204, 401, 404, 410 |
@@ -369,6 +370,7 @@ Enum: `own_upload`, `distribution`, `recommendation`
 | `series` | `SeriesRef` |  |  |
 | `duration_ms` | integer (int64) | yes |  |
 | `cover_url` | string | yes | Relative URL; add `?size=` |
+| `has_cover` | boolean | yes | False when the book has no cover, so clients can skip the request |
 | `source` | `LibrarySource` | yes |  |
 | `progress` | `Progress` |  |  |
 | `added_at` | string (date-time) |  |  |
@@ -426,6 +428,15 @@ Chapter on the global book timeline (across files).
 |---|---|---|---|
 | `items` | array of `BookSummary` | yes |  |
 | `next_cursor` | string |  | Absent on the last page |
+
+### LibraryFacet
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `name` | string | yes |  |
+| `count` | integer | yes | Visible books |
+| `kind` | string: genre \| custom |  | Tags only |
 
 ### PersonPage
 

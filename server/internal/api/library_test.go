@@ -164,6 +164,9 @@ func testLibraryFlow(t *testing.T, h *harness) {
 	}
 	r = h.do(nil, "GET", "/books/"+bookID, nil, bearer(alice))
 	expect(t, r, 200, "book detail")
+	if _, ok := r.body["has_cover"].(bool); !ok {
+		t.Fatalf("has_cover missing: %s", r.raw)
+	}
 	if chs := r.body["chapters"].([]any); len(chs) != 2 {
 		t.Fatalf("chapters: %s", r.raw)
 	}
@@ -174,6 +177,18 @@ func testLibraryFlow(t *testing.T, h *harness) {
 	if ap := h.do(nil, "GET", "/authors/"+authorID, nil, bearer(alice)); len(ap.body["books"].([]any)) != 1 || ap.body["name"] != "Ann Author" {
 		t.Fatalf("author page: %s", ap.raw)
 	}
+
+	for kind, want := range map[string]string{"authors": "Ann Author", "series": "", "narrators": "", "tags": ""} {
+		r := h.do(nil, "GET", "/library/facets?kind="+kind, nil, bearer(alice))
+		expect(t, r, 200, "facets "+kind)
+		if want != "" && (len(r.list) != 1 || r.list[0].(map[string]any)["name"] != want || r.list[0].(map[string]any)["count"] != float64(1)) {
+			t.Fatalf("facets %s: %s", kind, r.raw)
+		}
+	}
+	if r := h.do(nil, "GET", "/library/facets?kind=authors", nil, bearer(bob)); strings.TrimSpace(r.raw) != "[]" {
+		t.Fatalf("bob must not see facets of books he can't see: %q", r.raw)
+	}
+	expect(t, h.do(nil, "GET", "/library/facets?kind=bogus", nil, bearer(alice)), 400, "bad facet kind")
 
 	// Remove → recently removed → restore; hide → archived.
 	expect(t, h.do(nil, "DELETE", "/me/library/"+bookID, nil, bearer(alice)), 204, "remove")

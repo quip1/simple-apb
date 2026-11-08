@@ -41,16 +41,18 @@ export function readCookie(name: string): string | undefined {
 
 export function createApiClient(opts: ClientOptions = {}) {
   const base = `${opts.baseUrl ?? ""}/api/v1`;
-  let refreshing: Promise<boolean> | null = null;
+  // "offline" (server unreachable) must not sign the user out: only a real
+  // refusal from the server does.
+  let refreshing: Promise<"ok" | "denied" | "offline"> | null = null;
 
-  const refresh = (): Promise<boolean> => {
+  const refresh = (): Promise<"ok" | "denied" | "offline"> => {
     refreshing ??= fetch(`${base}/auth/refresh`, {
       method: "POST",
       credentials: "include",
       headers: { "X-CSRF-Token": readCookie("sapb_csrf") ?? "" },
     })
-      .then((r) => r.ok)
-      .catch(() => false)
+      .then((r): "ok" | "denied" | "offline" => (r.ok ? "ok" : r.status === 401 || r.status === 403 ? "denied" : "offline"))
+      .catch((): "offline" => "offline")
       .finally(() => {
         refreshing = null;
       });
@@ -67,14 +69,19 @@ export function createApiClient(opts: ClientOptions = {}) {
     };
     const retry = input.clone();
     const res = await send(input);
+    // Lets the live-sync listener tell echoes of our own writes from news.
+    if (res.ok && UNSAFE.has(input.method) && !input.url.includes("/auth/")) {
+      window.dispatchEvent(new Event("sapb:wrote"));
+    }
     if (res.status !== 401 || input.url.includes("/auth/")) return res;
     const body = (await res
       .clone()
       .json()
       .catch(() => ({}))) as Partial<ApiError>;
     if (body.code !== "invalid_token") return res;
-    if (await refresh()) return send(retry);
-    opts.onSignedOut?.();
+    const outcome = await refresh();
+    if (outcome === "ok") return send(retry);
+    if (outcome === "denied") opts.onSignedOut?.();
     return res;
   };
 

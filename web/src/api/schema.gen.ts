@@ -238,6 +238,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/library/facets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Series, authors, narrators or tags in my library, with book counts
+         * @description Powers the Library's Series/Authors/Narrators/Genres views. Counts only books on the "all" shelf (not archived or removed).
+         */
+        get: operations["listLibraryFacets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/books/{bookId}": {
         parameters: {
             query?: never;
@@ -1318,6 +1338,8 @@ export interface components {
             duration_ms: number;
             /** @description Relative URL; add `?size=` */
             cover_url: string;
+            /** @description False when the book has no cover, so clients can skip the request */
+            has_cover: boolean;
             source: components["schemas"]["LibrarySource"];
             progress?: components["schemas"]["Progress"];
             /** Format: date-time */
@@ -1376,6 +1398,18 @@ export interface components {
             items: components["schemas"]["BookSummary"][];
             /** @description Absent on the last page */
             next_cursor?: string;
+        };
+        LibraryFacet: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description Visible books */
+            count: number;
+            /**
+             * @description Tags only
+             * @enum {string}
+             */
+            kind?: "genre" | "custom";
         };
         PersonPage: {
             /** Format: uuid */
@@ -2228,6 +2262,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LibraryPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listLibraryFacets: {
+        parameters: {
+            query: {
+                kind: "series" | "authors" | "narrators" | "tags";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Facets, by name */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryFacet"][];
                 };
             };
             400: components["responses"]["BadRequest"];

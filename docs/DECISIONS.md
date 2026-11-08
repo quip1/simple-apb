@@ -480,6 +480,45 @@ used twice. This applies to login, enrollment, the setup wizard (so the wizard's
 replayed for the first login) and re-authentication for dangerous actions (emptying the Trash, which
 now checks the typed count *before* spending the code).
 
+## ADR-0028 — Library facets and `has_cover`
+
+**Decision.** `GET /library/facets?kind=series|authors|narrators|tags` lists the names in my
+library with book counts (same visibility rules as `/library`, "all" shelf only). `BookSummary`
+gains a required `has_cover`.
+
+**Why.** The Library's Series/Authors/Narrators/Genres views (brief §7.4) need the list of names;
+paging through the whole library on the client to collect them doesn't scale. `has_cover` lets
+clients skip the cover request for books without one: before it, every coverless book cost a 404
+(and a console error) per screen.
+
+## ADR-0029 — The web player engine
+
+**Decision.**
+- **One `<audio>` element, book timeline.** Original quality plays each file in turn and maps
+  positions with the files' `offset_ms`. Data saver plays the server's HLS playlist through
+  hls.js (light build, loaded only when needed), or natively in Safari.
+- **Signed stream links** (`POST /books/{id}/stream-url`, 6 h) for all media, not the access
+  cookie. The browser fetches audio in many range requests over a chapter; with the 15-minute
+  cookie those would start failing mid-chapter. Links are renewed 10 minutes before they expire
+  and once on a playback error.
+- **Quality "Automatic"** = original, except data saver when the browser reports a cellular
+  connection (brief §6.9). Files this browser can't decode fall back to data saver.
+- **Progress** every 15 s while playing, on pause, seek (debounced), end and tab hide; a
+  `keepalive` request on page unload. A 409 shows the "Jump to … from <device>?" prompt; the
+  user's answer is sent with `resolution`. While paused, a newer position from another device
+  is followed silently.
+- **Live hints.** `/ws` also hints a tab about its own writes. Hints within 1.5 s of our own
+  successful write are treated as echoes and dropped (the server polls every 500 ms), and bursts
+  are coalesced, so open screens don't reload every 15 s during playback.
+- **Offline is not signed out.** A refresh that fails because the server is unreachable keeps
+  the session; only a refusal from the server signs the user out.
+- **Per-browser preferences** (skip lengths, quality, e-ink refresh interval, left-handed layout,
+  grid/list) live in `localStorage` for now; syncing them belongs with the account settings work.
+
+**Not in the web player (v1).** Boost/EQ/mono/balance, casting, car mode and downloads. Audio
+settings need Web Audio, which stops background playback in mobile browsers; casting and car mode
+are Android features; the web player is streaming-only (brief §9).
+
 ---
 
 ## Open questions for Jacob

@@ -5,6 +5,6 @@
 try {
   var t = localStorage.getItem("sapb.theme");
   if (t === "eink" || t === "dark") document.documentElement.dataset.theme = t;
-} catch (e) {
+} catch {
   /* private mode */
 }

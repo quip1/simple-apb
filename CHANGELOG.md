@@ -5,13 +5,20 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-**Current phase: 2 — Admin panel + web player** (milestone 1 done: web foundation). Phase 1 accepted 2026-11-08.
+**Current phase: 2 — Admin panel + web player** (milestones 1–2 done: web foundation, player screens). Phase 1 accepted 2026-11-08.
 
 ### Added (Phase 2)
 - Web app foundation: Svelte 5 + Vite + TypeScript, embedded in the server binary with SPA fallback, strict CSP and caching; cookie auth with CSRF and transparent refresh; ICU i18n from the shared catalogs; dark and e-ink themes with accessible components (48 px targets, visible focus, labelled errors).
 - Pages: setup wizard (all brief steps, 2FA QR enrollment, DB/library/SMTP tests, recovery codes), sign-in with 2FA or recovery code, account request, forced 2FA enrollment.
 - Single-use TOTP codes (ADR-0027); emptying the Trash checks the count before spending the code.
 - Docker image builds and embeds the web app; CI type-checks, format-checks and builds it.
+- Player screens (milestone 2): Home (continue listening, next in series, recently added), Library (all/series/authors/narrators/genres/collections views, shelves, sort, instant search, grid/list, paged in e-ink), author/narrator/series pages, book detail (play, mark finished, collections, archive, remove/restore, chapters, bookmarks), Now playing (chapter and book progress, skip, chapter skip, speed, sleep timer, chapters, bookmarks with notes, quality), mini-player bar, Settings (theme, playback, e-ink refresh interval, left-handed layout, sign out).
+- Web player engine (ADR-0029): multi-file books on one timeline, HLS data saver via hls.js, signed stream links, progress sync with the conflict prompt, Media Session (media keys, lock screen), live sync hints, screen-reader announcements, e-ink screen refresh button.
+- `GET /library/facets` and `BookSummary.has_cover` (ADR-0028); `openapi.yaml` 0.7.0.
+- ESLint for the web app, run in CI.
+
+### Fixed (Phase 2)
+- The web client no longer signs you out when the server is briefly unreachable during a token refresh.
 
 ## Phase 1
 

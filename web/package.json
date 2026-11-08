@@ -14,23 +14,31 @@
     "build:embed": "vite build && node scripts/embed.mjs",
     "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
     "format": "prettier --write \"src/**/*.{ts,svelte,css}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,svelte,css}\""
+    "format:check": "prettier --check \"src/**/*.{ts,svelte,css}\"",
+    "lint": "eslint ."
   },
   "dependencies": {
+    "hls.js": "^1.6.15",
     "intl-messageformat": "^12.1.4",
     "openapi-fetch": "^0.14.0",
     "qrcode": "^1.5.4",
     "svelte": "^5.57.3"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.1",
     "@redocly/cli": "^2.0.0",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@types/qrcode": "^1.5.6",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-svelte": "^3.13.0",
+    "globals": "^16.5.0",
     "openapi-typescript": "^7.8.0",
     "prettier": "^3.9.10",
     "prettier-plugin-svelte": "^4.1.1",
     "svelte-check": "^4.7.8",
     "typescript": "^5.9.0",
+    "typescript-eslint": "^8.46.4",
     "vite": "^8.3.6",
     "yaml": "^2.8.0"
   }

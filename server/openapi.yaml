@@ -11,7 +11,7 @@
 openapi: 3.0.3
 info:
   title: Simple APB API
-  version: 0.6.0
+  version: 0.7.0
   description: |
     REST API for Simple APB. All endpoints live under `/api/v1`.
 
@@ -289,6 +289,28 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/LibraryPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /library/facets:
+    get:
+      tags: [library]
+      operationId: listLibraryFacets
+      summary: Series, authors, narrators or tags in my library, with book counts
+      description: Powers the Library's Series/Authors/Narrators/Genres views. Counts only books on the "all" shelf (not archived or removed).
+      parameters:
+        - name: kind
+          in: query
+          required: true
+          schema: { type: string, enum: [series, authors, narrators, tags] }
+      responses:
+        "200":
+          description: Facets, by name
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/LibraryFacet" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
@@ -1732,7 +1754,7 @@ components:
 
     BookSummary:
       type: object
-      required: [id, title, authors, narrators, duration_ms, cover_url, source, updated_at]
+      required: [id, title, authors, narrators, duration_ms, cover_url, has_cover, source, updated_at]
       properties:
         id: { type: string, format: uuid }
         title: { type: string }
@@ -1742,6 +1764,7 @@ components:
         series: { $ref: "#/components/schemas/SeriesRef" }
         duration_ms: { type: integer, format: int64 }
         cover_url: { type: string, description: "Relative URL; add `?size=`" }
+        has_cover: { type: boolean, description: "False when the book has no cover, so clients can skip the request" }
         source: { $ref: "#/components/schemas/LibrarySource" }
         progress: { $ref: "#/components/schemas/Progress" }
         added_at: { type: string, format: date-time }
@@ -1798,6 +1821,15 @@ components:
       properties:
         items: { type: array, items: { $ref: "#/components/schemas/BookSummary" } }
         next_cursor: { type: string, description: "Absent on the last page" }
+
+    LibraryFacet:
+      type: object
+      required: [id, name, count]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        count: { type: integer, description: "Visible books" }
+        kind: { type: string, enum: [genre, custom], description: "Tags only" }
 
     PersonPage:
       type: object

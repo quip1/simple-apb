@@ -1,12 +1,20 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <script lang="ts">
   import { onMount } from "svelte";
+  import AppShell from "./components/AppShell.svelte";
   import { t } from "./lib/i18n";
+  import { live, startLive, stopLive } from "./lib/live.svelte";
+  import { followRemoteProgress, restoreLastBook } from "./lib/player.svelte";
   import { match, navigate, route } from "./lib/router.svelte";
   import { loadSession, session } from "./lib/session.svelte";
+  import BookDetail from "./pages/BookDetail.svelte";
   import EnrollTotp from "./pages/EnrollTotp.svelte";
   import Home from "./pages/Home.svelte";
+  import Library from "./pages/Library.svelte";
   import Login from "./pages/Login.svelte";
+  import PersonPage from "./pages/PersonPage.svelte";
+  import Player from "./pages/Player.svelte";
+  import Settings from "./pages/Settings.svelte";
   import Setup from "./pages/Setup.svelte";
   import Signup from "./pages/Signup.svelte";
 
@@ -31,6 +39,26 @@
 
   // 2FA required but not set up: the server only allows /me and enrollment.
   const mustEnroll = $derived(!!session.me && session.me.role === "admin" && !session.me.totp_enabled);
+  const ready = $derived(!!session.me && !mustEnroll);
+
+  // Signed in: live sync hints, and bring back the last book (paused).
+  $effect(() => {
+    if (!ready) return;
+    startLive();
+    void restoreLastBook();
+    return stopLive;
+  });
+  $effect(() => {
+    if (live.tick > 0) void followRemoteProgress();
+  });
+
+  const params = $derived.by(() => {
+    for (const p of ["/books/:id", "/authors/:id", "/narrators/:id", "/series/:id"]) {
+      const m = match(p, route.path);
+      if (m) return { pattern: p, id: m.id! };
+    }
+    return null;
+  });
 </script>
 
 {#if !session.loaded}
@@ -46,14 +74,30 @@
 {:else if session.me && mustEnroll}
   <EnrollTotp required />
 {:else if session.me}
-  {#if match("/", route.path)}
-    <Home />
-  {:else}
-    <main class="loading">
-      <h1>{t("error.not_found_title")}</h1>
-      <p><a href="/">{t("common.home")}</a></p>
-    </main>
-  {/if}
+  <AppShell>
+    {#if match("/", route.path)}
+      <Home />
+    {:else if match("/library", route.path)}
+      <Library />
+    {:else if match("/player", route.path)}
+      <Player />
+    {:else if match("/settings", route.path)}
+      <Settings />
+    {:else if params?.pattern === "/books/:id"}
+      {#key params.id}<BookDetail id={params.id} />{/key}
+    {:else if params?.pattern === "/authors/:id"}
+      <PersonPage kind="author" id={params.id} />
+    {:else if params?.pattern === "/narrators/:id"}
+      <PersonPage kind="narrator" id={params.id} />
+    {:else if params?.pattern === "/series/:id"}
+      <PersonPage kind="series" id={params.id} />
+    {:else}
+      <div class="loading">
+        <h1>{t("error.not_found_title")}</h1>
+        <p><a href="/">{t("common.home")}</a></p>
+      </div>
+    {/if}
+  </AppShell>
 {/if}
 
 <style>
