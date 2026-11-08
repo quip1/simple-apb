@@ -48,7 +48,7 @@ func TestScore(t *testing.T) {
 			Record{Title: "The Quiet Orbit", Authors: []string{"Mara Lindqvist"}}, 0.9, 1},
 		{"wrong author", q, Record{Title: "The Quiet Orbit", Authors: []string{"Someone Else"}}, 0.7, 0.8},
 		{"different book", q, Record{Title: "Salt and Cedar", Authors: []string{"Ines Moreau"}}, 0, 0.4},
-		{"no author known caps the score", Query{Title: "The Quiet Orbit"}, Record{Title: "The Quiet Orbit"}, 0.85, 0.85},
+		{"no author known caps the score", Query{Title: "The Quiet Orbit"}, Record{Title: "The Quiet Orbit"}, 0.75, 0.75},
 		{"isbn match is certain", Query{Title: "x", ISBN: "0-306-40615-2"}, Record{Title: "y", ISBN: "9780306406157"}, 1, 1},
 		{"asin match is certain", Query{Title: "x", ASIN: "b0testasin"}, Record{Title: "y", ASIN: "B0TESTASIN"}, 1, 1},
 		{"accents", Query{Title: "Café Stories", Author: "Zoë Brontë"}, Record{Title: "Cafe Stories", Authors: []string{"Zoe Bronte"}}, 1, 1},

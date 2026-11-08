@@ -15,8 +15,9 @@ const DefaultThreshold = 0.8
 
 // Score rates how well a record matches a book, from 0 to 1 (brief §6.12):
 // a shared ASIN or ISBN is a certain match; otherwise the title counts 70 %
-// and the author 30 %. Without a known author the title alone can reach at
-// most 0.85, so it only auto-applies on a near-exact title.
+// and the author 30 %. Without a known author the title alone reaches at
+// most 0.75, below the lowest default threshold, so a bare title ("Test",
+// "Untitled") never auto-applies some other book's details: it goes to review.
 func Score(q Query, r Record) float64 {
 	if q.ASIN != "" && strings.EqualFold(strings.TrimSpace(q.ASIN), r.ASIN) {
 		return 1
@@ -26,7 +27,7 @@ func Score(q Query, r Record) float64 {
 	}
 	t := titleSimilarity(q.Title, r.Title, r.Subtitle)
 	if strings.TrimSpace(q.Author) == "" {
-		return round2(t * 0.85)
+		return round2(t * 0.75)
 	}
 	a := 0.0
 	for _, name := range r.Authors {

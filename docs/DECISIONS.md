@@ -643,8 +643,8 @@ book, uploaders with `can_edit_metadata` only their own (`authz.EditBookMetadata
 digit is verified) scores 1. Otherwise the title counts 70 % and the best author 30 %. Both are
 normalized first (case, accents, punctuation, a leading article, bracketed notes and words like
 "unabridged") and compared with an edit-distance ratio or word overlap, whichever is higher, so
-"Lindqvist, Mara" matches "Mara Lindqvist". With no author known, the title alone can score at most
-0.85. Candidates at or above the threshold (default 0.8, adjustable from 0.5 to 1) are applied,
+"Lindqvist, Mara" matches "Mara Lindqvist". With no author known, the title alone scores at most 0.75, so
+a bare title ("Test", "Untitled") always goes to review instead of borrowing a random book's details. Candidates at or above the threshold (default 0.8, adjustable from 0.5 to 1) are applied,
 best first, filling only the fields that are still empty. Below the threshold nothing is applied:
 the book gets "needs review" and appears in the Metadata tab of the moderation inbox. Any hand
 edit, or "Keep as is", clears the flag. A no-match also counts as needs review, because an admin
