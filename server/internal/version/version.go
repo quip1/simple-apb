@@ -2,7 +2,7 @@
 
 // Package version holds build information, set with -ldflags at build time:
 //
-//	go build -ldflags "-X github.com/simple-apb/simple-apb/server/internal/version.Version=1.2.3"
+//	go build -ldflags "-X github.com/quip1/simple-apb/server/internal/version.Version=1.2.3"
 package version
 
 // Version is the server's semver. "dev" for local builds.

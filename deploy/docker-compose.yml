@@ -3,7 +3,7 @@
 # networks for the reverse proxy) lands in Phase 1.
 services:
   simpleapb-server:
-    image: ghcr.io/simple-apb/simple-apb-server:latest
+    image: ghcr.io/quip1/simple-apb-server:latest
     restart: unless-stopped
     environment:
       SIMPLEAPB_LISTEN: ":8080"

@@ -12,7 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/simple-apb/simple-apb/server/internal/version"
+	"github.com/quip1/simple-apb/server/internal/version"
 )
 
 // ErrNotImplemented is returned by operations that exist in the contract but

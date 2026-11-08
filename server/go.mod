@@ -1,4 +1,4 @@
-module github.com/simple-apb/simple-apb/server
+module github.com/quip1/simple-apb/server
 
 go 1.27.0
 

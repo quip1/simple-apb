@@ -9,7 +9,7 @@ RUN go mod download
 COPY server/ ./
 ARG VERSION=dev
 RUN CGO_ENABLED=0 go build -trimpath \
-    -ldflags "-s -w -X github.com/simple-apb/simple-apb/server/internal/version.Version=${VERSION}" \
+    -ldflags "-s -w -X github.com/quip1/simple-apb/server/internal/version.Version=${VERSION}" \
     -o /out/simpleapb ./cmd/simpleapb
 
 FROM alpine:3.22

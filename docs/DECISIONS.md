@@ -140,7 +140,7 @@ Two `sqlc` query sets would double every query edit.
 
 | # | Question | Current choice (until answered) |
 |---|---|---|
-| Q1 | GitHub owner for the repo / image (`github.com/<owner>/simple-apb`, `ghcr.io/<owner>/…`)? | Placeholder `simple-apb` org in the Go module path, compose file and image name |
+| Q1 | ~~GitHub owner~~ **Answered:** `quip1` — `github.com/quip1/simple-apb`, image `ghcr.io/quip1/simple-apb-server` | — |
 | Q2 | License identifier: `AGPL-3.0-or-later` or `AGPL-3.0-only`? | `AGPL-3.0-or-later` (GNU's recommendation) in SPDX headers |
 | Q3 | Commit the Gradle wrapper now, or when the Android app starts (Phase 3)? | CI installs Gradle 9.1 directly; wrapper added in Phase 3 |
 | Q4 | Review the schema (`server/internal/store/migrations/sqlite/00001_init.sql`) and API outline (`docs/API.md`) — Phase 0 acceptance | — |

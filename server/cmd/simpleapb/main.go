@@ -17,9 +17,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/simple-apb/simple-apb/server/internal/api"
-	"github.com/simple-apb/simple-apb/server/internal/store"
-	"github.com/simple-apb/simple-apb/server/internal/version"
+	"github.com/quip1/simple-apb/server/internal/api"
+	"github.com/quip1/simple-apb/server/internal/store"
+	"github.com/quip1/simple-apb/server/internal/version"
 )
 
 func main() {
