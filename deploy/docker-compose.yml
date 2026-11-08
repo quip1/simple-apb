@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Phase 0 skeleton. Full version (healthchecks for ntfy, postgres profile,
+# networks for the reverse proxy) lands in Phase 1.
+services:
+  simpleapb-server:
+    image: ghcr.io/simple-apb/simple-apb-server:latest
+    restart: unless-stopped
+    environment:
+      SIMPLEAPB_LISTEN: ":8080"
+    volumes:
+      - ./config:/config
+      - /path/to/your/audiobooks:/library
+      - ./cache:/cache
+      - ./backups:/backups
+    ports:
+      - "8080:8080"
+
+  ntfy:
+    image: binwiederhier/ntfy:latest
+    command: serve
+    restart: unless-stopped
+    volumes:
+      - ./ntfy:/var/lib/ntfy

@@ -1,0 +1,9 @@
+{
+  "$schema-note": "ICU MessageFormat strings. Keys are shared by web, desktop and (via a build step) Android.",
+  "app.name": "Simple APB",
+  "error.invalid_credentials": "Wrong username or password.",
+  "error.account_pending": "Your account is waiting for an admin to approve it.",
+  "error.rate_limited": "Too many attempts. Try again in {seconds, plural, one {# second} other {# seconds}}.",
+  "progress.conflict.prompt": "Jump to {position} from {device}?",
+  "update.required": "This app is too old for the server. Please update to continue."
+}

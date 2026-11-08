@@ -1,0 +1,1127 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# SOURCE OF TRUTH for the Simple APB API. Edit this first, then regenerate:
+#   Go:     cd server && go generate ./...
+#   TS:     cd web && npm run gen:api
+#   Kotlin: android/core-api generates at build time
+#   Docs:   cd web && npm run gen:docs
+#
+# v0 scope (Phase 0): instance info, auth, me/sessions, library, progress + delta
+# sync, media/streaming. Setup wizard, uploads, admin, social etc. come later.
+openapi: 3.0.3
+info:
+  title: Simple APB API
+  version: 0.1.0
+  description: |
+    REST API for Simple APB. All endpoints live under `/api/v1`.
+
+    **Conventions**
+    - Every response carries an `X-Server-Version` header.
+    - IDs are UUIDv7 strings. Positions and durations are integer milliseconds.
+    - Timestamps are RFC 3339 UTC.
+    - Errors use the `Error` schema with a stable machine-readable `code`.
+    - List endpoints use opaque cursor pagination (`cursor` in, `next_cursor` out).
+    - Clients authenticate with a Bearer access token (apps) or the
+      `sapb_session` cookie plus `X-CSRF-Token` header (web).
+  license:
+    name: AGPL-3.0-or-later
+    url: https://www.gnu.org/licenses/agpl-3.0.html
+servers:
+  - url: /api/v1
+
+security:
+  - bearerAuth: []
+  - cookieAuth: []
+
+tags:
+  - name: instance
+    description: Public instance info and health
+  - name: auth
+    description: Sign-up, login, tokens and two-factor auth
+  - name: me
+    description: The signed-in user and their device sessions
+  - name: library
+    description: Browsing the books visible to the user
+  - name: progress
+    description: Listening progress and delta sync
+  - name: media
+    description: Audio files, HLS streams, covers and signed cast URLs
+
+paths:
+  # ───────────────────────────── Instance ─────────────────────────────
+  /health:
+    get:
+      tags: [instance]
+      operationId: getHealth
+      summary: Liveness check (used by container healthchecks)
+      security: []
+      responses:
+        "200":
+          description: Server is up
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Health" }
+
+  /instance:
+    get:
+      tags: [instance]
+      operationId: getInstance
+      summary: Public instance information
+      description: Name, version, client version guard, sign-up state, legal text, login options.
+      security: []
+      responses:
+        "200":
+          description: Instance info
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Instance" }
+
+  # ─────────────────────────────── Auth ───────────────────────────────
+  /auth/signup:
+    post:
+      tags: [auth]
+      operationId: signup
+      summary: Request an account (creates a pending user awaiting admin approval)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SignupRequest" }
+      responses:
+        "202":
+          description: Request received; an admin must approve it
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SignupAccepted" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      summary: Log in with username + password
+      description: |
+        Returns tokens, or `totp_required` with a short-lived challenge to pass to
+        `POST /auth/totp/verify`. Pending/denied users get 403 with a code that
+        says so.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginRequest" }
+      responses:
+        "200":
+          description: Logged in, or second factor needed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LoginResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /auth/totp/verify:
+    post:
+      tags: [auth]
+      operationId: verifyTotp
+      summary: Complete login with a TOTP code or a recovery code
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TotpVerifyRequest" }
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LoginResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /auth/totp/enroll:
+    post:
+      tags: [auth]
+      operationId: enrollTotp
+      summary: Start TOTP enrollment (returns secret + otpauth URI)
+      responses:
+        "200":
+          description: Enrollment started; confirm with a code to activate
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TotpEnrollment" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /auth/totp/confirm:
+    post:
+      tags: [auth]
+      operationId: confirmTotp
+      summary: Confirm TOTP enrollment; returns the 10 one-time recovery codes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TotpConfirmRequest" }
+      responses:
+        "200":
+          description: TOTP active
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecoveryCodes" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      operationId: refreshTokens
+      summary: Exchange a refresh token for a new token pair (rotating)
+      description: |
+        The old refresh token is invalidated. Reusing an already-rotated refresh
+        token revokes the whole device session (theft detection). Web clients
+        send no body; the refresh cookie is used.
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RefreshRequest" }
+      responses:
+        "200":
+          description: New tokens
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenPair" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: End the current device session
+      responses:
+        "204": { description: "Logged out" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ──────────────────────────────── Me ────────────────────────────────
+  /me:
+    get:
+      tags: [me]
+      operationId: getMe
+      summary: The current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Me" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /me/sessions:
+    get:
+      tags: [me]
+      operationId: listMySessions
+      summary: My device sessions
+      responses:
+        "200":
+          description: Sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Session" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /me/sessions/{sessionId}:
+    delete:
+      tags: [me]
+      operationId: revokeMySession
+      summary: Revoke one of my sessions
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      responses:
+        "204": { description: "Revoked" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ────────────────────────────── Library ─────────────────────────────
+  /library:
+    get:
+      tags: [library]
+      operationId: listLibrary
+      summary: My library (own uploads ∪ distributions, minus removed/hidden/filtered/taken down)
+      parameters:
+        - name: shelf
+          in: query
+          schema:
+            type: string
+            enum: [all, in_progress, not_started, finished, archived, recently_removed]
+            default: all
+        - { name: series, in: query, schema: { type: string, format: uuid } }
+        - { name: author, in: query, schema: { type: string, format: uuid } }
+        - { name: narrator, in: query, schema: { type: string, format: uuid } }
+        - { name: tag, in: query, description: "Genre or custom book tag id", schema: { type: string, format: uuid } }
+        - { name: collection, in: query, schema: { type: string, format: uuid } }
+        - { name: q, in: query, description: "Full-text search over title/author/narrator/series", schema: { type: string, maxLength: 200 } }
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [recent_added, recent_played, title, author, series, duration]
+            default: recent_added
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: A page of books
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LibraryPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /books/{bookId}:
+    get:
+      tags: [library]
+      operationId: getBook
+      summary: Book detail (files, chapters, my progress)
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "200":
+          description: Book
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BookDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /me/library/{bookId}:
+    delete:
+      tags: [library]
+      operationId: removeFromMyLibrary
+      summary: Remove a book from my view (restorable for 30 days; master copy is kept)
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "204": { description: "Removed from my library" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /me/library/{bookId}/restore:
+    post:
+      tags: [library]
+      operationId: restoreToMyLibrary
+      summary: Restore a book from "Recently removed", or un-archive it
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "204": { description: "Restored" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "410": { $ref: "#/components/responses/Gone" }
+
+  /me/library/{bookId}/hide:
+    post:
+      tags: [library]
+      operationId: hideInMyLibrary
+      summary: Archive (hide) a book in my library
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "204": { description: "Archived" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /authors/{personId}:
+    get:
+      tags: [library]
+      operationId: getAuthor
+      summary: Author page (books visible to me)
+      parameters:
+        - $ref: "#/components/parameters/PersonId"
+      responses:
+        "200":
+          description: Author
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PersonPage" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /narrators/{personId}:
+    get:
+      tags: [library]
+      operationId: getNarrator
+      summary: Narrator page (books visible to me)
+      parameters:
+        - $ref: "#/components/parameters/PersonId"
+      responses:
+        "200":
+          description: Narrator
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PersonPage" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /series/{seriesId}:
+    get:
+      tags: [library]
+      operationId: getSeries
+      summary: Series page (books in order, visible to me)
+      parameters:
+        - name: seriesId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Series
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeriesPage" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ───────────────────────────── Progress ─────────────────────────────
+  /me/progress/{bookId}:
+    get:
+      tags: [progress]
+      operationId: getProgress
+      summary: My stored progress for a book
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "200":
+          description: Progress
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Progress" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [progress]
+      operationId: putProgress
+      summary: Report playback position
+      description: |
+        Sent every 15 s while playing, on pause/stop/seek and on app background;
+        queued in a local outbox while offline and flushed in order.
+
+        The server keeps the latest record by `client_ts`. If the incoming
+        position differs from the stored one by more than the user's conflict
+        threshold (default 3 min) **and** the two writes came from different
+        devices within the same offline window, the server answers **409** with
+        both candidates. The client asks the user, then re-sends the chosen
+        position with `resolution` set to the returned `conflict_id`; that
+        write always wins and is logged.
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProgressUpdate" }
+      responses:
+        "200":
+          description: Stored (or ignored as older than the stored record — see `applied`)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProgressWriteResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Position conflict between devices; the user must choose
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProgressConflict" }
+
+  /me/sync:
+    get:
+      tags: [progress]
+      operationId: getSyncDelta
+      summary: Everything that changed for me since a cursor
+      description: |
+        The single call clients make on reconnect. Omit `since` for a full
+        snapshot. Returns library visibility changes, progress, and tombstones
+        (bookmarks/collections join in Phase 1). Page with `next_cursor` while
+        `has_more` is true; store the final cursor.
+      parameters:
+        - name: since
+          in: query
+          description: Opaque cursor from a previous response
+          schema: { type: string }
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Delta
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SyncDelta" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "410":
+          description: Cursor too old (change log pruned); do a full sync without `since`
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  # ────────────────────────────── Media ───────────────────────────────
+  /books/{bookId}/files/{fileId}:
+    get:
+      tags: [media]
+      operationId: getBookFile
+      summary: Original audio file (supports HTTP Range)
+      description: Auth by token/cookie, or by a signed `sig` from `POST /books/{bookId}/stream-url`.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+        - streamSignature: []
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+        - name: fileId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: Range
+          in: header
+          required: false
+          schema: { type: string, example: "bytes=0-1048575" }
+      responses:
+        "200":
+          description: Whole file
+          headers:
+            Accept-Ranges: { schema: { type: string, enum: [bytes] } }
+          content:
+            audio/*:
+              schema: { type: string, format: binary }
+        "206":
+          description: Partial content
+          headers:
+            Content-Range: { schema: { type: string } }
+          content:
+            audio/*:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "416": { description: "Range not satisfiable" }
+
+  /stream/{bookId}/hls/{profile}/index.m3u8:
+    get:
+      tags: [media]
+      operationId: getHlsPlaylist
+      summary: Low-bitrate HLS playlist for the whole book (generated on demand)
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+        - streamSignature: []
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+        - $ref: "#/components/parameters/HlsProfile"
+      responses:
+        "200":
+          description: HLS media playlist
+          content:
+            application/vnd.apple.mpegurl:
+              schema: { type: string }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /stream/{bookId}/hls/{profile}/{segment}:
+    get:
+      tags: [media]
+      operationId: getHlsSegment
+      summary: One 10 s HLS segment
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+        - streamSignature: []
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+        - $ref: "#/components/parameters/HlsProfile"
+        - name: segment
+          in: path
+          required: true
+          schema: { type: string, pattern: '^seg_[0-9]{6}\.(ts|m4s|aac)$' }
+      responses:
+        "200":
+          description: Segment
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /books/{bookId}/stream-url:
+    post:
+      tags: [media]
+      operationId: createStreamUrl
+      summary: Signed, short-lived stream URLs for casting targets
+      description: Bound to user + book; expire after 6 h. Casting devices fetch audio without app tokens.
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StreamUrlRequest" }
+      responses:
+        "200":
+          description: Signed URLs
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StreamUrls" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /books/{bookId}/cover:
+    get:
+      tags: [media]
+      operationId: getBookCover
+      summary: Cover image (resized variant)
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+        - streamSignature: []
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+        - name: size
+          in: query
+          schema: { type: integer, enum: [128, 256, 512, 1024], default: 512 }
+      responses:
+        "200":
+          description: JPEG cover
+          content:
+            image/jpeg:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 15-minute access token from login/refresh.
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sapb_session
+      description: Web/admin. HttpOnly, SameSite=Lax. State-changing requests also need `X-CSRF-Token`.
+    streamSignature:
+      type: apiKey
+      in: query
+      name: sig
+      description: Signed stream token from `POST /books/{bookId}/stream-url`.
+
+  parameters:
+    BookId:
+      name: bookId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    PersonId:
+      name: personId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    HlsProfile:
+      name: profile
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/HlsProfile" }
+    Cursor:
+      name: cursor
+      in: query
+      description: Opaque pagination cursor from `next_cursor`
+      schema: { type: string }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unauthorized:
+      description: Not authenticated
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Forbidden:
+      description: Not allowed
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Not found (or not visible to you)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Conflict:
+      description: Conflict with current state
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Gone:
+      description: No longer available
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    TooManyRequests:
+      description: Rate limited
+      headers:
+        Retry-After: { schema: { type: integer } }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    # ── common ──
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: Stable machine-readable code, e.g. `invalid_credentials`, `account_pending`, `rate_limited`.
+        message:
+          type: string
+          description: Human-readable English message (clients show their own translated text by `code`).
+        details:
+          type: object
+          additionalProperties: true
+
+    Health:
+      type: object
+      required: [status, version]
+      properties:
+        status: { type: string, enum: [ok, degraded] }
+        version: { type: string }
+
+    Instance:
+      type: object
+      required: [name, version, api_version, min_client_version, signup_open, setup_required, oidc_providers]
+      properties:
+        name: { type: string }
+        version: { type: string, description: "Server semver" }
+        api_version: { type: string, example: "v1" }
+        min_client_version:
+          $ref: "#/components/schemas/ClientVersionGuard"
+        signup_open: { type: boolean }
+        setup_required: { type: boolean, description: "True until the first-run wizard is finished" }
+        privacy_text: { type: string }
+        terms_text: { type: string }
+        copyright_contact: { type: string }
+        oidc_providers:
+          type: array
+          items: { $ref: "#/components/schemas/OidcProvider" }
+
+    ClientVersionGuard:
+      type: object
+      description: Clients below `required` must block with "Update required"; below `recommended` show a soft banner.
+      properties:
+        android: { $ref: "#/components/schemas/VersionPair" }
+        wear: { $ref: "#/components/schemas/VersionPair" }
+        web: { $ref: "#/components/schemas/VersionPair" }
+        windows: { $ref: "#/components/schemas/VersionPair" }
+
+    VersionPair:
+      type: object
+      required: [required, recommended]
+      properties:
+        required: { type: string }
+        recommended: { type: string }
+
+    OidcProvider:
+      type: object
+      required: [id, display_name]
+      properties:
+        id: { type: string }
+        display_name: { type: string }
+
+    Platform:
+      type: string
+      enum: [android, wear, web, windows, other]
+
+    # ── auth ──
+    SignupRequest:
+      type: object
+      required: [username, password, age_confirmed, terms_accepted]
+      properties:
+        username: { type: string, minLength: 3, maxLength: 32, pattern: '^[a-zA-Z0-9_.-]+$' }
+        password: { type: string, minLength: 10, maxLength: 256, format: password }
+        email: { type: string, format: email }
+        message: { type: string, maxLength: 500, description: "Optional note to the admin" }
+        age_confirmed: { type: boolean }
+        terms_accepted: { type: boolean }
+
+    SignupAccepted:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [pending] }
+
+    DeviceInfo:
+      type: object
+      required: [device_id, device_name, platform, app_version]
+      properties:
+        device_id: { type: string, format: uuid, description: "Generated once per install" }
+        device_name: { type: string, maxLength: 100 }
+        platform: { $ref: "#/components/schemas/Platform" }
+        app_version: { type: string, maxLength: 32 }
+
+    LoginRequest:
+      type: object
+      required: [username, password, device]
+      properties:
+        username: { type: string }
+        password: { type: string, format: password }
+        device: { $ref: "#/components/schemas/DeviceInfo" }
+
+    LoginResponse:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [ok, totp_required] }
+        tokens: { $ref: "#/components/schemas/TokenPair" }
+        totp_challenge:
+          type: string
+          description: Present when `status = totp_required`; valid for 5 minutes.
+        user: { $ref: "#/components/schemas/Me" }
+
+    TotpVerifyRequest:
+      type: object
+      required: [totp_challenge]
+      properties:
+        totp_challenge: { type: string }
+        code: { type: string, pattern: '^[0-9]{6}$' }
+        recovery_code: { type: string }
+
+    TotpEnrollment:
+      type: object
+      required: [secret, otpauth_uri]
+      properties:
+        secret: { type: string, description: "Base32 secret" }
+        otpauth_uri: { type: string }
+
+    TotpConfirmRequest:
+      type: object
+      required: [code]
+      properties:
+        code: { type: string, pattern: '^[0-9]{6}$' }
+
+    RecoveryCodes:
+      type: object
+      required: [codes]
+      properties:
+        codes:
+          type: array
+          minItems: 10
+          maxItems: 10
+          items: { type: string }
+
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token: { type: string }
+
+    TokenPair:
+      type: object
+      required: [access_token, access_expires_at, refresh_token, refresh_expires_at]
+      properties:
+        access_token: { type: string }
+        access_expires_at: { type: string, format: date-time }
+        refresh_token: { type: string, description: "Empty for web clients (cookie is set instead)" }
+        refresh_expires_at: { type: string, format: date-time }
+
+    # ── me ──
+    UserRole:
+      type: string
+      enum: [admin, user]
+
+    UserStatus:
+      type: string
+      enum: [pending, active, restricted, suspended, banned, deleted]
+
+    Me:
+      type: object
+      required: [id, username, display_name, role, status, totp_enabled, quota_bytes, used_bytes, locale, permissions]
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        display_name: { type: string }
+        email: { type: string, format: email }
+        role: { $ref: "#/components/schemas/UserRole" }
+        status: { $ref: "#/components/schemas/UserStatus" }
+        totp_enabled: { type: boolean }
+        quota_bytes: { type: integer, format: int64, description: "0 = unlimited" }
+        used_bytes: { type: integer, format: int64 }
+        locale: { type: string, example: en }
+        permissions: { $ref: "#/components/schemas/EffectivePermissions" }
+        notice:
+          type: string
+          description: Moderator warning to show once on login, if any.
+
+    EffectivePermissions:
+      type: object
+      description: Result of authz evaluation (status → role → user overrides → tags → instance defaults).
+      required: [can_upload, can_edit_metadata, can_delete_own, can_share, can_review, can_post_public]
+      properties:
+        can_upload: { type: boolean }
+        can_edit_metadata: { type: boolean }
+        can_delete_own: { type: boolean }
+        can_share: { type: boolean }
+        can_review: { type: boolean }
+        can_post_public: { type: boolean }
+
+    Session:
+      type: object
+      required: [id, device_id, device_name, platform, app_version, last_seen_at, created_at, current]
+      properties:
+        id: { type: string, format: uuid }
+        device_id: { type: string, format: uuid }
+        device_name: { type: string }
+        platform: { $ref: "#/components/schemas/Platform" }
+        app_version: { type: string }
+        last_seen_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+        current: { type: boolean, description: "This is the session making the request" }
+
+    # ── library ──
+    PersonRef:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+
+    SeriesRef:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        index: { type: string, description: "Position in the series as text (e.g. \"1\", \"2.5\")" }
+
+    TagRef:
+      type: object
+      required: [id, name, kind]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        kind: { type: string, enum: [genre, custom] }
+
+    LibrarySource:
+      type: string
+      enum: [own_upload, distribution, recommendation]
+
+    BookSummary:
+      type: object
+      required: [id, title, authors, narrators, duration_ms, cover_url, source, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        subtitle: { type: string }
+        authors: { type: array, items: { $ref: "#/components/schemas/PersonRef" } }
+        narrators: { type: array, items: { $ref: "#/components/schemas/PersonRef" } }
+        series: { $ref: "#/components/schemas/SeriesRef" }
+        duration_ms: { type: integer, format: int64 }
+        cover_url: { type: string, description: "Relative URL; add `?size=`" }
+        source: { $ref: "#/components/schemas/LibrarySource" }
+        progress: { $ref: "#/components/schemas/Progress" }
+        added_at: { type: string, format: date-time }
+        hidden: { type: boolean }
+        removed_at: { type: string, format: date-time, description: "Set on the recently_removed shelf" }
+        updated_at: { type: string, format: date-time }
+
+    BookDetail:
+      allOf:
+        - $ref: "#/components/schemas/BookSummary"
+        - type: object
+          required: [files, chapters, tags, size_bytes, has_epub]
+          properties:
+            description: { type: string }
+            publisher: { type: string }
+            published_year: { type: integer }
+            language: { type: string }
+            isbn: { type: string }
+            asin: { type: string }
+            size_bytes: { type: integer, format: int64 }
+            has_epub: { type: boolean }
+            tags: { type: array, items: { $ref: "#/components/schemas/TagRef" } }
+            files: { type: array, items: { $ref: "#/components/schemas/BookFile" } }
+            chapters: { type: array, items: { $ref: "#/components/schemas/Chapter" } }
+
+    BookFile:
+      type: object
+      description: One audio file. `offset_ms` maps it onto the global book timeline.
+      required: [id, index, offset_ms, duration_ms, size_bytes, codec, mime_type, sha256]
+      properties:
+        id: { type: string, format: uuid }
+        index: { type: integer }
+        offset_ms: { type: integer, format: int64 }
+        duration_ms: { type: integer, format: int64 }
+        size_bytes: { type: integer, format: int64 }
+        codec: { type: string, example: aac }
+        bitrate_kbps: { type: integer }
+        mime_type: { type: string, example: audio/mp4 }
+        sha256: { type: string }
+
+    Chapter:
+      type: object
+      description: Chapter on the global book timeline (across files).
+      required: [index, title, start_ms, end_ms]
+      properties:
+        index: { type: integer }
+        title: { type: string }
+        start_ms: { type: integer, format: int64 }
+        end_ms: { type: integer, format: int64 }
+
+    LibraryPage:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/BookSummary" } }
+        next_cursor: { type: string, description: "Absent on the last page" }
+
+    PersonPage:
+      type: object
+      required: [id, name, books]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        books: { type: array, items: { $ref: "#/components/schemas/BookSummary" } }
+
+    SeriesPage:
+      type: object
+      required: [id, name, books]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        books: { type: array, items: { $ref: "#/components/schemas/BookSummary" } }
+
+    # ── progress & sync ──
+    Progress:
+      type: object
+      required: [book_id, position_ms, device_id, client_ts, updated_at, speed]
+      properties:
+        book_id: { type: string, format: uuid }
+        position_ms: { type: integer, format: int64, minimum: 0 }
+        device_id: { type: string, format: uuid }
+        device_name: { type: string }
+        client_ts: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time, description: "Server receive time" }
+        speed: { type: number, format: float, minimum: 0.5, maximum: 3.5 }
+        finished_at: { type: string, format: date-time }
+
+    ProgressUpdate:
+      type: object
+      required: [position_ms, device_id, client_ts, speed]
+      properties:
+        position_ms: { type: integer, format: int64, minimum: 0 }
+        device_id: { type: string, format: uuid }
+        client_ts: { type: string, format: date-time }
+        speed: { type: number, format: float, minimum: 0.5, maximum: 3.5 }
+        finished: { type: boolean }
+        last_synced_at:
+          type: string
+          format: date-time
+          description: |
+            When this device last successfully synced progress for this book.
+            Used to detect writes made in the same offline window.
+        resolution:
+          type: string
+          description: Echo a `conflict_id` from a 409 to force this write after the user chose.
+
+    ProgressWriteResult:
+      type: object
+      required: [applied, progress]
+      properties:
+        applied:
+          type: boolean
+          description: False when the write was older (by `client_ts`) than the stored record and was ignored.
+        progress: { $ref: "#/components/schemas/Progress" }
+
+    ProgressConflict:
+      type: object
+      required: [code, conflict_id, server, incoming]
+      properties:
+        code: { type: string, enum: [progress_conflict] }
+        conflict_id: { type: string }
+        server: { $ref: "#/components/schemas/Progress" }
+        incoming: { $ref: "#/components/schemas/Progress" }
+
+    Tombstone:
+      type: object
+      required: [entity, id, deleted_at]
+      properties:
+        entity: { type: string, enum: [library_entry, progress, bookmark, collection] }
+        id: { type: string, description: "Entity id (for library_entry and progress: the book id)" }
+        deleted_at: { type: string, format: date-time }
+
+    SyncDelta:
+      type: object
+      required: [cursor, has_more, library, progress, tombstones]
+      properties:
+        cursor: { type: string, description: "Pass as `since` next time" }
+        has_more: { type: boolean }
+        full: { type: boolean, description: "True when this is a full snapshot (no `since`)" }
+        library:
+          type: array
+          description: Books that became visible or whose metadata changed
+          items: { $ref: "#/components/schemas/BookSummary" }
+        progress:
+          type: array
+          items: { $ref: "#/components/schemas/Progress" }
+        tombstones:
+          type: array
+          items: { $ref: "#/components/schemas/Tombstone" }
+
+    # ── media ──
+    HlsProfile:
+      type: string
+      enum: [low, medium]
+      description: "`low` = HE-AAC 32 kbps mono, `medium` = AAC 64 kbps stereo"
+
+    StreamUrlRequest:
+      type: object
+      properties:
+        profile:
+          type: string
+          enum: [original, low, medium]
+          default: original
+
+    StreamUrls:
+      type: object
+      required: [expires_at]
+      properties:
+        expires_at: { type: string, format: date-time }
+        files:
+          type: array
+          description: Present for `original`
+          items:
+            type: object
+            required: [file_id, url]
+            properties:
+              file_id: { type: string, format: uuid }
+              url: { type: string }
+        hls_url: { type: string, description: "Present for `low`/`medium`" }
+        cover_url: { type: string }

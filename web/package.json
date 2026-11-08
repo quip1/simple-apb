@@ -1,0 +1,22 @@
+{
+  "name": "@simple-apb/web",
+  "private": true,
+  "version": "0.1.0",
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "scripts": {
+    "gen:api": "openapi-typescript ../server/openapi.yaml -o src/api/schema.gen.ts",
+    "gen:docs": "node scripts/gen-api-docs.mjs ../server/openapi.yaml ../docs/API.md",
+    "lint:api": "redocly lint --config redocly.yaml ../server/openapi.yaml",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.14.0"
+  },
+  "devDependencies": {
+    "@redocly/cli": "^2.0.0",
+    "openapi-typescript": "^7.8.0",
+    "typescript": "^5.9.0",
+    "yaml": "^2.8.0"
+  }
+}

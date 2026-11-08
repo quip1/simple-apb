@@ -1,0 +1,40 @@
+# Private, never committed: the build brief (contains personal deployment details),
+# local notes, secrets.
+.local/
+*.env
+.env*
+!.env.example
+secret.key
+
+# Go
+server/bin/
+server/coverage.out
+*.test
+
+# Node / web
+node_modules/
+web/dist/
+server/internal/web/dist/*
+!server/internal/web/dist/.gitkeep
+
+# Android / Gradle
+.gradle/
+**/build/
+local.properties
+*.iml
+.idea/
+captures/
+*.jks
+*.keystore
+
+# Tauri / Rust
+desktop/src-tauri/target/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+*.swp
+
+# Runtime data when running the server locally
+/data/

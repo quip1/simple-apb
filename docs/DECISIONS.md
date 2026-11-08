@@ -1,0 +1,146 @@
+# Decisions log
+
+ADR-style: what was decided, the alternatives, and why. Newest at the bottom.
+Open questions for Jacob are at the end.
+
+---
+
+## ADR-0001 — Monorepo, and a pure-JVM `core-api` Android module
+
+**Decision.** One repository with `server/`, `web/`, `desktop/`, `android/`, `deploy/`,
+`docs/`, `i18n/` as in the brief. On Android, the OpenAPI-generated Kotlin client lives in
+its own **pure-JVM** module `android/core-api`, which `core-data` will depend on.
+
+**Alternatives.** Put the generated client directly inside `core-data` (the brief's layout).
+
+**Why.** The generated client has no Android dependencies. As a JVM module it compiles in
+seconds on any machine with a JDK — including CI and this dev box, which has no Android SDK —
+so "the generated clients compile" can be checked from Phase 0. `core-data` (Room, sync
+engine) still owns everything Android-specific.
+
+## ADR-0002 — The build brief is not committed
+
+The brief contains personal deployment details (hostnames, home network). It lives at
+`.local/BRIEF.md`, which is gitignored. `CLAUDE.md` points to it. Anything from the brief that
+belongs in the public repo is restated in these docs in generic form.
+
+## ADR-0003 — Pure-Go SQLite driver (`modernc.org/sqlite`)
+
+**Decision.** Use `modernc.org/sqlite` (driver `sqlite`) and `pgx` (driver `pgx`) behind
+`database/sql`.
+
+**Alternatives.** `mattn/go-sqlite3` (cgo).
+
+**Why.** No cgo means a truly static binary, trivial cross-compilation for the amd64+arm64
+image, and no C toolchain for self-hosters building from source. modernc is slower than cgo
+SQLite in micro-benchmarks, but our load (a few writes per second per active listener) is far
+below where that matters.
+
+## ADR-0004 — Schema conventions shared by both dialects
+
+**Decision.**
+
+| Concept | SQLite | PostgreSQL |
+|---|---|---|
+| IDs | `TEXT` holding a UUIDv7 | `UUID` |
+| Timestamps | `INTEGER` unix **milliseconds** UTC | `BIGINT` unix ms |
+| Booleans | `INTEGER` 0/1 + `CHECK` | `BOOLEAN` |
+| JSON | `TEXT` | `JSONB` |
+| Lists (authors, narrators…) | join tables | join tables |
+| Type safety | `STRICT` tables | native |
+
+Migrations are hand-written per dialect with **the same file names, tables and columns**.
+`TestMigrationFilesMatch` always runs; `TestSchemaParity` compares every table's columns when
+Postgres is available (CI runs it).
+
+**Alternatives.** Native `timestamptz` in Postgres and `TEXT` ISO dates in SQLite; arrays for
+authors; one generated migration set.
+
+**Why.** Integer milliseconds compare, sort and subtract identically in both engines, which
+keeps the query layer dialect-agnostic and matches the API's integer `position_ms` world (sync
+conflicts are about time arithmetic). The API still speaks RFC 3339. Join tables give us
+author/narrator pages and indexes for free. `STRICT` makes SQLite reject wrongly typed values
+instead of silently storing them — important when the same Go code must behave the same on
+Postgres.
+
+**Small deviations from the brief's logical model** (all additive):
+- `invites_or_requests` is named `signup_requests` and links to the pending user row.
+- `listening_visibility` is a column `users.listening_visible` instead of its own table (it is
+  one boolean per user).
+- `users.conflict_threshold_ms` (1–30 min, default 3) holds the per-user sync conflict setting.
+- Added tables the brief's features need: `recovery_codes` (TOTP), `api_tokens` (§6.19),
+  `uploads` (tus tracking), `progress_conflicts` (409s and the user's final choice are logged),
+  `duplicate_candidates` (duplicate finder review list), `sync_changes` (delta sync, ADR-0005),
+  `book_authors`/`book_narrators` (join tables).
+- `books.locked_fields` records hand-edited metadata so providers never overwrite it;
+  `books.metadata_review` is the "needs review" flag.
+- The `books` table is kept free of audio-only concepts (those live in `book_files`) so it can
+  later become a shared "media item" table for the podcasts app.
+
+## ADR-0005 — Delta sync uses a change log with a sequence cursor
+
+**Decision.** Every change relevant to sync appends a row to `sync_changes(seq, user_id,
+entity, entity_id, op, at)`. `GET /me/sync?since=<cursor>` reads rows with `seq > cursor` for
+that user (plus `user_id IS NULL` rows for objects they can see), returns current state for
+upserts and tombstones for deletes, and the new cursor is the highest `seq` returned. The
+cursor is opaque to clients. If old rows are pruned the server answers `410` and the client
+does a full sync.
+
+**Alternatives.** `updated_at > since` on every table.
+
+**Why.** Timestamps from different writers can tie or arrive out of order, so `updated_at`
+cursors silently skip changes. A single monotonic sequence never does, gives tombstones a
+natural home, and makes "what changed for user X" one indexed range scan.
+
+## ADR-0006 — SQLite durability: WAL + `synchronous=NORMAL`
+
+As the brief specifies. In WAL mode, `NORMAL` never corrupts the database on power loss; at
+worst the last few committed transactions roll back. `FULL` would fsync on every commit and
+cost a lot of write latency for a guarantee the progress-sync design already tolerates (clients
+keep an outbox and resend). Foreign keys are switched on per connection and `_txlock=immediate`
+avoids deadlock-prone lock upgrades.
+
+## ADR-0007 — Code generation and what gets committed
+
+| Target | Tool | Committed? |
+|---|---|---|
+| Go server | `oapi-codegen` v2, chi + **strict server**, run with `go tool` (pinned in `go.mod`) | yes, `api.gen.go`; CI fails if stale |
+| TypeScript | `openapi-typescript` (types) + `openapi-fetch` (≈6 kB runtime) | yes, `schema.gen.ts`; CI fails if stale |
+| Kotlin | `openapi-generator` `kotlin` / `jvm-retrofit2` + kotlinx.serialization, coroutines | no, generated at build time |
+| Docs | `web/scripts/gen-api-docs.mjs` → `docs/API.md` | yes; CI fails if stale |
+
+**Why.** Committed Go/TS output makes code review show API changes and lets the server build
+without Node. The Kotlin generator is a JVM tool that Gradle already runs, so committing its
+large output would only add noise. `openapi-typescript` produces types only — no generated
+runtime code to audit — which suits a small, fast web player. Dates are plain strings in the
+Kotlin client to avoid a date-library dependency in the generated layer; `core-data` converts.
+
+## ADR-0008 — "Same offline window" for progress conflicts
+
+The brief returns 409 when two devices disagree by more than the threshold "within the same
+offline window". Proposed concrete rule (implemented in Phase 1): each `PUT /me/progress`
+carries `last_synced_at`, the time that device last synced this book. If the stored record
+came from a *different* device and was written **after** the incoming device's
+`last_synced_at`, the incoming device didn't know about it — they were offline at the same
+time. Then, if positions differ by more than the threshold, answer 409. Otherwise latest
+`client_ts` wins silently. The client's re-send with `resolution: <conflict_id>` always wins
+and is recorded in `progress_conflicts`.
+
+## ADR-0009 — Repository layer (proposed, finalized in Phase 1)
+
+Lean towards a **thin hand-written repository** over `database/sql`, with queries written once
+using `?` placeholders and rebound to `$n` for Postgres, instead of `sqlc` with two query sets.
+Because ADR-0004 keeps both schemas column-identical with portable types, almost every query is
+the same text in both dialects; the few that aren't (upserts, `RETURNING`) are small branches.
+Two `sqlc` query sets would double every query edit.
+
+---
+
+## Open questions for Jacob
+
+| # | Question | Current choice (until answered) |
+|---|---|---|
+| Q1 | GitHub owner for the repo / image (`github.com/<owner>/simple-apb`, `ghcr.io/<owner>/…`)? | Placeholder `simple-apb` org in the Go module path, compose file and image name |
+| Q2 | License identifier: `AGPL-3.0-or-later` or `AGPL-3.0-only`? | `AGPL-3.0-or-later` (GNU's recommendation) in SPDX headers |
+| Q3 | Commit the Gradle wrapper now, or when the Android app starts (Phase 3)? | CI installs Gradle 9.1 directly; wrapper added in Phase 3 |
+| Q4 | Review the schema (`server/internal/store/migrations/sqlite/00001_init.sql`) and API outline (`docs/API.md`) — Phase 0 acceptance | — |

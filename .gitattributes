@@ -1,0 +1,11 @@
+* text=auto eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.jar binary
+*.png binary
+*.jpg binary
+*.m4b binary
+*.mp3 binary
+# Generated code: collapse in diffs
+server/internal/api/api.gen.go linguist-generated=true
+web/src/api/schema.gen.ts linguist-generated=true

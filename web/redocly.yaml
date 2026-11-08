@@ -1,0 +1,5 @@
+extends:
+  - recommended
+rules:
+  # /health and /instance are public and cannot fail with a 4xx.
+  operation-4xx-response: off
