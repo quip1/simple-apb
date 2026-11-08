@@ -34,6 +34,8 @@ const (
 	UploadFailed    = "upload_failed"
 	LibraryAdded    = "library_added"
 	SignupRequest   = "signup_request"
+	ReportFiled     = "report"
+	ReviewRequest   = "review_request"
 	BackupFailed    = "backup_failed"
 	IntegrityFailed = "integrity_failed"
 	UncleanShutdown = "unclean_shutdown"

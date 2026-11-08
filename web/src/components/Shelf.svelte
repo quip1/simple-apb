@@ -2,12 +2,19 @@
 <script lang="ts">
   // A Home row. Scrolls sideways in the dark theme; wraps into a grid in e-ink
   // (no smooth scrolling there, brief §11).
+  import type { Snippet } from "svelte";
   import type { BookSummary } from "../api/client";
   import { t } from "../lib/i18n";
   import { link } from "../lib/router.svelte";
   import BookCard from "./BookCard.svelte";
 
-  let { id, title, books, more }: { id: string; title: string; books: BookSummary[]; more?: string } = $props();
+  let {
+    id,
+    title,
+    books,
+    more,
+    below,
+  }: { id: string; title: string; books: BookSummary[]; more?: string; below?: Snippet<[BookSummary]> } = $props();
 </script>
 
 <section aria-labelledby={id}>
@@ -17,7 +24,9 @@
   </div>
   <ul>
     {#each books as book (book.id)}
-      <li><BookCard {book} /></li>
+      <li>
+        <BookCard {book} />{#if below}{@render below(book)}{/if}
+      </li>
     {/each}
   </ul>
 </section>

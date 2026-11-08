@@ -11,7 +11,7 @@
 openapi: 3.0.3
 info:
   title: Simple APB API
-  version: 0.9.0
+  version: 0.10.0
   description: |
     REST API for Simple APB. All endpoints live under `/api/v1`.
 
@@ -50,6 +50,8 @@ tags:
     description: First-run setup wizard (needs the one-time setup token from the server log)
   - name: uploads
     description: Resumable uploads (tus) and background jobs
+  - name: social
+    description: Reviews, recommendations, who's listening, reports and sharing
   - name: admin
     description: Instance administration (admin role only)
 
@@ -1815,8 +1817,9 @@ paths:
         POSTs events there. Without an endpoint you get a random server topic on this
         instance's ntfy to subscribe to directly. Payloads never contain content, only
         `{"type": "...", "id": "..."}`; fetch details from the API.
-        Event types: `upload_done`, `upload_failed`, `library_added`, and for admins
-        `signup_request`, `backup_failed`, `integrity_failed`, `unclean_shutdown`.
+        Event types: `upload_done`, `upload_failed`, `library_added` (a share, or a
+        recommendation; `id` is the book), and for admins `signup_request`, `report`,
+        `review_request`, `backup_failed`, `integrity_failed`, `unclean_shutdown`.
       requestBody:
         required: true
         content:
@@ -1886,6 +1889,453 @@ paths:
               schema: { $ref: "#/components/schemas/JobRef" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  # ───────────────────────────── Social ───────────────────────────────
+  /books/{bookId}/reviews:
+    get:
+      tags: [social]
+      operationId: listReviews
+      summary: Ratings and reviews of a book, newest first, with the average
+      description: |
+        Hidden reviews are left out of the list and the average, except that
+        the author still sees their own (marked hidden) and admins see all of them.
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Reviews
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReviewPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /books/{bookId}/reviews/mine:
+    put:
+      tags: [social]
+      operationId: putMyReview
+      summary: Rate and review a book (creates or replaces your review; needs `can_review`)
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReviewInput" }
+      responses:
+        "200":
+          description: Your review
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Review" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [social]
+      operationId: deleteMyReview
+      summary: Delete your review of a book
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /books/{bookId}/recommend:
+    post:
+      tags: [social]
+      operationId: recommendBook
+      summary: Recommend a book to other people
+      description: |
+        Only people who can already see the book receive it; the rest are
+        counted in `skipped`. A recommendation never makes a book visible.
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RecommendRequest" }
+      responses:
+        "200":
+          description: Result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecommendResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /me/recommendations:
+    get:
+      tags: [social]
+      operationId: listMyRecommendations
+      summary: Books other people recommended to you (only books you can see)
+      responses:
+        "200":
+          description: Recommendations, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Recommendation" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /me/recommendations/{recommendationId}:
+    delete:
+      tags: [social]
+      operationId: dismissRecommendation
+      summary: Dismiss a recommendation
+      parameters:
+        - $ref: "#/components/parameters/RecommendationId"
+      responses:
+        "204": { description: Dismissed }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /books/{bookId}/listeners:
+    get:
+      tags: [social]
+      operationId: listListeners
+      summary: Who's listening to (or finished) a book
+      description: |
+        People who turned off "show my listening" in their settings never
+        appear. You don't appear in your own list.
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "200":
+          description: At most 50 people, most recent first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Listener" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /reports:
+    post:
+      tags: [social]
+      operationId: createReport
+      summary: Report a book, a review or a person to the admins
+      description: Reporting the same thing again while your report is open updates it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReportCreate" }
+      responses:
+        "201":
+          description: Reported
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReportRef" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /people:
+    get:
+      tags: [social]
+      operationId: searchPeople
+      summary: Find people to recommend or share to (active users in your groups)
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: At least 2 characters of a username or display name
+          schema: { type: string, minLength: 2, maxLength: 100 }
+      responses:
+        "200":
+          description: At most 10 people
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/UserRef" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /me/groups:
+    get:
+      tags: [social]
+      operationId: listMyGroups
+      summary: The groups you belong to (share targets)
+      responses:
+        "200":
+          description: Groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/GroupRef" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /books/{bookId}/shares:
+    get:
+      tags: [social]
+      operationId: listBookShares
+      summary: Your shares of a book you uploaded, and your requests to share it publicly
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "200":
+          description: Shares and requests
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BookShares" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [social]
+      operationId: shareBook
+      summary: Share a book you uploaded with a person or one of your groups
+      description: |
+        Needs `can_share` (brief §6.5 rule 6). Sharing with `Public` needs
+        `can_post_public` and always goes to the admins' review queue first
+        (`status: pending_review`).
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShareCreate" }
+      responses:
+        "201":
+          description: Shared, or queued for review
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShareResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /books/{bookId}/shares/{shareId}:
+    delete:
+      tags: [social]
+      operationId: unshareBook
+      summary: Stop sharing (or withdraw a pending public request)
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+        - $ref: "#/components/parameters/ShareId"
+      responses:
+        "204": { description: Removed }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /me/collections/{collectionId}/shares:
+    get:
+      tags: [social]
+      operationId: listCollectionShares
+      summary: Who a collection of yours is shared with
+      parameters:
+        - $ref: "#/components/parameters/CollectionId"
+      responses:
+        "200":
+          description: Shares
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/CollectionShare" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [social]
+      operationId: shareCollection
+      summary: Share a collection with a person or one of your groups
+      description: People only ever see the books in it that they can already see.
+      parameters:
+        - $ref: "#/components/parameters/CollectionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShareCreate" }
+      responses:
+        "201":
+          description: Shared
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CollectionShare" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /me/collections/{collectionId}/shares/{shareId}:
+    delete:
+      tags: [social]
+      operationId: unshareCollection
+      summary: Stop sharing a collection with someone
+      parameters:
+        - $ref: "#/components/parameters/CollectionId"
+        - $ref: "#/components/parameters/ShareId"
+      responses:
+        "204": { description: Removed }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /shared-collections:
+    get:
+      tags: [social]
+      operationId: listSharedCollections
+      summary: Collections other people shared with you or your groups
+      responses:
+        "200":
+          description: Collections (only the books you can see)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SharedCollection" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ───────────────────────────── Moderation ───────────────────────────
+  /admin/review-queue:
+    get:
+      tags: [admin]
+      operationId: listReviewQueue
+      summary: Requests to share books with Public, oldest first
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, approved, rejected], default: pending }
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: A page of requests
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReviewQueuePage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/review-queue/{itemId}/approve:
+    post:
+      tags: [admin]
+      operationId: approveReviewItem
+      summary: Approve a request (the book is shared with the group)
+      parameters:
+        - $ref: "#/components/parameters/ItemId"
+      responses:
+        "204": { description: Approved }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /admin/review-queue/{itemId}/reject:
+    post:
+      tags: [admin]
+      operationId: rejectReviewItem
+      summary: Reject a request (a reason is required and shown to the uploader)
+      parameters:
+        - $ref: "#/components/parameters/ItemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReasonRequest" }
+      responses:
+        "204": { description: Rejected }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /admin/reports:
+    get:
+      tags: [admin]
+      operationId: listReports
+      summary: Reports, oldest open first (or newest first for closed ones)
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [open, resolved, dismissed], default: open }
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: A page of reports
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReportPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/reports/{reportId}/resolve:
+    post:
+      tags: [admin]
+      operationId: resolveReport
+      summary: Close a report, and every other open report about the same thing
+      description: |
+        `hide_review` hides the reported review; `takedown` takes the reported
+        book (or the reviewed book) down. `resolved` closes the report after
+        you acted on the person from their user page. A note is required.
+      parameters:
+        - $ref: "#/components/parameters/ReportId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReportResolve" }
+      responses:
+        "204": { description: Resolved }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /admin/reviews/{reviewId}/hide:
+    post:
+      tags: [admin]
+      operationId: hideReview
+      summary: Hide a review from everyone but its author (a reason is required)
+      parameters:
+        - $ref: "#/components/parameters/ReviewId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReasonRequest" }
+      responses:
+        "204": { description: Hidden }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [admin]
+      operationId: unhideReview
+      summary: Show a hidden review again
+      parameters:
+        - $ref: "#/components/parameters/ReviewId"
+      responses:
+        "204": { description: Shown }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
 components:
   securitySchemes:
@@ -1996,6 +2446,32 @@ components:
       name: limit
       in: query
       schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+
+    RecommendationId:
+      name: recommendationId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ShareId:
+      name: shareId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ItemId:
+      name: itemId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ReportId:
+      name: reportId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ReviewId:
+      name: reviewId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
 
   responses:
     BadRequest:
@@ -2406,6 +2882,7 @@ components:
             asin: { type: string }
             size_bytes: { type: integer, format: int64 }
             has_epub: { type: boolean }
+            uploaded_by_me: { type: boolean, description: "You uploaded it (you may share it, given the permission)" }
             tags: { type: array, items: { $ref: "#/components/schemas/TagRef" } }
             files: { type: array, items: { $ref: "#/components/schemas/BookFile" } }
             chapters: { type: array, items: { $ref: "#/components/schemas/Chapter" } }
@@ -3251,3 +3728,253 @@ components:
         last_backup: { $ref: "#/components/schemas/OpStatus" }
         last_scrub: { $ref: "#/components/schemas/OpStatus" }
         last_unclean_shutdown: { $ref: "#/components/schemas/OpStatus" }
+
+    # ── Social ──
+    Review:
+      type: object
+      required: [id, book_id, stars, mine, hidden, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        book_id: { type: string, format: uuid }
+        author: { $ref: "#/components/schemas/UserRef" }
+        stars: { type: integer, minimum: 1, maximum: 5 }
+        text: { type: string }
+        mine: { type: boolean }
+        hidden: { type: boolean, description: "Hidden by a moderator (only the author and admins see it)" }
+        hidden_reason: { type: string, description: "Admins only" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    RatingSummary:
+      type: object
+      required: [count, average, histogram]
+      properties:
+        count: { type: integer }
+        average: { type: number, description: "0 when there are no ratings" }
+        histogram:
+          type: array
+          description: "Number of 1- to 5-star ratings (index 0 is one star)"
+          items: { type: integer }
+          minItems: 5
+          maxItems: 5
+
+    ReviewPage:
+      type: object
+      required: [items, summary]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/Review" } }
+        summary: { $ref: "#/components/schemas/RatingSummary" }
+        mine: { $ref: "#/components/schemas/Review" }
+        next_cursor: { type: string }
+
+    ReviewInput:
+      type: object
+      required: [stars]
+      properties:
+        stars: { type: integer, minimum: 1, maximum: 5 }
+        text: { type: string, maxLength: 500 }
+
+    RecommendRequest:
+      type: object
+      required: [user_ids]
+      properties:
+        user_ids:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items: { type: string, format: uuid }
+        note: { type: string, maxLength: 300 }
+
+    RecommendResult:
+      type: object
+      required: [sent, skipped]
+      properties:
+        sent: { type: integer }
+        skipped: { type: integer, description: "People who can't see the book (they get nothing)" }
+
+    Recommendation:
+      type: object
+      required: [id, book, from, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        book: { $ref: "#/components/schemas/BookSummary" }
+        from: { $ref: "#/components/schemas/UserRef" }
+        note: { type: string }
+        created_at: { type: string, format: date-time }
+
+    Listener:
+      type: object
+      required: [user, state, updated_at]
+      properties:
+        user: { $ref: "#/components/schemas/UserRef" }
+        state: { type: string, enum: [listening, finished] }
+        updated_at: { type: string, format: date-time }
+
+    ReportReason:
+      type: string
+      enum: [copyright, inappropriate, spam, harassment, wrong_metadata, other]
+
+    ReportCreate:
+      type: object
+      required: [object_type, object_id, reason]
+      properties:
+        object_type: { type: string, enum: [book, review, user] }
+        object_id: { type: string, format: uuid }
+        reason: { $ref: "#/components/schemas/ReportReason" }
+        details: { type: string, maxLength: 1000 }
+
+    ReportRef:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string, format: uuid }
+
+    GroupRef:
+      type: object
+      required: [id, name, public]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        public: { type: boolean, description: "The built-in Public group (sharing to it is reviewed first)" }
+
+    ShareCreate:
+      type: object
+      required: [target_type, target_id]
+      properties:
+        target_type: { type: string, enum: [group, user] }
+        target_id: { type: string, format: uuid }
+
+    ShareResult:
+      type: object
+      required: [id, status]
+      properties:
+        id: { type: string, format: uuid, description: "The share, or the review request" }
+        status: { type: string, enum: [shared, pending_review] }
+
+    Share:
+      type: object
+      required: [id, target_type, target_id, target_name, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        target_type: { type: string, enum: [group, user] }
+        target_id: { type: string, format: uuid }
+        target_name: { type: string }
+        created_at: { type: string, format: date-time }
+
+    ShareRequest:
+      type: object
+      required: [id, target_id, target_name, status, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        target_id: { type: string, format: uuid }
+        target_name: { type: string }
+        status: { type: string, enum: [pending, approved, rejected] }
+        reason: { type: string, description: "Why it was rejected" }
+        created_at: { type: string, format: date-time }
+        decided_at: { type: string, format: date-time }
+
+    BookShares:
+      type: object
+      required: [shares, requests]
+      properties:
+        shares: { type: array, items: { $ref: "#/components/schemas/Share" } }
+        requests: { type: array, items: { $ref: "#/components/schemas/ShareRequest" } }
+
+    CollectionShare:
+      type: object
+      required: [id, target_type, target_id, target_name, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        target_type: { type: string, enum: [group, user] }
+        target_id: { type: string, format: uuid }
+        target_name: { type: string }
+        created_at: { type: string, format: date-time }
+
+    SharedCollection:
+      type: object
+      required: [id, name, owner, book_ids, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        owner: { $ref: "#/components/schemas/UserRef" }
+        book_ids:
+          type: array
+          description: "Books in order (only books you can see)"
+          items: { type: string, format: uuid }
+        updated_at: { type: string, format: date-time }
+
+    # ── Moderation ──
+    BookRef:
+      type: object
+      required: [id, title, has_cover]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        has_cover: { type: boolean }
+
+    ReviewQueueItem:
+      type: object
+      required: [id, book, target, status, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        book: { $ref: "#/components/schemas/BookRef" }
+        uploader: { $ref: "#/components/schemas/UserRef" }
+        target: { $ref: "#/components/schemas/GroupRef" }
+        status: { type: string, enum: [pending, approved, rejected] }
+        reason: { type: string }
+        decided_by: { $ref: "#/components/schemas/UserRef" }
+        created_at: { type: string, format: date-time }
+        decided_at: { type: string, format: date-time }
+
+    ReviewQueuePage:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/ReviewQueueItem" } }
+        next_cursor: { type: string }
+
+    ReportedReview:
+      type: object
+      required: [id, stars, hidden]
+      properties:
+        id: { type: string, format: uuid }
+        stars: { type: integer }
+        text: { type: string }
+        author: { $ref: "#/components/schemas/UserRef" }
+        hidden: { type: boolean }
+
+    AdminReport:
+      type: object
+      required: [id, object_type, object_id, object_label, reason, status, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        object_type: { type: string, enum: [book, review, user] }
+        object_id: { type: string, format: uuid }
+        object_label: { type: string, description: "Book title, reviewed book title, or username (empty if it no longer exists)" }
+        book: { $ref: "#/components/schemas/BookRef" }
+        review: { $ref: "#/components/schemas/ReportedReview" }
+        user: { $ref: "#/components/schemas/UserRef" }
+        reporter: { $ref: "#/components/schemas/UserRef" }
+        reason: { $ref: "#/components/schemas/ReportReason" }
+        details: { type: string }
+        status: { type: string, enum: [open, resolved, dismissed] }
+        resolution: { type: string, enum: [dismiss, hide_review, takedown, resolved] }
+        resolution_note: { type: string }
+        resolved_by: { $ref: "#/components/schemas/UserRef" }
+        created_at: { type: string, format: date-time }
+        resolved_at: { type: string, format: date-time }
+
+    ReportPage:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/AdminReport" } }
+        next_cursor: { type: string }
+
+    ReportResolve:
+      type: object
+      required: [action, note]
+      properties:
+        action: { type: string, enum: [dismiss, hide_review, takedown, resolved] }
+        note: { type: string, minLength: 1, maxLength: 1000 }

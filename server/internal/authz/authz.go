@@ -23,6 +23,9 @@ const (
 	DeleteAccount Action = "delete_account"
 	Logout        Action = "logout"
 	Admin         Action = "admin"
+	// Social baseline actions (any active user; restricted users are read-only).
+	Recommend       Action = "recommend"
+	ShareCollection Action = "share_collection"
 
 	// Capability actions (configurable per user / tag / instance).
 	Upload       Action = "can_upload"
@@ -77,7 +80,7 @@ func Allowed(s Subject, a Action) bool {
 	switch a {
 	case Admin:
 		return false
-	case Read, Report, Export, DeleteAccount, Logout:
+	case Read, Report, Export, DeleteAccount, Logout, Recommend, ShareCollection:
 		return true
 	}
 	if !isCapability(a) {

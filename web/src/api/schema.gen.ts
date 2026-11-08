@@ -1417,8 +1417,9 @@ export interface paths {
          *     POSTs events there. Without an endpoint you get a random server topic on this
          *     instance's ntfy to subscribe to directly. Payloads never contain content, only
          *     `{"type": "...", "id": "..."}`; fetch details from the API.
-         *     Event types: `upload_done`, `upload_failed`, `library_added`, and for admins
-         *     `signup_request`, `backup_failed`, `integrity_failed`, `unclean_shutdown`.
+         *     Event types: `upload_done`, `upload_failed`, `library_added` (a share, or a
+         *     recommendation; `id` is the book), and for admins `signup_request`, `report`,
+         *     `review_request`, `backup_failed`, `integrity_failed`, `unclean_shutdown`.
          */
         post: operations["registerPush"];
         delete?: never;
@@ -1474,6 +1475,378 @@ export interface paths {
         /** Re-hash every library file against its stored checksum now */
         post: operations["runIntegrityCheck"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/books/{bookId}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ratings and reviews of a book, newest first, with the average
+         * @description Hidden reviews are left out of the list and the average, except that
+         *     the author still sees their own (marked hidden) and admins see all of them.
+         */
+        get: operations["listReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/books/{bookId}/reviews/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Rate and review a book (creates or replaces your review; needs `can_review`) */
+        put: operations["putMyReview"];
+        post?: never;
+        /** Delete your review of a book */
+        delete: operations["deleteMyReview"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/books/{bookId}/recommend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recommend a book to other people
+         * @description Only people who can already see the book receive it; the rest are
+         *     counted in `skipped`. A recommendation never makes a book visible.
+         */
+        post: operations["recommendBook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/recommendations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Books other people recommended to you (only books you can see) */
+        get: operations["listMyRecommendations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/recommendations/{recommendationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Dismiss a recommendation */
+        delete: operations["dismissRecommendation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/books/{bookId}/listeners": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Who's listening to (or finished) a book
+         * @description People who turned off "show my listening" in their settings never
+         *     appear. You don't appear in your own list.
+         */
+        get: operations["listListeners"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Report a book, a review or a person to the admins
+         * @description Reporting the same thing again while your report is open updates it.
+         */
+        post: operations["createReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Find people to recommend or share to (active users in your groups) */
+        get: operations["searchPeople"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The groups you belong to (share targets) */
+        get: operations["listMyGroups"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/books/{bookId}/shares": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Your shares of a book you uploaded, and your requests to share it publicly */
+        get: operations["listBookShares"];
+        put?: never;
+        /**
+         * Share a book you uploaded with a person or one of your groups
+         * @description Needs `can_share` (brief §6.5 rule 6). Sharing with `Public` needs
+         *     `can_post_public` and always goes to the admins' review queue first
+         *     (`status: pending_review`).
+         */
+        post: operations["shareBook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/books/{bookId}/shares/{shareId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Stop sharing (or withdraw a pending public request) */
+        delete: operations["unshareBook"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/collections/{collectionId}/shares": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Who a collection of yours is shared with */
+        get: operations["listCollectionShares"];
+        put?: never;
+        /**
+         * Share a collection with a person or one of your groups
+         * @description People only ever see the books in it that they can already see.
+         */
+        post: operations["shareCollection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/collections/{collectionId}/shares/{shareId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Stop sharing a collection with someone */
+        delete: operations["unshareCollection"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shared-collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Collections other people shared with you or your groups */
+        get: operations["listSharedCollections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/review-queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Requests to share books with Public, oldest first */
+        get: operations["listReviewQueue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/review-queue/{itemId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve a request (the book is shared with the group) */
+        post: operations["approveReviewItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/review-queue/{itemId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject a request (a reason is required and shown to the uploader) */
+        post: operations["rejectReviewItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reports, oldest open first (or newest first for closed ones) */
+        get: operations["listReports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reports/{reportId}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Close a report, and every other open report about the same thing
+         * @description `hide_review` hides the reported review; `takedown` takes the reported
+         *     book (or the reviewed book) down. `resolved` closes the report after
+         *     you acted on the person from their user page. A note is required.
+         */
+        post: operations["resolveReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reviews/{reviewId}/hide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hide a review from everyone but its author (a reason is required) */
+        post: operations["hideReview"];
+        /** Show a hidden review again */
+        delete: operations["unhideReview"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1787,6 +2160,8 @@ export interface components {
             /** Format: int64 */
             size_bytes: number;
             has_epub: boolean;
+            /** @description You uploaded it (you may share it, given the permission) */
+            uploaded_by_me?: boolean;
             tags: components["schemas"]["TagRef"][];
             files: components["schemas"]["BookFile"][];
             chapters: components["schemas"]["Chapter"][];
@@ -2571,6 +2946,222 @@ export interface components {
             last_scrub?: components["schemas"]["OpStatus"];
             last_unclean_shutdown?: components["schemas"]["OpStatus"];
         };
+        Review: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            book_id: string;
+            author?: components["schemas"]["UserRef"];
+            stars: number;
+            text?: string;
+            mine: boolean;
+            /** @description Hidden by a moderator (only the author and admins see it) */
+            hidden: boolean;
+            /** @description Admins only */
+            hidden_reason?: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        RatingSummary: {
+            count: number;
+            /** @description 0 when there are no ratings */
+            average: number;
+            /** @description Number of 1- to 5-star ratings (index 0 is one star) */
+            histogram: number[];
+        };
+        ReviewPage: {
+            items: components["schemas"]["Review"][];
+            summary: components["schemas"]["RatingSummary"];
+            mine?: components["schemas"]["Review"];
+            next_cursor?: string;
+        };
+        ReviewInput: {
+            stars: number;
+            text?: string;
+        };
+        RecommendRequest: {
+            user_ids: string[];
+            note?: string;
+        };
+        RecommendResult: {
+            sent: number;
+            /** @description People who can't see the book (they get nothing) */
+            skipped: number;
+        };
+        Recommendation: {
+            /** Format: uuid */
+            id: string;
+            book: components["schemas"]["BookSummary"];
+            from: components["schemas"]["UserRef"];
+            note?: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        Listener: {
+            user: components["schemas"]["UserRef"];
+            /** @enum {string} */
+            state: "listening" | "finished";
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /** @enum {string} */
+        ReportReason: "copyright" | "inappropriate" | "spam" | "harassment" | "wrong_metadata" | "other";
+        ReportCreate: {
+            /** @enum {string} */
+            object_type: "book" | "review" | "user";
+            /** Format: uuid */
+            object_id: string;
+            reason: components["schemas"]["ReportReason"];
+            details?: string;
+        };
+        ReportRef: {
+            /** Format: uuid */
+            id: string;
+        };
+        GroupRef: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description The built-in Public group (sharing to it is reviewed first) */
+            public: boolean;
+        };
+        ShareCreate: {
+            /** @enum {string} */
+            target_type: "group" | "user";
+            /** Format: uuid */
+            target_id: string;
+        };
+        ShareResult: {
+            /**
+             * Format: uuid
+             * @description The share, or the review request
+             */
+            id: string;
+            /** @enum {string} */
+            status: "shared" | "pending_review";
+        };
+        Share: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            target_type: "group" | "user";
+            /** Format: uuid */
+            target_id: string;
+            target_name: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        ShareRequest: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            target_id: string;
+            target_name: string;
+            /** @enum {string} */
+            status: "pending" | "approved" | "rejected";
+            /** @description Why it was rejected */
+            reason?: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            decided_at?: string;
+        };
+        BookShares: {
+            shares: components["schemas"]["Share"][];
+            requests: components["schemas"]["ShareRequest"][];
+        };
+        CollectionShare: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            target_type: "group" | "user";
+            /** Format: uuid */
+            target_id: string;
+            target_name: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        SharedCollection: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            description?: string;
+            owner: components["schemas"]["UserRef"];
+            /** @description Books in order (only books you can see) */
+            book_ids: string[];
+            /** Format: date-time */
+            updated_at: string;
+        };
+        BookRef: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            has_cover: boolean;
+        };
+        ReviewQueueItem: {
+            /** Format: uuid */
+            id: string;
+            book: components["schemas"]["BookRef"];
+            uploader?: components["schemas"]["UserRef"];
+            target: components["schemas"]["GroupRef"];
+            /** @enum {string} */
+            status: "pending" | "approved" | "rejected";
+            reason?: string;
+            decided_by?: components["schemas"]["UserRef"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            decided_at?: string;
+        };
+        ReviewQueuePage: {
+            items: components["schemas"]["ReviewQueueItem"][];
+            next_cursor?: string;
+        };
+        ReportedReview: {
+            /** Format: uuid */
+            id: string;
+            stars: number;
+            text?: string;
+            author?: components["schemas"]["UserRef"];
+            hidden: boolean;
+        };
+        AdminReport: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            object_type: "book" | "review" | "user";
+            /** Format: uuid */
+            object_id: string;
+            /** @description Book title, reviewed book title, or username (empty if it no longer exists) */
+            object_label: string;
+            book?: components["schemas"]["BookRef"];
+            review?: components["schemas"]["ReportedReview"];
+            user?: components["schemas"]["UserRef"];
+            reporter?: components["schemas"]["UserRef"];
+            reason: components["schemas"]["ReportReason"];
+            details?: string;
+            /** @enum {string} */
+            status: "open" | "resolved" | "dismissed";
+            /** @enum {string} */
+            resolution?: "dismiss" | "hide_review" | "takedown" | "resolved";
+            resolution_note?: string;
+            resolved_by?: components["schemas"]["UserRef"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            resolved_at?: string;
+        };
+        ReportPage: {
+            items: components["schemas"]["AdminReport"][];
+            next_cursor?: string;
+        };
+        ReportResolve: {
+            /** @enum {string} */
+            action: "dismiss" | "hide_review" | "takedown" | "resolved";
+            note: string;
+        };
     };
     responses: {
         /** @description Invalid request */
@@ -2660,6 +3251,11 @@ export interface components {
         /** @description Opaque pagination cursor from `next_cursor` */
         Cursor: string;
         Limit: number;
+        RecommendationId: string;
+        ShareId: string;
+        ItemId: string;
+        ReportId: string;
+        ReviewId: string;
     };
     requestBodies: never;
     headers: never;
@@ -5206,6 +5802,627 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    listReviews: {
+        parameters: {
+            query?: {
+                /** @description Opaque pagination cursor from `next_cursor` */
+                cursor?: components["parameters"]["Cursor"];
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reviews */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    putMyReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewInput"];
+            };
+        };
+        responses: {
+            /** @description Your review */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Review"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteMyReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    recommendBook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecommendRequest"];
+            };
+        };
+        responses: {
+            /** @description Result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecommendResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listMyRecommendations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Recommendations, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Recommendation"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    dismissRecommendation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recommendationId: components["parameters"]["RecommendationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dismissed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listListeners: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description At most 50 people, most recent first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listener"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportCreate"];
+            };
+        };
+        responses: {
+            /** @description Reported */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportRef"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    searchPeople: {
+        parameters: {
+            query: {
+                /** @description At least 2 characters of a username or display name */
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description At most 10 people */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserRef"][];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listMyGroups: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Groups */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupRef"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listBookShares: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Shares and requests */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookShares"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    shareBook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShareCreate"];
+            };
+        };
+        responses: {
+            /** @description Shared, or queued for review */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    unshareBook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+                shareId: components["parameters"]["ShareId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listCollectionShares: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collectionId: components["parameters"]["CollectionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Shares */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionShare"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    shareCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collectionId: components["parameters"]["CollectionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShareCreate"];
+            };
+        };
+        responses: {
+            /** @description Shared */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionShare"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    unshareCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collectionId: components["parameters"]["CollectionId"];
+                shareId: components["parameters"]["ShareId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listSharedCollections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Collections (only the books you can see) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedCollection"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listReviewQueue: {
+        parameters: {
+            query?: {
+                status?: "pending" | "approved" | "rejected";
+                /** @description Opaque pagination cursor from `next_cursor` */
+                cursor?: components["parameters"]["Cursor"];
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of requests */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewQueuePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    approveReviewItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                itemId: components["parameters"]["ItemId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Approved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    rejectReviewItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                itemId: components["parameters"]["ItemId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description Rejected */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listReports: {
+        parameters: {
+            query?: {
+                status?: "open" | "resolved" | "dismissed";
+                /** @description Opaque pagination cursor from `next_cursor` */
+                cursor?: components["parameters"]["Cursor"];
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of reports */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    resolveReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reportId: components["parameters"]["ReportId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportResolve"];
+            };
+        };
+        responses: {
+            /** @description Resolved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    hideReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reviewId: components["parameters"]["ReviewId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description Hidden */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    unhideReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reviewId: components["parameters"]["ReviewId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Shown */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
 }

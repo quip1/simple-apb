@@ -8,7 +8,9 @@ export const session = $state<{
   loaded: boolean;
   instance: Instance | null;
   me: Me | null;
-}>({ loaded: false, instance: null, me: null });
+  /** A moderator notice from the sign-in response; the server shows it once. */
+  notice: string;
+}>({ loaded: false, instance: null, me: null, notice: "" });
 
 export async function loadSession(): Promise<void> {
   const inst = await api.GET("/instance");

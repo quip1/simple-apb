@@ -1,10 +1,10 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <script lang="ts">
   // Book detail (brief §7.4): cover, people, series, description, chapters,
-  // bookmarks; play, mark finished, add to collection, archive, remove.
-  // Ratings/reviews/recommend/report come with moderation (milestone 5),
-  // metadata editing with the metadata pipeline (milestone 6).
-  import { api, deviceId, putProgress, type Book } from "../api/client";
+  // bookmarks, ratings and reviews, who is listening; play, mark finished,
+  // add to collection, archive, remove, recommend, share (your uploads),
+  // report. Metadata editing comes with the metadata pipeline (milestone 6).
+  import { api, deviceId, putProgress, type Book, type Schemas } from "../api/client";
   import Alert from "../components/Alert.svelte";
   import Bookmarks from "../components/Bookmarks.svelte";
   import Button from "../components/Button.svelte";
@@ -13,7 +13,11 @@
   import Cover from "../components/Cover.svelte";
   import Dialog from "../components/Dialog.svelte";
   import ProgressBar from "../components/ProgressBar.svelte";
-  import { duration, percent, seriesLabel } from "../lib/format";
+  import RecommendDialog from "../components/RecommendDialog.svelte";
+  import ReportDialog from "../components/ReportDialog.svelte";
+  import Reviews from "../components/Reviews.svelte";
+  import ShareDialog from "../components/ShareDialog.svelte";
+  import { ago, duration, percent, seriesLabel } from "../lib/format";
   import { t, tError } from "../lib/i18n";
   import { live } from "../lib/live.svelte";
   import { chapterIndexAt, openBook, player, play, seekTo, sendProgress } from "../lib/player.svelte";
@@ -28,6 +32,10 @@
   let busy = $state(false);
   let pickerOpen = $state(false);
   let removeOpen = $state(false);
+  let recommendOpen = $state(false);
+  let shareOpen = $state(false);
+  let reportOpen = $state(false);
+  let listeners = $state<Schemas["Listener"][]>([]);
 
   async function load(bookId: string) {
     const { data, error: err } = await api.GET("/books/{bookId}", { params: { path: { bookId } } });
@@ -38,7 +46,15 @@
     }
     error = "";
     book = data;
+    const l = await api.GET("/books/{bookId}/listeners", { params: { path: { bookId } } });
+    listeners = l.data ?? [];
   }
+
+  const me = $derived(session.me);
+  const canRecommend = $derived(me?.status === "active");
+  const canShare = $derived(
+    !!book?.uploaded_by_me && (me?.role === "admin" || !!me?.permissions.can_share || !!me?.permissions.can_post_public),
+  );
 
   $effect(() => {
     void live.tick;
@@ -190,7 +206,16 @@
           {:else}
             <Button variant="secondary" {busy} onclick={() => archive(true)}>{t("book.archive")}</Button>
           {/if}
+          {#if canRecommend}
+            <Button variant="secondary" onclick={() => (recommendOpen = true)}>{t("book.recommend")}</Button>
+          {/if}
+          {#if canShare}
+            <Button variant="secondary" onclick={() => (shareOpen = true)}>{t("book.share")}</Button>
+          {/if}
           <Button variant="ghost" onclick={() => (removeOpen = true)}>{t("book.remove")}</Button>
+          {#if canRecommend}
+            <Button variant="ghost" onclick={() => (reportOpen = true)}>{t("report.action")}</Button>
+          {/if}
         </div>
       {/if}
 
@@ -224,10 +249,34 @@
         <h2 id="bookmarks">{t("bookmarks.title")}</h2>
         <Bookmarks bookId={book.id} onjump={jump} />
       </section>
+
+      <section aria-labelledby="reviews">
+        <h2 id="reviews">{t("reviews.title")}</h2>
+        {#key book.id}<Reviews bookId={book.id} />{/key}
+      </section>
+
+      {#if listeners.length}
+        <section aria-labelledby="listeners">
+          <h2 id="listeners">{t("listeners.title")}</h2>
+          <ul class="listeners">
+            {#each listeners as l (l.user.id)}
+              <li>
+                <strong>{l.user.display_name}</strong>
+                <span class="muted"
+                  >{l.state === "finished" ? t("listeners.finished") : t("listeners.listening", { when: ago(l.updated_at) })}</span
+                >
+              </li>
+            {/each}
+          </ul>
+        </section>
+      {/if}
     </div>
   </article>
 
   <CollectionPicker bookId={book.id} open={pickerOpen} onclose={() => (pickerOpen = false)} />
+  <RecommendDialog open={recommendOpen} bookId={book.id} title={book.title} onclose={() => (recommendOpen = false)} />
+  <ShareDialog open={shareOpen} kind="book" id={book.id} title={book.title} onclose={() => (shareOpen = false)} />
+  <ReportDialog open={reportOpen} targets={[{ kind: "book", id: book.id, label: book.title }]} onclose={() => (reportOpen = false)} />
   <Dialog open={removeOpen} title={t("book.remove_title")} onclose={() => (removeOpen = false)}>
     <p>{t("book.remove_body")}</p>
     <div class="row">
@@ -295,6 +344,18 @@
   }
   section {
     margin-top: 2rem;
+  }
+  .listeners {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .listeners li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+    min-height: 40px;
+    align-items: center;
   }
   @media (max-width: 40rem) {
     .detail {

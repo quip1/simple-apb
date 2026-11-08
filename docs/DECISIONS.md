@@ -574,7 +574,7 @@ quota (brief §6.11). The copyright contact (Q10) is shown in the app footer whe
 **Audit CSV** cells that start with `= + - @` are prefixed with `'` so spreadsheet apps don't run
 them as formulas.
 
-**Not yet:** the review queue, reports and duplicates (moderation milestone), book tools
+**Not yet:** duplicates (with the book tools), book tools
 (Phase 5), updates and crash reports (Phase 6), OIDC and metadata-provider settings (Phase 6 and
 the metadata milestone).
 
@@ -587,6 +587,48 @@ changes the hash, so the same token (and any other outstanding link) stops match
 for 24 hours, are rate-limited per IP, and using one signs the account out everywhere and clears a
 lockout. The token sits in the URL fragment (`/reset-password#…`), so it never reaches server logs
 or `Referer` headers. Email-based reset (when SMTP is configured) comes with the mail templates.
+
+## ADR-0034 — Social features and moderation
+
+**Sharing your uploads (brief §6.5 rules 5–6).** `authz.BookShare` makes the whole decision from
+three facts the handler gathers: is the user the book's uploader, what kind of target is it
+(a person, a group they're in, another group, Public), and their permissions. People and your own
+groups need `can_share`; Public needs `can_post_public` and always goes to the review queue; other
+groups are refused; admins share anything directly. A user's share is a normal `distributions`
+row with `distributed_by` = the user, so visibility needs no new rule, the user can take it back,
+and admins can revoke it like any other. Approving a Public request also records the uploader as
+`distributed_by`, so they can later stop sharing it publicly themselves. "People" means active
+users who share a group with you (`GET /people` searches only them, at least 2 letters).
+
+**Recommendations never grant access.** The brief lists `recommendation` as a library-entry
+source, but an entry with that source would make a book visible to someone the admin never
+shared it with. So a recommendation is only a row in `recommendations`: it reaches people who can
+already see the book (the rest are counted as `skipped`, never named), and "Recommended to you"
+re-checks visibility when it is read. The `recommendation` entry source stays unused.
+
+**Reviews.** One live review per user and book (`PUT /books/{id}/reviews/mine`), up to 500
+characters, needs `can_review`; deleting your own is always allowed. A moderator hides a review
+with a reason: it drops out of the list and the average for everyone but its author (who sees it
+marked hidden, without the reason) and admins. Editing a hidden review keeps it hidden. Hiding
+doesn't change the review's edit time.
+
+**Reports.** Anyone active can report a book or review they can see, or a person (not themselves
+or their own review), choosing a reason from a fixed list. Reporting the same thing again while
+your report is open updates it, and one account can have at most 50 open reports. Resolving
+needs a note and closes every open report about the same object at once: dismiss, hide the review,
+take the book down (the reviewed book, for a review), or "resolved" after acting on the person
+from their user page. New reports and review-queue items notify admins by push.
+
+**Who's listening.** People with progress on the book in the last 30 days, or who finished it, minus anyone who
+turned off "show my listening", inactive accounts and yourself; at most 50.
+
+**Collection sharing.** Any active user may share a collection with people or their own groups,
+Public included, because recipients only ever see the books in it they can already see. Shared
+collections are read through `GET /shared-collections`; they are not part of delta sync yet (the
+apps can add them when they need them).
+
+**Warnings.** The sign-in response already carries an admin's notice once; the web app now shows
+it in a dialog after signing in.
 
 ---
 

@@ -1,8 +1,10 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <script lang="ts">
-  // Home: Continue listening, Recently added, Next in series (brief §7.4/§9).
-  import { api, type BookSummary } from "../api/client";
+  // Home: Continue listening, Recommended to you, Next in series, Recently
+  // added (brief §7.4/§9).
+  import { api, type BookSummary, type Schemas } from "../api/client";
   import Alert from "../components/Alert.svelte";
+  import Button from "../components/Button.svelte";
   import Shelf from "../components/Shelf.svelte";
   import { t } from "../lib/i18n";
   import { live } from "../lib/live.svelte";
@@ -14,6 +16,8 @@
   let continuing = $state<BookSummary[]>([]);
   let recent = $state<BookSummary[]>([]);
   let nextUp = $state<BookSummary[]>([]);
+  let recs = $state<Schemas["Recommendation"][]>([]);
+  const recFor = $derived(new Map(recs.map((r) => [r.book.id, r])));
 
   const ROW = 12;
 
@@ -46,13 +50,17 @@
 
   async function load() {
     try {
-      const [c, r, f] = await Promise.all([
+      const [c, r, f, rec] = await Promise.all([
         shelf("in_progress", "recent_played"),
         shelf("all", "recent_added"),
         shelf("finished", "recent_played", 20),
+        api.GET("/me/recommendations"),
       ]);
       continuing = c;
       recent = r;
+      // One card per book, newest recommendation first.
+      const seen = new Set<string>();
+      recs = (rec.data ?? []).filter((x) => !seen.has(x.book.id) && !!seen.add(x.book.id));
       nextUp = await nextInSeries(f);
       failed = false;
     } catch {
@@ -66,7 +74,17 @@
     void load();
   });
 
-  const empty = $derived(loaded && !failed && !continuing.length && !recent.length && !nextUp.length);
+  const empty = $derived(loaded && !failed && !continuing.length && !recent.length && !nextUp.length && !recs.length);
+
+  async function dismiss(bookId: string) {
+    const all = (await api.GET("/me/recommendations")).data ?? [];
+    await Promise.all(
+      all
+        .filter((r) => r.book.id === bookId)
+        .map((r) => api.DELETE("/me/recommendations/{recommendationId}", { params: { path: { recommendationId: r.id } } })),
+    );
+    recs = recs.filter((r) => r.book.id !== bookId);
+  }
 </script>
 
 <svelte:head><title>{t("nav.home")} · {session.instance?.name ?? ""}</title></svelte:head>
@@ -87,6 +105,20 @@
     {#if continuing.length}
       <Shelf id="shelf-continue" title={t("home.continue")} books={continuing} more="/library?shelf=in_progress" />
     {/if}
+    {#if recs.length}
+      <Shelf id="shelf-recs" title={t("home.recommended")} books={recs.map((r) => r.book)}>
+        {#snippet below(book: BookSummary)}
+          {@const r = recFor.get(book.id)}
+          {#if r}
+            <div class="rec">
+              <p class="muted">{t("home.recommended_by", { name: r.from.display_name })}</p>
+              {#if r.note}<p class="note">“{r.note}”</p>{/if}
+              <Button variant="ghost" onclick={() => dismiss(book.id)}>{t("home.dismiss")}</Button>
+            </div>
+          {/if}
+        {/snippet}
+      </Shelf>
+    {/if}
     {#if nextUp.length}
       <Shelf id="shelf-next" title={t("home.next_in_series")} books={nextUp} />
     {/if}
@@ -103,5 +135,13 @@
   }
   .empty {
     max-width: 36rem;
+  }
+  .rec p {
+    margin: 0.25rem 0 0;
+    font-size: 0.9rem;
+    overflow-wrap: anywhere;
+  }
+  .rec .note {
+    font-style: italic;
   }
 </style>

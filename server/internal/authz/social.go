@@ -1,0 +1,78 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+package authz
+
+// ShareTarget is who a user wants to share one of their books with.
+type ShareTarget int
+
+const (
+	// TargetUser is one other active user.
+	TargetUser ShareTarget = iota
+	// TargetMemberGroup is a group the sharer belongs to (not Public).
+	TargetMemberGroup
+	// TargetOtherGroup is a group the sharer does not belong to.
+	TargetOtherGroup
+	// TargetPublic is the built-in Public group.
+	TargetPublic
+)
+
+// ShareOutcome is what happens to a share request.
+type ShareOutcome int
+
+const (
+	// ShareDenied means the request is refused.
+	ShareDenied ShareOutcome = iota
+	// ShareDirect means the share takes effect at once.
+	ShareDirect
+	// ShareNeedsReview means it goes to the admins' review queue first.
+	ShareNeedsReview
+)
+
+// BookShare decides a user's request to share a book (brief §6.5 rules 5–6):
+//   - admins share anything directly (the admin distribution path);
+//   - others may only share books they uploaded;
+//   - people and the sharer's own groups need can_share;
+//   - Public needs can_post_public and is always reviewed first;
+//   - groups the sharer isn't in are refused.
+func BookShare(s Subject, uploader bool, t ShareTarget) ShareOutcome {
+	if !Allowed(s, Read) {
+		return ShareDenied
+	}
+	if Allowed(s, Admin) {
+		return ShareDirect
+	}
+	if !uploader {
+		return ShareDenied
+	}
+	switch t {
+	case TargetUser, TargetMemberGroup:
+		if Allowed(s, Share) {
+			return ShareDirect
+		}
+	case TargetPublic:
+		if Allowed(s, PostPublic) {
+			return ShareNeedsReview
+		}
+	}
+	return ShareDenied
+}
+
+// CollectionShare decides whether a user may share a collection with a
+// target. Collections only ever show recipients books they can already see,
+// so any active user may share with people and their own groups (Public
+// included); groups they aren't in are refused.
+func CollectionShare(s Subject, t ShareTarget) bool {
+	if !Allowed(s, ShareCollection) {
+		return false
+	}
+	if Allowed(s, Admin) {
+		return true
+	}
+	return t != TargetOtherGroup
+}
+
+// SeeHiddenReviews reports whether the subject sees reviews a moderator
+// hid (authors always see their own).
+func SeeHiddenReviews(s Subject, author bool) bool {
+	return author || Allowed(s, Admin)
+}

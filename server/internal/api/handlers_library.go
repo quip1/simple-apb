@@ -194,12 +194,14 @@ func (s *Server) GetBook(ctx context.Context, req GetBookRequestObject) (GetBook
 	sum, b := sums[0], it.Book
 	d := BookDetail{
 		Id: sum.Id, Title: sum.Title, Subtitle: sum.Subtitle, Authors: sum.Authors, Narrators: sum.Narrators, Series: sum.Series,
-		DurationMs: sum.DurationMs, CoverUrl: sum.CoverUrl, Source: sum.Source, Progress: sum.Progress, AddedAt: sum.AddedAt,
+		DurationMs: sum.DurationMs, CoverUrl: sum.CoverUrl, HasCover: sum.HasCover, Source: sum.Source, Progress: sum.Progress, AddedAt: sum.AddedAt,
 		Hidden: sum.Hidden, RemovedAt: sum.RemovedAt, UpdatedAt: sum.UpdatedAt,
 		Description: strPtr(b.Description), Publisher: strPtr(b.Publisher), Language: strPtr(b.Language),
 		Isbn: strPtr(b.ISBN), Asin: strPtr(b.ASIN), SizeBytes: b.SizeBytes, HasEpub: b.EpubPath != "",
 		Files: make([]BookFile, 0, len(files)), Chapters: make([]Chapter, 0, len(chapters)), Tags: make([]TagRef, 0, len(tags)),
 	}
+	mine := b.UploaderID == p.User.ID
+	d.UploadedByMe = &mine
 	if b.PublishedYear > 0 {
 		y := int(b.PublishedYear)
 		d.PublishedYear = &y

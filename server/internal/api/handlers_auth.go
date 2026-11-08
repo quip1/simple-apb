@@ -41,7 +41,7 @@ func (s *Server) Login(ctx context.Context, req LoginRequestObject) (LoginRespon
 	if err != nil {
 		return nil, err
 	}
-	return s.loginResponse(ctx, res, req.Body.Device.Platform == Web)
+	return s.loginResponse(ctx, res, req.Body.Device.Platform == PlatformWeb)
 }
 
 func (s *Server) VerifyTotp(ctx context.Context, req VerifyTotpRequestObject) (VerifyTotpResponseObject, error) {

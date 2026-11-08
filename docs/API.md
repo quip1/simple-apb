@@ -2,7 +2,7 @@
 
 > **Generated** from `server/openapi.yaml` by `web/scripts/gen-api-docs.mjs`. Do not edit by hand.
 
-Version **0.9.0** · base path `/api/v1`
+Version **0.10.0** · base path `/api/v1`
 
 REST API for Simple APB. All endpoints live under `/api/v1`.
 
@@ -113,6 +113,28 @@ REST API for Simple APB. All endpoints live under `/api/v1`.
 | GET | `/me/uploads` | My recent uploads and their processing status | yes | 200, 401 |
 | GET | `/jobs/{jobId}` | Status of a background job you started (admins can see any) | yes | 200, 401, 404 |
 
+### social
+
+| Method | Path | Summary | Auth | Responses |
+|---|---|---|---|---|
+| GET | `/books/{bookId}/reviews` | Ratings and reviews of a book, newest first, with the average | yes | 200, 400, 401, 404 |
+| PUT | `/books/{bookId}/reviews/mine` | Rate and review a book (creates or replaces your review; needs `can_review`) | yes | 200, 400, 401, 403, 404 |
+| DELETE | `/books/{bookId}/reviews/mine` | Delete your review of a book | yes | 204, 401, 403, 404 |
+| POST | `/books/{bookId}/recommend` | Recommend a book to other people | yes | 200, 400, 401, 403, 404 |
+| GET | `/me/recommendations` | Books other people recommended to you (only books you can see) | yes | 200, 401 |
+| DELETE | `/me/recommendations/{recommendationId}` | Dismiss a recommendation | yes | 204, 401, 404 |
+| GET | `/books/{bookId}/listeners` | Who's listening to (or finished) a book | yes | 200, 401, 404 |
+| POST | `/reports` | Report a book, a review or a person to the admins | yes | 201, 400, 401, 403, 404, 429 |
+| GET | `/people` | Find people to recommend or share to (active users in your groups) | yes | 200, 400, 401, 403 |
+| GET | `/me/groups` | The groups you belong to (share targets) | yes | 200, 401 |
+| GET | `/books/{bookId}/shares` | Your shares of a book you uploaded, and your requests to share it publicly | yes | 200, 401, 403, 404 |
+| POST | `/books/{bookId}/shares` | Share a book you uploaded with a person or one of your groups | yes | 201, 400, 401, 403, 404, 409 |
+| DELETE | `/books/{bookId}/shares/{shareId}` | Stop sharing (or withdraw a pending public request) | yes | 204, 401, 404 |
+| GET | `/me/collections/{collectionId}/shares` | Who a collection of yours is shared with | yes | 200, 401, 404 |
+| POST | `/me/collections/{collectionId}/shares` | Share a collection with a person or one of your groups | yes | 201, 400, 401, 403, 404 |
+| DELETE | `/me/collections/{collectionId}/shares/{shareId}` | Stop sharing a collection with someone | yes | 204, 401, 404 |
+| GET | `/shared-collections` | Collections other people shared with you or your groups | yes | 200, 401 |
+
 ### admin
 
 | Method | Path | Summary | Auth | Responses |
@@ -161,6 +183,13 @@ REST API for Simple APB. All endpoints live under `/api/v1`.
 | GET | `/admin/backups` | Database backups and the latest backup/scrub status | yes | 200, 401, 403 |
 | POST | `/admin/backups` | Back up the database now | yes | 202, 401, 403 |
 | POST | `/admin/integrity-check` | Re-hash every library file against its stored checksum now | yes | 202, 401, 403 |
+| GET | `/admin/review-queue` | Requests to share books with Public, oldest first | yes | 200, 400, 401, 403 |
+| POST | `/admin/review-queue/{itemId}/approve` | Approve a request (the book is shared with the group) | yes | 204, 401, 403, 404, 409 |
+| POST | `/admin/review-queue/{itemId}/reject` | Reject a request (a reason is required and shown to the uploader) | yes | 204, 400, 401, 403, 404, 409 |
+| GET | `/admin/reports` | Reports, oldest open first (or newest first for closed ones) | yes | 200, 400, 401, 403 |
+| POST | `/admin/reports/{reportId}/resolve` | Close a report, and every other open report about the same thing | yes | 204, 400, 401, 403, 404, 409 |
+| POST | `/admin/reviews/{reviewId}/hide` | Hide a review from everyone but its author (a reason is required) | yes | 204, 400, 401, 403, 404 |
+| DELETE | `/admin/reviews/{reviewId}/hide` | Show a hidden review again | yes | 204, 401, 403, 404 |
 
 ## Schemas
 
@@ -496,6 +525,7 @@ Enum: `own_upload`, `distribution`, `recommendation`
 | `asin` | string |  |  |
 | `size_bytes` | integer (int64) | yes |  |
 | `has_epub` | boolean | yes |  |
+| `uploaded_by_me` | boolean |  | You uploaded it (you may share it, given the permission) |
 | `tags` | array of `TagRef` | yes |  |
 | `files` | array of `BookFile` | yes |  |
 | `chapters` | array of `Chapter` | yes |  |
@@ -1303,4 +1333,240 @@ Explicit values; a missing key means "not overridden"
 | `last_backup` | `OpStatus` |  |  |
 | `last_scrub` | `OpStatus` |  |  |
 | `last_unclean_shutdown` | `OpStatus` |  |  |
+
+### Review
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `book_id` | string (uuid) | yes |  |
+| `author` | `UserRef` |  |  |
+| `stars` | integer | yes |  |
+| `text` | string |  |  |
+| `mine` | boolean | yes |  |
+| `hidden` | boolean | yes | Hidden by a moderator (only the author and admins see it) |
+| `hidden_reason` | string |  | Admins only |
+| `created_at` | string (date-time) | yes |  |
+| `updated_at` | string (date-time) | yes |  |
+
+### RatingSummary
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `count` | integer | yes |  |
+| `average` | number | yes | 0 when there are no ratings |
+| `histogram` | array of integer | yes | Number of 1- to 5-star ratings (index 0 is one star) |
+
+### ReviewPage
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `items` | array of `Review` | yes |  |
+| `summary` | `RatingSummary` | yes |  |
+| `mine` | `Review` |  |  |
+| `next_cursor` | string |  |  |
+
+### ReviewInput
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `stars` | integer | yes |  |
+| `text` | string |  |  |
+
+### RecommendRequest
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `user_ids` | array of string | yes |  |
+| `note` | string |  |  |
+
+### RecommendResult
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `sent` | integer | yes |  |
+| `skipped` | integer | yes | People who can't see the book (they get nothing) |
+
+### Recommendation
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `book` | `BookSummary` | yes |  |
+| `from` | `UserRef` | yes |  |
+| `note` | string |  |  |
+| `created_at` | string (date-time) | yes |  |
+
+### Listener
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `user` | `UserRef` | yes |  |
+| `state` | string: listening \| finished | yes |  |
+| `updated_at` | string (date-time) | yes |  |
+
+### ReportReason
+
+Enum: `copyright`, `inappropriate`, `spam`, `harassment`, `wrong_metadata`, `other`
+
+### ReportCreate
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `object_type` | string: book \| review \| user | yes |  |
+| `object_id` | string (uuid) | yes |  |
+| `reason` | `ReportReason` | yes |  |
+| `details` | string |  |  |
+
+### ReportRef
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+
+### GroupRef
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `name` | string | yes |  |
+| `public` | boolean | yes | The built-in Public group (sharing to it is reviewed first) |
+
+### ShareCreate
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `target_type` | string: group \| user | yes |  |
+| `target_id` | string (uuid) | yes |  |
+
+### ShareResult
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes | The share, or the review request |
+| `status` | string: shared \| pending_review | yes |  |
+
+### Share
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `target_type` | string: group \| user | yes |  |
+| `target_id` | string (uuid) | yes |  |
+| `target_name` | string | yes |  |
+| `created_at` | string (date-time) | yes |  |
+
+### ShareRequest
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `target_id` | string (uuid) | yes |  |
+| `target_name` | string | yes |  |
+| `status` | string: pending \| approved \| rejected | yes |  |
+| `reason` | string |  | Why it was rejected |
+| `created_at` | string (date-time) | yes |  |
+| `decided_at` | string (date-time) |  |  |
+
+### BookShares
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `shares` | array of `Share` | yes |  |
+| `requests` | array of `ShareRequest` | yes |  |
+
+### CollectionShare
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `target_type` | string: group \| user | yes |  |
+| `target_id` | string (uuid) | yes |  |
+| `target_name` | string | yes |  |
+| `created_at` | string (date-time) | yes |  |
+
+### SharedCollection
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `name` | string | yes |  |
+| `description` | string |  |  |
+| `owner` | `UserRef` | yes |  |
+| `book_ids` | array of string | yes | Books in order (only books you can see) |
+| `updated_at` | string (date-time) | yes |  |
+
+### BookRef
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `title` | string | yes |  |
+| `has_cover` | boolean | yes |  |
+
+### ReviewQueueItem
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `book` | `BookRef` | yes |  |
+| `uploader` | `UserRef` |  |  |
+| `target` | `GroupRef` | yes |  |
+| `status` | string: pending \| approved \| rejected | yes |  |
+| `reason` | string |  |  |
+| `decided_by` | `UserRef` |  |  |
+| `created_at` | string (date-time) | yes |  |
+| `decided_at` | string (date-time) |  |  |
+
+### ReviewQueuePage
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `items` | array of `ReviewQueueItem` | yes |  |
+| `next_cursor` | string |  |  |
+
+### ReportedReview
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `stars` | integer | yes |  |
+| `text` | string |  |  |
+| `author` | `UserRef` |  |  |
+| `hidden` | boolean | yes |  |
+
+### AdminReport
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `object_type` | string: book \| review \| user | yes |  |
+| `object_id` | string (uuid) | yes |  |
+| `object_label` | string | yes | Book title, reviewed book title, or username (empty if it no longer exists) |
+| `book` | `BookRef` |  |  |
+| `review` | `ReportedReview` |  |  |
+| `user` | `UserRef` |  |  |
+| `reporter` | `UserRef` |  |  |
+| `reason` | `ReportReason` | yes |  |
+| `details` | string |  |  |
+| `status` | string: open \| resolved \| dismissed | yes |  |
+| `resolution` | string: dismiss \| hide_review \| takedown \| resolved |  |  |
+| `resolution_note` | string |  |  |
+| `resolved_by` | `UserRef` |  |  |
+| `created_at` | string (date-time) | yes |  |
+| `resolved_at` | string (date-time) |  |  |
+
+### ReportPage
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `items` | array of `AdminReport` | yes |  |
+| `next_cursor` | string |  |  |
+
+### ReportResolve
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `action` | string: dismiss \| hide_review \| takedown \| resolved | yes |  |
+| `note` | string | yes |  |
 

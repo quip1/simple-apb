@@ -52,6 +52,7 @@
 
   function done(user: typeof session.me | undefined) {
     session.me = user ?? null;
+    session.notice = user?.notice ?? "";
     const next = new URLSearchParams(location.search).get("next");
     navigate(next && next.startsWith("/") && !next.startsWith("//") ? next : "/", { replace: true });
   }

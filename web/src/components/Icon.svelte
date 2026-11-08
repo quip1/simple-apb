@@ -1,7 +1,8 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <script lang="ts">
   // Small inline icon set (decorative: the button around it carries the label).
-  type Name = "play" | "pause" | "back" | "forward" | "prev" | "next" | "list" | "grid" | "bookmark" | "moon" | "search" | "refresh";
+  type Name =
+    "play" | "pause" | "back" | "forward" | "prev" | "next" | "list" | "grid" | "bookmark" | "moon" | "search" | "refresh" | "close";
   let { name, size = 24 }: { name: Name; size?: number } = $props();
 
   const paths: Record<Name, string> = {
@@ -17,6 +18,7 @@
     moon: "M14.5 3a8.5 8.5 0 1 0 6.5 13.9A7 7 0 0 1 14.5 3z",
     search: "M10 3a7 7 0 0 1 5.6 11.2l5.1 5.1-1.4 1.4-5.1-5.1A7 7 0 1 1 10 3zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10z",
     refresh: "M12 4a8 8 0 0 1 7.4 5H22l-3.5 4L15 9h2.2A6 6 0 1 0 18 14h2.1A8 8 0 1 1 12 4z",
+    close: "M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19l5.6-5.6 5.6 5.6 1.4-1.4-5.6-5.6L19 6.4 17.6 5 12 10.6z",
   };
 </script>
 

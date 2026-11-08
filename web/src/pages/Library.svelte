@@ -11,6 +11,7 @@
   import Icon from "../components/Icon.svelte";
   import IconButton from "../components/IconButton.svelte";
   import Pager from "../components/Pager.svelte";
+  import ShareDialog from "../components/ShareDialog.svelte";
   import { t, tError } from "../lib/i18n";
   import { live } from "../lib/live.svelte";
   import { prefs, savePrefs } from "../lib/prefs.svelte";
@@ -171,15 +172,19 @@
 
   // ── collections ──
   let collections = $state<Collection[]>([]);
+  let shared = $state<Schemas["SharedCollection"][]>([]);
   async function loadCollections() {
-    const { data } = await api.GET("/me/collections");
-    collections = data ?? [];
+    const [own, other] = await Promise.all([api.GET("/me/collections"), api.GET("/shared-collections")]);
+    collections = own.data ?? [];
+    shared = other.data ?? [];
   }
+  let shareOpen = $state(false);
   $effect(() => {
     void live.tick;
     if (view === "collections" || collection) void loadCollections();
   });
   const activeCollection = $derived(collections.find((c) => c.id === collection));
+  const activeShared = $derived(shared.find((c) => c.id === collection));
 
   let newName = $state("");
   let creating = $state(false);
@@ -257,9 +262,13 @@
     {#if tag || collection}
       <div class="row filter">
         <h2>
-          {#if tag}{t("library.genre_heading", { name: tagName || "…" })}{:else}{activeCollection?.name ?? "…"}{/if}
+          {#if tag}{t("library.genre_heading", { name: tagName || "…" })}{:else}{activeCollection?.name ?? activeShared?.name ?? "…"}{/if}
         </h2>
+        {#if activeShared}
+          <span class="muted">{t("library.shared_by", { name: activeShared.owner.display_name })}</span>
+        {/if}
         {#if activeCollection}
+          <Button variant="secondary" onclick={() => (shareOpen = true)}>{t("library.collection_share")}</Button>
           <Button
             variant="secondary"
             onclick={() => {
@@ -347,6 +356,19 @@
     {:else}
       <p class="muted">{t("library.no_collections")}</p>
     {/if}
+    {#if shared.length}
+      <h2>{t("library.shared_with_you")}</h2>
+      <ul class="facets">
+        {#each shared as c (c.id)}
+          <li>
+            <a href="/library?collection={c.id}" use:link>
+              <span>{c.name} <span class="muted">· {t("library.shared_by", { name: c.owner.display_name })}</span></span>
+              <span class="muted">{t("library.book_count", { n: c.book_ids.length })}</span>
+            </a>
+          </li>
+        {/each}
+      </ul>
+    {/if}
   {:else}
     {#if loading && !facets.length}
       <p class="muted" role="status">{t("common.loading")}</p>
@@ -382,6 +404,16 @@
     </div>
   </form>
 </Dialog>
+
+{#if activeCollection}
+  <ShareDialog
+    open={shareOpen}
+    kind="collection"
+    id={activeCollection.id}
+    title={activeCollection.name}
+    onclose={() => (shareOpen = false)}
+  />
+{/if}
 
 <Dialog open={deleteOpen} title={t("library.collection_delete")} onclose={() => (deleteOpen = false)}>
   <p>{t("library.collection_delete_body", { name: activeCollection?.name ?? "" })}</p>

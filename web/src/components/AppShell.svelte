@@ -8,7 +8,9 @@
   import { link, route } from "../lib/router.svelte";
   import { session } from "../lib/session.svelte";
   import { themeState } from "../lib/theme.svelte";
+  import Button from "./Button.svelte";
   import ConflictPrompt from "./ConflictPrompt.svelte";
+  import Dialog from "./Dialog.svelte";
   import Icon from "./Icon.svelte";
   import MiniPlayer from "./MiniPlayer.svelte";
 
@@ -56,6 +58,11 @@
   {/if}
 </header>
 
+<Dialog open={!!session.notice} title={t("notice.title")} onclose={() => (session.notice = "")}>
+  <p class="notice">{session.notice}</p>
+  <div class="row"><Button onclick={() => (session.notice = "")}>{t("notice.ok")}</Button></div>
+</Dialog>
+
 <main id="main" class="content" class:with-mini={showMini}>
   {@render children()}
 </main>
@@ -72,6 +79,9 @@
 {#if flashing}<div class="flash" aria-hidden="true"></div>{/if}
 
 <style>
+  .notice {
+    white-space: pre-wrap;
+  }
   .skip {
     position: absolute;
     left: -999px;

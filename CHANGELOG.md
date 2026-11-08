@@ -5,7 +5,7 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-**Current phase: 2 — Admin panel + web player** (milestones 1–4 done: web foundation, player screens, account and stats, admin panel). Phase 1 accepted 2026-11-08.
+**Current phase: 2 — Admin panel + web player** (milestones 1–5 done: web foundation, player screens, account and stats, admin panel, moderation and social). Phase 1 accepted 2026-11-08.
 
 ### Added (Phase 2)
 - Web app foundation: Svelte 5 + Vite + TypeScript, embedded in the server binary with SPA fallback, strict CSP and caching; cookie auth with CSRF and transparent refresh; ICU i18n from the shared catalogs; dark and e-ink themes with accessible components (48 px targets, visible focus, labelled errors).
@@ -25,7 +25,11 @@ All notable changes to this project are documented here. The format follows
 - Admin password reset links and the public reset page (ADR-0033); copyright contact in the app footer.
 - API: `GET /admin/dashboard`, `GET /admin/growth`, `GET /admin/users/{id}`, `PUT /admin/users/{id}/permissions`, user tags, `GET /admin/users/{id}/sessions`, `POST /admin/users/{id}/reset-link`, `POST /auth/password-reset`, `PATCH /admin/groups/{id}`, `GET /admin/groups/{id}/members`, takedowns, `GET /admin/audit` (+ `/export`), `GET/PATCH /admin/settings`, `POST /admin/settings/smtp/test`; `openapi.yaml` 0.9.0.
 
+- Moderation and social (milestone 5, ADR-0034): ratings and reviews on book pages (average and breakdown, your review, report, admins hide/show), recommendations (people in your groups who can already see the book; "Recommended to you" on Home), who's listening, reporting books, reviews and people, sharing your uploads with people and your groups (Public goes through the review queue), sharing collections ("Shared with you" in the library), and the inbox tabs for the review queue and reports. The admin's warning notice now shows after signing in.
+- API: `GET /books/{id}/reviews`, `PUT/DELETE /books/{id}/reviews/mine`, `POST /books/{id}/recommend`, `GET/DELETE /me/recommendations`, `GET /books/{id}/listeners`, `POST /reports`, `GET /people`, `GET /me/groups`, `GET/POST/DELETE /books/{id}/shares`, `GET/POST/DELETE /me/collections/{id}/shares`, `GET /shared-collections`, `GET /admin/review-queue` (+ approve/reject), `GET /admin/reports` (+ resolve), `POST/DELETE /admin/reviews/{id}/hide`; `BookDetail.uploaded_by_me`; push events `report` and `review_request`; migration 00003; `openapi.yaml` 0.10.0.
+
 ### Fixed (Phase 2)
+- The book page now reports `has_cover` (it was always false there).
 - The web client no longer signs you out when the server is briefly unreachable during a token refresh.
 - The web client no longer looks signed out after 15 idle minutes: when the access cookie has expired it now refreshes the session instead of showing the sign-in page.
 - A book's finished date is when it was finished on the device, not when the server heard about it (offline listening).
