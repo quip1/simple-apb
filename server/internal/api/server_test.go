@@ -4,6 +4,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -23,6 +24,7 @@ import (
 	"github.com/quip1/simple-apb/server/internal/auth"
 	"github.com/quip1/simple-apb/server/internal/config"
 	"github.com/quip1/simple-apb/server/internal/setup"
+	"github.com/quip1/simple-apb/server/internal/store"
 )
 
 // ── test harness ──
@@ -32,6 +34,41 @@ type harness struct {
 	srv *Server
 	ts  *httptest.Server
 	dir string
+	// db is the wizard's database choice: {"dialect":"sqlite"} or a Postgres DSN.
+	db map[string]any
+}
+
+// forEachDialect runs fn on SQLite, and on Postgres when
+// SIMPLEAPB_TEST_POSTGRES_DSN is set. Each Postgres run gets its own schema so
+// it can't collide with other packages' tests on the same database.
+func forEachDialect(t *testing.T, fn func(t *testing.T, h *harness)) {
+	t.Run("sqlite", func(t *testing.T) { fn(t, newHarness(t)) })
+	t.Run("postgres", func(t *testing.T) {
+		base := os.Getenv("SIMPLEAPB_TEST_POSTGRES_DSN")
+		if base == "" {
+			t.Skip("SIMPLEAPB_TEST_POSTGRES_DSN not set")
+		}
+		ctx := context.Background()
+		admin, err := store.Open(ctx, store.Postgres, base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		schema := "t_" + strings.ReplaceAll(uuid.NewString(), "-", "")[:16]
+		if _, err := admin.ExecContext(ctx, "CREATE SCHEMA "+schema); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			_, _ = admin.ExecContext(context.Background(), "DROP SCHEMA "+schema+" CASCADE")
+			_ = admin.Close()
+		})
+		sep := "?"
+		if strings.Contains(base, "?") {
+			sep = "&"
+		}
+		h := newHarness(t)
+		h.db = map[string]any{"dialect": "postgres", "dsn": base + sep + "search_path=" + schema}
+		fn(t, h)
+	})
 }
 
 func newHarness(t *testing.T) *harness {
@@ -57,7 +94,7 @@ func newHarness(t *testing.T) *harness {
 			_ = a.DB.Close()
 		}
 	})
-	return &harness{t: t, srv: srv, ts: ts, dir: dir}
+	return &harness{t: t, srv: srv, ts: ts, dir: dir, db: map[string]any{"dialect": "sqlite"}}
 }
 
 type resp struct {
@@ -135,7 +172,7 @@ func (h *harness) setupInstance() string {
 	code, _ := totp.GenerateCode(secret, time.Now())
 	r = h.do(nil, "POST", "/setup/complete", map[string]any{
 		"admin":         map[string]any{"username": "admin", "password": adminPassword, "totp_secret": secret, "totp_code": code},
-		"database":      map[string]any{"dialect": "sqlite"},
+		"database":      h.db,
 		"library_path":  filepath.Join(h.dir, "library"),
 		"base_url":      "https://books.example.com/",
 		"instance_name": "Test Shelf",
@@ -206,8 +243,9 @@ func TestSetupMode(t *testing.T) {
 	}
 }
 
-func TestAccountFlow(t *testing.T) {
-	h := newHarness(t)
+func TestAccountFlow(t *testing.T) { forEachDialect(t, testAccountFlow) }
+
+func testAccountFlow(t *testing.T, h *harness) {
 	secret := h.setupInstance()
 	adminTok := h.adminLogin(secret)
 
@@ -326,8 +364,9 @@ func TestAccountFlow(t *testing.T) {
 	}
 }
 
-func TestWebCookiesAndCSRF(t *testing.T) {
-	h := newHarness(t)
+func TestWebCookiesAndCSRF(t *testing.T) { forEachDialect(t, testWebCookiesAndCSRF) }
+
+func testWebCookiesAndCSRF(t *testing.T, h *harness) {
 	secret := h.setupInstance()
 	jar, _ := cookiejar.New(nil)
 	web := &http.Client{Jar: jar}

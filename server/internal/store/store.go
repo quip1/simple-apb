@@ -154,12 +154,19 @@ func IsUniqueViolation(err error) bool {
 	return strings.Contains(err.Error(), "UNIQUE constraint failed")
 }
 
-// notFound maps sql.ErrNoRows to ErrNotFound.
+// notFound maps sql.ErrNoRows, and Postgres rejecting a malformed UUID
+// (which SQLite simply fails to match), to ErrNotFound so both dialects agree.
 func notFound(err error) error {
-	if errors.Is(err, sql.ErrNoRows) {
+	if errors.Is(err, sql.ErrNoRows) || isInvalidUUID(err) {
 		return ErrNotFound
 	}
 	return err
+}
+
+// isInvalidUUID reports Postgres SQLSTATE 22P02 (invalid_text_representation).
+func isInvalidUUID(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "22P02"
 }
 
 // nullStr converts "" to NULL.

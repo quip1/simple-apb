@@ -306,7 +306,7 @@ func TagOverrides(ctx context.Context, q Querier, userID string) ([]map[string]b
 
 func mustAffect(res sql.Result, err error) error {
 	if err != nil {
-		return err
+		return notFound(err)
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
 		return ErrNotFound

@@ -106,8 +106,16 @@ func TestUsersSessionsGroups(t *testing.T) {
 		if len(list) != 1 {
 			t.Fatalf("sessions %d", len(list))
 		}
-		if err := RevokeSession(ctx, db, s.ID, "someone-else"); !errors.Is(err, ErrNotFound) && err != nil {
-			t.Fatal(err)
+		// Revoking another user's session is "not found" on both dialects, for a
+		// well-formed foreign id and a malformed one alike.
+		if err := RevokeSession(ctx, db, s.ID, NewID()); !errors.Is(err, ErrNotFound) {
+			t.Fatalf("want ErrNotFound, got %v", err)
+		}
+		if err := RevokeSession(ctx, db, s.ID, "someone-else"); !errors.Is(err, ErrNotFound) {
+			t.Fatalf("malformed id: want ErrNotFound, got %v", err)
+		}
+		if _, err := GetUser(ctx, db, "not-a-uuid"); !errors.Is(err, ErrNotFound) {
+			t.Fatalf("malformed user id: want ErrNotFound, got %v", err)
 		}
 
 		if err := Audit(ctx, db, AuditEntry{ActorID: id, Action: "test", Details: map[string]any{"k": 1}}); err != nil {
