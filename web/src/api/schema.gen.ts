@@ -4,3707 +4,3707 @@
  */
 
 export interface paths {
-  "/health": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Liveness check (used by container healthchecks) */
+        get: operations["getHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Liveness check (used by container healthchecks) */
-    get: operations["getHealth"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/instance": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/instance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public instance information
+         * @description Name, version, client version guard, sign-up state, legal text, login options.
+         */
+        get: operations["getInstance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Public instance information
-     * @description Name, version, client version guard, sign-up state, legal text, login options.
-     */
-    get: operations["getInstance"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/auth/signup": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/signup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request an account (creates a pending user awaiting admin approval) */
+        post: operations["signup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Request an account (creates a pending user awaiting admin approval) */
-    post: operations["signup"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/auth/login": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Log in with username + password
+         * @description Returns tokens, or `totp_required` with a short-lived challenge to pass to
+         *     `POST /auth/totp/verify`. Pending/denied users get 403 with a code that
+         *     says so.
+         */
+        post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Log in with username + password
-     * @description Returns tokens, or `totp_required` with a short-lived challenge to pass to
-     *     `POST /auth/totp/verify`. Pending/denied users get 403 with a code that
-     *     says so.
-     */
-    post: operations["login"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/auth/totp/verify": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/totp/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete login with a TOTP code or a recovery code */
+        post: operations["verifyTotp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Complete login with a TOTP code or a recovery code */
-    post: operations["verifyTotp"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/auth/totp/enroll": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/totp/enroll": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start TOTP enrollment (returns secret + otpauth URI) */
+        post: operations["enrollTotp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Start TOTP enrollment (returns secret + otpauth URI) */
-    post: operations["enrollTotp"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/auth/totp/confirm": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/totp/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm TOTP enrollment; returns the 10 one-time recovery codes */
+        post: operations["confirmTotp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Confirm TOTP enrollment; returns the 10 one-time recovery codes */
-    post: operations["confirmTotp"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/auth/refresh": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exchange a refresh token for a new token pair (rotating)
+         * @description The old refresh token is invalidated. Reusing an already-rotated refresh
+         *     token revokes the whole device session (theft detection). Web clients
+         *     send no body; the refresh cookie is used.
+         */
+        post: operations["refreshTokens"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Exchange a refresh token for a new token pair (rotating)
-     * @description The old refresh token is invalidated. Reusing an already-rotated refresh
-     *     token revokes the whole device session (theft detection). Web clients
-     *     send no body; the refresh cookie is used.
-     */
-    post: operations["refreshTokens"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/auth/logout": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** End the current device session */
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** End the current device session */
-    post: operations["logout"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/me": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The current user */
+        get: operations["getMe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** The current user */
-    get: operations["getMe"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/me/sessions": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/me/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My device sessions */
+        get: operations["listMySessions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** My device sessions */
-    get: operations["listMySessions"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/me/sessions/{sessionId}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/me/sessions/{sessionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke one of my sessions */
+        delete: operations["revokeMySession"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post?: never;
-    /** Revoke one of my sessions */
-    delete: operations["revokeMySession"];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/library": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/library": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My library (own uploads ∪ distributions, minus removed/hidden/filtered/taken down) */
+        get: operations["listLibrary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** My library (own uploads ∪ distributions, minus removed/hidden/filtered/taken down) */
-    get: operations["listLibrary"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/books/{bookId}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/books/{bookId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Book detail (files, chapters, my progress) */
+        get: operations["getBook"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Book detail (files, chapters, my progress) */
-    get: operations["getBook"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/me/library/{bookId}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/me/library/{bookId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a book from my view (restorable for 30 days; master copy is kept) */
+        delete: operations["removeFromMyLibrary"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post?: never;
-    /** Remove a book from my view (restorable for 30 days; master copy is kept) */
-    delete: operations["removeFromMyLibrary"];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/me/library/{bookId}/restore": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/me/library/{bookId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore a book from "Recently removed", or un-archive it */
+        post: operations["restoreToMyLibrary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Restore a book from "Recently removed", or un-archive it */
-    post: operations["restoreToMyLibrary"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/me/library/{bookId}/hide": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/me/library/{bookId}/hide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive (hide) a book in my library */
+        post: operations["hideInMyLibrary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Archive (hide) a book in my library */
-    post: operations["hideInMyLibrary"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/authors/{personId}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/authors/{personId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Author page (books visible to me) */
+        get: operations["getAuthor"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Author page (books visible to me) */
-    get: operations["getAuthor"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/narrators/{personId}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/narrators/{personId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Narrator page (books visible to me) */
+        get: operations["getNarrator"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Narrator page (books visible to me) */
-    get: operations["getNarrator"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/series/{seriesId}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/series/{seriesId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Series page (books in order, visible to me) */
+        get: operations["getSeries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Series page (books in order, visible to me) */
-    get: operations["getSeries"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/me/progress/{bookId}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/me/progress/{bookId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My stored progress for a book */
+        get: operations["getProgress"];
+        /**
+         * Report playback position
+         * @description Sent every 15 s while playing, on pause/stop/seek and on app background;
+         *     queued in a local outbox while offline and flushed in order.
+         *
+         *     The server keeps the latest record by `client_ts`. If the incoming
+         *     position differs from the stored one by more than the user's conflict
+         *     threshold (default 3 min) **and** the two writes came from different
+         *     devices within the same offline window, the server answers **409** with
+         *     both candidates. The client asks the user, then re-sends the chosen
+         *     position with `resolution` set to the returned `conflict_id`; that
+         *     write always wins and is logged.
+         */
+        put: operations["putProgress"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** My stored progress for a book */
-    get: operations["getProgress"];
-    /**
-     * Report playback position
-     * @description Sent every 15 s while playing, on pause/stop/seek and on app background;
-     *     queued in a local outbox while offline and flushed in order.
-     *
-     *     The server keeps the latest record by `client_ts`. If the incoming
-     *     position differs from the stored one by more than the user's conflict
-     *     threshold (default 3 min) **and** the two writes came from different
-     *     devices within the same offline window, the server answers **409** with
-     *     both candidates. The client asks the user, then re-sends the chosen
-     *     position with `resolution` set to the returned `conflict_id`; that
-     *     write always wins and is logged.
-     */
-    put: operations["putProgress"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/me/sync": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/me/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Everything that changed for me since a cursor
+         * @description The single call clients make on reconnect. Omit `since` for a full
+         *     snapshot. Returns library visibility changes, progress, bookmarks,
+         *     collections and tombstones. While `has_more` is true, call again with
+         *     the returned `cursor`; store the final one. A tombstone for a
+         *     `library_entry` means the book is no longer visible to you.
+         *
+         *     Open clients can also connect to the WebSocket at `/ws` (Bearer header or
+         *     session cookie), which sends `{"type":"changed","seq":N}` hints so they
+         *     sync immediately.
+         */
+        get: operations["getSyncDelta"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Everything that changed for me since a cursor
-     * @description The single call clients make on reconnect. Omit `since` for a full
-     *     snapshot. Returns library visibility changes, progress, bookmarks,
-     *     collections and tombstones. While `has_more` is true, call again with
-     *     the returned `cursor`; store the final one. A tombstone for a
-     *     `library_entry` means the book is no longer visible to you.
-     *
-     *     Open clients can also connect to the WebSocket at `/ws` (Bearer header or
-     *     session cookie), which sends `{"type":"changed","seq":N}` hints so they
-     *     sync immediately.
-     */
-    get: operations["getSyncDelta"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/books/{bookId}/files/{fileId}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/books/{bookId}/files/{fileId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Original audio file (supports HTTP Range)
+         * @description Auth by token/cookie, or by a signed `sig` from `POST /books/{bookId}/stream-url`.
+         */
+        get: operations["getBookFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Original audio file (supports HTTP Range)
-     * @description Auth by token/cookie, or by a signed `sig` from `POST /books/{bookId}/stream-url`.
-     */
-    get: operations["getBookFile"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/stream/{bookId}/hls/{profile}/index.m3u8": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/stream/{bookId}/hls/{profile}/index.m3u8": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Low-bitrate HLS playlist for the whole book (generated on demand) */
+        get: operations["getHlsPlaylist"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Low-bitrate HLS playlist for the whole book (generated on demand) */
-    get: operations["getHlsPlaylist"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/stream/{bookId}/hls/{profile}/{segment}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/stream/{bookId}/hls/{profile}/{segment}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One 10 s HLS segment */
+        get: operations["getHlsSegment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** One 10 s HLS segment */
-    get: operations["getHlsSegment"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/books/{bookId}/stream-url": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/books/{bookId}/stream-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Signed, short-lived stream URLs for casting targets
+         * @description Bound to user + book; expire after 6 h. Casting devices fetch audio without app tokens.
+         */
+        post: operations["createStreamUrl"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Signed, short-lived stream URLs for casting targets
-     * @description Bound to user + book; expire after 6 h. Casting devices fetch audio without app tokens.
-     */
-    post: operations["createStreamUrl"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/books/{bookId}/cover": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/books/{bookId}/cover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cover image (resized variant) */
+        get: operations["getBookCover"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Cover image (resized variant) */
-    get: operations["getBookCover"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/setup/status": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/setup/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whether the first-run wizard still needs to run */
+        get: operations["getSetupStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Whether the first-run wizard still needs to run */
-    get: operations["getSetupStatus"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/setup/database/test": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/setup/database/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check that a database can be opened */
+        post: operations["testSetupDatabase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Check that a database can be opened */
-    post: operations["testSetupDatabase"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/setup/library/test": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/setup/library/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check the library path exists and is writable (warns if empty) */
+        post: operations["testSetupLibrary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Check the library path exists and is writable (warns if empty) */
-    post: operations["testSetupLibrary"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/setup/smtp/test": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/setup/smtp/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a test email with the given SMTP settings */
+        post: operations["testSetupSmtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Send a test email with the given SMTP settings */
-    post: operations["testSetupSmtp"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/setup/totp": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/setup/totp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generate the first admin's TOTP secret (enrollment is mandatory) */
+        post: operations["createSetupTotp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Generate the first admin's TOTP secret (enrollment is mandatory) */
-    post: operations["createSetupTotp"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/setup/complete": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/setup/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Finish the wizard (creates the admin, stores settings, switches the server to normal mode) */
+        post: operations["completeSetup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Finish the wizard (creates the admin, stores settings, switches the server to normal mode) */
-    post: operations["completeSetup"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/admin/signup-requests": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/signup-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sign-up requests (moderation inbox) */
+        get: operations["listSignupRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Sign-up requests (moderation inbox) */
-    get: operations["listSignupRequests"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/admin/signup-requests/{requestId}/approve": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/signup-requests/{requestId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve a sign-up (user becomes active and joins Public) */
+        post: operations["approveSignupRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Approve a sign-up (user becomes active and joins Public) */
-    post: operations["approveSignupRequest"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/admin/signup-requests/{requestId}/deny": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/signup-requests/{requestId}/deny": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deny a sign-up */
+        post: operations["denySignupRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Deny a sign-up */
-    post: operations["denySignupRequest"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/admin/users": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Users */
+        get: operations["listUsers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Users */
-    get: operations["listUsers"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/admin/users/{userId}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/users/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change a user's status, role, quota or notice (a reason is required) */
+        patch: operations["patchUser"];
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    /** Change a user's status, role, quota or notice (a reason is required) */
-    patch: operations["patchUser"];
-    trace?: never;
-  };
-  "/admin/groups": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Groups */
+        get: operations["listGroups"];
+        put?: never;
+        /** Create a group */
+        post: operations["createGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Groups */
-    get: operations["listGroups"];
-    put?: never;
-    /** Create a group */
-    post: operations["createGroup"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/admin/groups/{groupId}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/groups/{groupId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a group (the built-in Public group cannot be deleted) */
+        delete: operations["deleteGroup"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post?: never;
-    /** Delete a group (the built-in Public group cannot be deleted) */
-    delete: operations["deleteGroup"];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/admin/groups/{groupId}/members/{userId}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/groups/{groupId}/members/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Add a user to a group */
+        put: operations["addGroupMember"];
+        post?: never;
+        /** Remove a user from a group */
+        delete: operations["removeGroupMember"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    /** Add a user to a group */
-    put: operations["addGroupMember"];
-    post?: never;
-    /** Remove a user from a group */
-    delete: operations["removeGroupMember"];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/admin/sessions/{sessionId}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/sessions/{sessionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke any user's session */
+        delete: operations["adminRevokeSession"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post?: never;
-    /** Revoke any user's session */
-    delete: operations["adminRevokeSession"];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/me/uploads": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/me/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My recent uploads and their processing status
+         * @description Files are uploaded with the **tus 1.0 resumable protocol** at `/api/v1/uploads/`
+         *     (not described operation-by-operation here). Create an upload with
+         *     `POST /api/v1/uploads/` and headers `Tus-Resumable: 1.0.0`, `Upload-Length`, and
+         *     `Upload-Metadata` containing `filename` (required) and optionally `sha256`
+         *     (hex, verified after the last chunk). Accepted: `.m4b`, `.m4a`, `.mp3`, or a `.zip`
+         *     of one book's mp3 files. Quota is checked before the upload starts.
+         *     After the final chunk the server imports the book in the background; poll this
+         *     endpoint (or wait for the push notification) for the result.
+         */
+        get: operations["listMyUploads"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * My recent uploads and their processing status
-     * @description Files are uploaded with the **tus 1.0 resumable protocol** at `/api/v1/uploads/`
-     *     (not described operation-by-operation here). Create an upload with
-     *     `POST /api/v1/uploads/` and headers `Tus-Resumable: 1.0.0`, `Upload-Length`, and
-     *     `Upload-Metadata` containing `filename` (required) and optionally `sha256`
-     *     (hex, verified after the last chunk). Accepted: `.m4b`, `.m4a`, `.mp3`, or a `.zip`
-     *     of one book's mp3 files. Quota is checked before the upload starts.
-     *     After the final chunk the server imports the book in the background; poll this
-     *     endpoint (or wait for the push notification) for the result.
-     */
-    get: operations["listMyUploads"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/jobs/{jobId}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/jobs/{jobId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Status of a background job you started (admins can see any) */
+        get: operations["getJob"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Status of a background job you started (admins can see any) */
-    get: operations["getJob"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/admin/books": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/books": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Browse the master store (every book the server holds) */
+        get: operations["listMasterBooks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Browse the master store (every book the server holds) */
-    get: operations["listMasterBooks"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/admin/books/{bookId}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/books/{bookId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One master-store book with its distributions */
+        get: operations["getMasterBook"];
+        put?: never;
+        post?: never;
+        /** Move a book to the Trash (hidden everywhere; purged after 30 days) */
+        delete: operations["trashBook"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** One master-store book with its distributions */
-    get: operations["getMasterBook"];
-    put?: never;
-    post?: never;
-    /** Move a book to the Trash (hidden everywhere; purged after 30 days) */
-    delete: operations["trashBook"];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/admin/books/{bookId}/restore": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/books/{bookId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore a book from the Trash */
+        post: operations["restoreBook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Restore a book from the Trash */
-    post: operations["restoreBook"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/admin/books/{bookId}/purge": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/books/{bookId}/purge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Permanently delete one trashed book and its files now */
+        post: operations["purgeBook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Permanently delete one trashed book and its files now */
-    post: operations["purgeBook"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/admin/trash/empty": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/trash/empty": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Permanently delete everything in the Trash
+         * @description Requires typing the number of trashed books, plus the admin password and a TOTP code.
+         */
+        post: operations["emptyTrash"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Permanently delete everything in the Trash
-     * @description Requires typing the number of trashed books, plus the admin password and a TOTP code.
-     */
-    post: operations["emptyTrash"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/admin/distributions": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/distributions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Make a master-store book visible to a group or a user */
+        post: operations["createDistribution"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Make a master-store book visible to a group or a user */
-    post: operations["createDistribution"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/admin/distributions/{distributionId}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/distributions/{distributionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke a distribution */
+        delete: operations["revokeDistribution"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post?: never;
-    /** Revoke a distribution */
-    delete: operations["revokeDistribution"];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/admin/library/scan": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/library/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rescan the library folder now */
+        post: operations["scanLibrary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Rescan the library folder now */
-    post: operations["scanLibrary"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/me/bookmarks": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/me/bookmarks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My bookmarks (optionally for one book) */
+        get: operations["listBookmarks"];
+        put?: never;
+        /**
+         * Add a bookmark
+         * @description Clients may send their own `id` (UUID) so an offline-created bookmark syncs idempotently: re-sending the same id returns the existing bookmark.
+         */
+        post: operations["createBookmark"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** My bookmarks (optionally for one book) */
-    get: operations["listBookmarks"];
-    put?: never;
-    /**
-     * Add a bookmark
-     * @description Clients may send their own `id` (UUID) so an offline-created bookmark syncs idempotently: re-sending the same id returns the existing bookmark.
-     */
-    post: operations["createBookmark"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/me/bookmarks/{bookmarkId}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/me/bookmarks/{bookmarkId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a bookmark (leaves a tombstone for other devices) */
+        delete: operations["deleteBookmark"];
+        options?: never;
+        head?: never;
+        /** Edit a bookmark (last write wins by client_ts) */
+        patch: operations["updateBookmark"];
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post?: never;
-    /** Delete a bookmark (leaves a tombstone for other devices) */
-    delete: operations["deleteBookmark"];
-    options?: never;
-    head?: never;
-    /** Edit a bookmark (last write wins by client_ts) */
-    patch: operations["updateBookmark"];
-    trace?: never;
-  };
-  "/me/collections": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/me/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My collections */
+        get: operations["listCollections"];
+        put?: never;
+        /** Create a collection */
+        post: operations["createCollection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** My collections */
-    get: operations["listCollections"];
-    put?: never;
-    /** Create a collection */
-    post: operations["createCollection"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/me/collections/{collectionId}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/me/collections/{collectionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a collection (books are not affected) */
+        delete: operations["deleteCollection"];
+        options?: never;
+        head?: never;
+        /** Rename or describe a collection (last write wins by client_ts) */
+        patch: operations["updateCollection"];
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post?: never;
-    /** Delete a collection (books are not affected) */
-    delete: operations["deleteCollection"];
-    options?: never;
-    head?: never;
-    /** Rename or describe a collection (last write wins by client_ts) */
-    patch: operations["updateCollection"];
-    trace?: never;
-  };
-  "/me/collections/{collectionId}/books/{bookId}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/me/collections/{collectionId}/books/{bookId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Add a book to a collection */
+        put: operations["addToCollection"];
+        post?: never;
+        /** Remove a book from a collection */
+        delete: operations["removeFromCollection"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    /** Add a book to a collection */
-    put: operations["addToCollection"];
-    post?: never;
-    /** Remove a book from a collection */
-    delete: operations["removeFromCollection"];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/devices/push-subscription": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/devices/push-subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register this device for push notifications
+         * @description Send your UnifiedPush `endpoint` (from the distributor app, e.g. ntfy) and the server
+         *     POSTs events there. Without an endpoint you get a random server topic on this
+         *     instance's ntfy to subscribe to directly. Payloads never contain content, only
+         *     `{"type": "...", "id": "..."}`; fetch details from the API.
+         *     Event types: `upload_done`, `upload_failed`, `library_added`, and for admins
+         *     `signup_request`, `backup_failed`, `integrity_failed`, `unclean_shutdown`.
+         */
+        post: operations["registerPush"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Register this device for push notifications
-     * @description Send your UnifiedPush `endpoint` (from the distributor app, e.g. ntfy) and the server
-     *     POSTs events there. Without an endpoint you get a random server topic on this
-     *     instance's ntfy to subscribe to directly. Payloads never contain content, only
-     *     `{"type": "...", "id": "..."}`; fetch details from the API.
-     *     Event types: `upload_done`, `upload_failed`, `library_added`, and for admins
-     *     `signup_request`, `backup_failed`, `integrity_failed`, `unclean_shutdown`.
-     */
-    post: operations["registerPush"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/devices/push-subscription/{deviceId}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/devices/push-subscription/{deviceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Stop push notifications for a device */
+        delete: operations["unregisterPush"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post?: never;
-    /** Stop push notifications for a device */
-    delete: operations["unregisterPush"];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/admin/backups": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/backups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Database backups and the latest backup/scrub status */
+        get: operations["getBackups"];
+        put?: never;
+        /** Back up the database now */
+        post: operations["runBackup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Database backups and the latest backup/scrub status */
-    get: operations["getBackups"];
-    put?: never;
-    /** Back up the database now */
-    post: operations["runBackup"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/admin/integrity-check": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/integrity-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Re-hash every library file against its stored checksum now */
+        post: operations["runIntegrityCheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Re-hash every library file against its stored checksum now */
-    post: operations["runIntegrityCheck"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-  schemas: {
-    Error: {
-      /** @description Stable machine-readable code, e.g. `invalid_credentials`, `account_pending`, `rate_limited`. */
-      code: string;
-      /** @description Human-readable English message (clients show their own translated text by `code`). */
-      message: string;
-      details?: {
-        [key: string]: unknown;
-      };
-    };
-    Health: {
-      /** @enum {string} */
-      status: "ok" | "degraded";
-      version: string;
-    };
-    Instance: {
-      name: string;
-      /** @description Server semver */
-      version: string;
-      /** @example v1 */
-      api_version: string;
-      min_client_version: components["schemas"]["ClientVersionGuard"];
-      signup_open: boolean;
-      /** @description True until the first-run wizard is finished */
-      setup_required: boolean;
-      privacy_text?: string;
-      terms_text?: string;
-      copyright_contact?: string;
-      oidc_providers: components["schemas"]["OidcProvider"][];
-    };
-    /** @description Clients below `required` must block with "Update required"; below `recommended` show a soft banner. */
-    ClientVersionGuard: {
-      android?: components["schemas"]["VersionPair"];
-      wear?: components["schemas"]["VersionPair"];
-      web?: components["schemas"]["VersionPair"];
-      windows?: components["schemas"]["VersionPair"];
-    };
-    VersionPair: {
-      required: string;
-      recommended: string;
-    };
-    OidcProvider: {
-      id: string;
-      display_name: string;
-    };
-    /** @enum {string} */
-    Platform: "android" | "wear" | "web" | "windows" | "other";
-    SignupRequest: {
-      username: string;
-      /** Format: password */
-      password: string;
-      /** Format: email */
-      email?: string;
-      /** @description Optional note to the admin */
-      message?: string;
-      age_confirmed: boolean;
-      terms_accepted: boolean;
-    };
-    SignupAccepted: {
-      /** @enum {string} */
-      status: "pending";
-    };
-    DeviceInfo: {
-      /**
-       * Format: uuid
-       * @description Generated once per install
-       */
-      device_id: string;
-      device_name: string;
-      platform: components["schemas"]["Platform"];
-      app_version: string;
-    };
-    LoginRequest: {
-      username: string;
-      /** Format: password */
-      password: string;
-      device: components["schemas"]["DeviceInfo"];
-    };
-    LoginResponse: {
-      /** @enum {string} */
-      status: "ok" | "totp_required";
-      tokens?: components["schemas"]["TokenPair"];
-      /** @description Present when `status = totp_required`; valid for 5 minutes. */
-      totp_challenge?: string;
-      user?: components["schemas"]["Me"];
-    };
-    TotpVerifyRequest: {
-      totp_challenge: string;
-      code?: string;
-      recovery_code?: string;
-    };
-    TotpEnrollment: {
-      /** @description Base32 secret */
-      secret: string;
-      otpauth_uri: string;
-    };
-    TotpConfirmRequest: {
-      code: string;
-    };
-    RecoveryCodes: {
-      codes: string[];
-    };
-    RefreshRequest: {
-      refresh_token: string;
-    };
-    TokenPair: {
-      access_token: string;
-      /** Format: date-time */
-      access_expires_at: string;
-      /** @description Empty for web clients (cookie is set instead) */
-      refresh_token: string;
-      /** Format: date-time */
-      refresh_expires_at: string;
-    };
-    /** @enum {string} */
-    UserRole: "admin" | "user";
-    /** @enum {string} */
-    UserStatus: "pending" | "active" | "restricted" | "suspended" | "banned" | "deleted";
-    Me: {
-      /** Format: uuid */
-      id: string;
-      username: string;
-      display_name: string;
-      /** Format: email */
-      email?: string;
-      role: components["schemas"]["UserRole"];
-      status: components["schemas"]["UserStatus"];
-      totp_enabled: boolean;
-      /**
-       * Format: int64
-       * @description 0 = unlimited
-       */
-      quota_bytes: number;
-      /** Format: int64 */
-      used_bytes: number;
-      /** @example en */
-      locale: string;
-      permissions: components["schemas"]["EffectivePermissions"];
-      /** @description Moderator warning to show once on login, if any. */
-      notice?: string;
-    };
-    /** @description Result of authz evaluation (status → role → user overrides → tags → instance defaults). */
-    EffectivePermissions: {
-      can_upload: boolean;
-      can_edit_metadata: boolean;
-      can_delete_own: boolean;
-      can_share: boolean;
-      can_review: boolean;
-      can_post_public: boolean;
-    };
-    Session: {
-      /** Format: uuid */
-      id: string;
-      /** Format: uuid */
-      device_id: string;
-      device_name: string;
-      platform: components["schemas"]["Platform"];
-      app_version: string;
-      /** Format: date-time */
-      last_seen_at: string;
-      /** Format: date-time */
-      created_at: string;
-      /** @description This is the session making the request */
-      current: boolean;
-    };
-    PersonRef: {
-      /** Format: uuid */
-      id: string;
-      name: string;
-    };
-    SeriesRef: {
-      /** Format: uuid */
-      id: string;
-      name: string;
-      /** @description Position in the series as text (e.g. "1", "2.5") */
-      index?: string;
-    };
-    TagRef: {
-      /** Format: uuid */
-      id: string;
-      name: string;
-      /** @enum {string} */
-      kind: "genre" | "custom";
-    };
-    /** @enum {string} */
-    LibrarySource: "own_upload" | "distribution" | "recommendation";
-    BookSummary: {
-      /** Format: uuid */
-      id: string;
-      title: string;
-      subtitle?: string;
-      authors: components["schemas"]["PersonRef"][];
-      narrators: components["schemas"]["PersonRef"][];
-      series?: components["schemas"]["SeriesRef"];
-      /** Format: int64 */
-      duration_ms: number;
-      /** @description Relative URL; add `?size=` */
-      cover_url: string;
-      source: components["schemas"]["LibrarySource"];
-      progress?: components["schemas"]["Progress"];
-      /** Format: date-time */
-      added_at?: string;
-      hidden?: boolean;
-      /**
-       * Format: date-time
-       * @description Set on the recently_removed shelf
-       */
-      removed_at?: string;
-      /** Format: date-time */
-      updated_at: string;
-    };
-    BookDetail: components["schemas"]["BookSummary"] & {
-      description?: string;
-      publisher?: string;
-      published_year?: number;
-      language?: string;
-      isbn?: string;
-      asin?: string;
-      /** Format: int64 */
-      size_bytes: number;
-      has_epub: boolean;
-      tags: components["schemas"]["TagRef"][];
-      files: components["schemas"]["BookFile"][];
-      chapters: components["schemas"]["Chapter"][];
-    };
-    /** @description One audio file. `offset_ms` maps it onto the global book timeline. */
-    BookFile: {
-      /** Format: uuid */
-      id: string;
-      index: number;
-      /** Format: int64 */
-      offset_ms: number;
-      /** Format: int64 */
-      duration_ms: number;
-      /** Format: int64 */
-      size_bytes: number;
-      /** @example aac */
-      codec: string;
-      bitrate_kbps?: number;
-      /** @example audio/mp4 */
-      mime_type: string;
-      sha256: string;
-    };
-    /** @description Chapter on the global book timeline (across files). */
-    Chapter: {
-      index: number;
-      title: string;
-      /** Format: int64 */
-      start_ms: number;
-      /** Format: int64 */
-      end_ms: number;
-    };
-    LibraryPage: {
-      items: components["schemas"]["BookSummary"][];
-      /** @description Absent on the last page */
-      next_cursor?: string;
-    };
-    PersonPage: {
-      /** Format: uuid */
-      id: string;
-      name: string;
-      books: components["schemas"]["BookSummary"][];
-    };
-    SeriesPage: {
-      /** Format: uuid */
-      id: string;
-      name: string;
-      books: components["schemas"]["BookSummary"][];
-    };
-    Progress: {
-      /** Format: uuid */
-      book_id: string;
-      /** Format: int64 */
-      position_ms: number;
-      /** Format: uuid */
-      device_id: string;
-      device_name?: string;
-      /** Format: date-time */
-      client_ts: string;
-      /**
-       * Format: date-time
-       * @description Server receive time
-       */
-      updated_at: string;
-      /** Format: float */
-      speed: number;
-      /** Format: date-time */
-      finished_at?: string;
-    };
-    ProgressUpdate: {
-      /** Format: int64 */
-      position_ms: number;
-      /** Format: uuid */
-      device_id: string;
-      /** Format: date-time */
-      client_ts: string;
-      /** Format: float */
-      speed: number;
-      finished?: boolean;
-      /**
-       * Format: date-time
-       * @description When this device last successfully synced progress for this book.
-       *     Used to detect writes made in the same offline window.
-       */
-      last_synced_at?: string;
-      /** @description Echo a `conflict_id` from a 409 to force this write after the user chose. */
-      resolution?: string;
-    };
-    ProgressWriteResult: {
-      /** @description False when the write was older (by `client_ts`) than the stored record and was ignored. */
-      applied: boolean;
-      progress: components["schemas"]["Progress"];
-    };
-    ProgressConflict: {
-      /** @enum {string} */
-      code: "progress_conflict";
-      conflict_id: string;
-      server: components["schemas"]["Progress"];
-      incoming: components["schemas"]["Progress"];
-    };
-    Tombstone: {
-      /** @enum {string} */
-      entity: "library_entry" | "progress" | "bookmark" | "collection";
-      /** @description Entity id (for library_entry and progress: the book id) */
-      id: string;
-      /** Format: date-time */
-      deleted_at: string;
-    };
-    SyncDelta: {
-      /** @description Pass as `since` next time */
-      cursor: string;
-      has_more: boolean;
-      /** @description True when this is a full snapshot (no `since`) */
-      full?: boolean;
-      /** @description Books that became visible or whose metadata changed */
-      library: components["schemas"]["BookSummary"][];
-      progress: components["schemas"]["Progress"][];
-      bookmarks: components["schemas"]["Bookmark"][];
-      collections: components["schemas"]["Collection"][];
-      tombstones: components["schemas"]["Tombstone"][];
-    };
-    /**
-     * @description `low` = HE-AAC 32 kbps mono, `medium` = AAC 64 kbps stereo
-     * @enum {string}
-     */
-    HlsProfile: "low" | "medium";
-    StreamUrlRequest: {
-      /**
-       * @default original
-       * @enum {string}
-       */
-      profile: "original" | "low" | "medium";
-    };
-    StreamUrls: {
-      /** Format: date-time */
-      expires_at: string;
-      /** @description Present for `original` */
-      files?: {
-        /** Format: uuid */
-        file_id: string;
-        url: string;
-      }[];
-      /** @description Present for `low`/`medium` */
-      hls_url?: string;
-      cover_url?: string;
-    };
-    SetupStatus: {
-      setup_required: boolean;
-      /** @description A database is already chosen (config.json exists); the wizard will reuse it */
-      database_configured?: boolean;
-    };
-    SetupDatabase: {
-      /**
-       * @default sqlite
-       * @enum {string}
-       */
-      dialect: "sqlite" | "postgres";
-      /** @description Postgres connection string. Ignored for SQLite (stored at /config/simpleapb.db). */
-      dsn?: string;
-    };
-    SetupCheckResult: {
-      ok: boolean;
-      message?: string;
-    };
-    SetupLibrary: {
-      /** @default /library */
-      path: string;
-    };
-    LibraryCheck: {
-      exists: boolean;
-      writable: boolean;
-      /** @description True when the folder has no files yet (a warning, not an error) */
-      empty: boolean;
-      message?: string;
-    };
-    SmtpSettings: {
-      host: string;
-      port: number;
-      /** @enum {string} */
-      tls: "starttls" | "tls" | "none";
-      username?: string;
-      /** Format: password */
-      password?: string;
-      /** Format: email */
-      from: string;
-    };
-    SmtpTestRequest: {
-      smtp: components["schemas"]["SmtpSettings"];
-      /** Format: email */
-      to: string;
-    };
-    NtfySettings: {
-      /** @description How the server reaches ntfy, e.g. http://ntfy:80 */
-      internal_url?: string;
-      /** @description How devices reach ntfy */
-      public_url?: string;
-      /** @description Access token; generated automatically when empty */
-      token?: string;
-    };
-    SetupAdmin: {
-      username: string;
-      /** Format: password */
-      password: string;
-      display_name?: string;
-      /** Format: email */
-      email?: string;
-      /** @description Secret from POST /setup/totp */
-      totp_secret: string;
-      totp_code: string;
-    };
-    SetupRequest: {
-      admin: components["schemas"]["SetupAdmin"];
-      database: components["schemas"]["SetupDatabase"];
-      /** @default /library */
-      library_path: string;
-      /** @description Public base URL, e.g. https://books.example.com */
-      base_url: string;
-      smtp?: components["schemas"]["SmtpSettings"];
-      ntfy?: components["schemas"]["NtfySettings"];
-      instance_name: string;
-      privacy_text?: string;
-      terms_text?: string;
-      /** @default true */
-      signup_open: boolean;
-      /** @default 80 */
-      egress_mbps: number;
-    };
-    SetupResult: {
-      /** Format: uuid */
-      admin_id: string;
-      /** @description The admin's one-time recovery codes. Shown once. */
-      recovery_codes: string[];
-    };
-    SignupRequestItem: {
-      /** Format: uuid */
-      id: string;
-      /** Format: uuid */
-      user_id: string;
-      username: string;
-      email?: string;
-      message?: string;
-      /** @enum {string} */
-      status: "pending" | "approved" | "denied";
-      /** Format: date-time */
-      created_at: string;
-      /** Format: date-time */
-      decided_at?: string;
-    };
-    ReasonRequest: {
-      reason?: string;
-    };
-    AdminUser: {
-      /** Format: uuid */
-      id: string;
-      username: string;
-      display_name: string;
-      email?: string;
-      role: components["schemas"]["UserRole"];
-      status: components["schemas"]["UserStatus"];
-      status_reason?: string;
-      /** Format: date-time */
-      status_until?: string;
-      totp_enabled: boolean;
-      /** Format: int64 */
-      quota_bytes: number;
-      /** Format: date-time */
-      created_at: string;
-    };
-    AdminUserPatch: {
-      /** @description Why; written to the audit log */
-      reason: string;
-      /** @enum {string} */
-      status?: "active" | "restricted" | "suspended" | "banned";
-      /**
-       * Format: date-time
-       * @description Suspension end (status = suspended)
-       */
-      status_until?: string;
-      role?: components["schemas"]["UserRole"];
-      /** Format: int64 */
-      quota_bytes?: number;
-      /** @description Warning shown to the user on next login; empty clears it */
-      notice?: string;
-    };
-    Group: {
-      /** Format: uuid */
-      id: string;
-      name: string;
-      builtin: boolean;
-      /** @description Bandwidth priority class */
-      high_priority: boolean;
-      members: number;
-    };
-    GroupCreate: {
-      name: string;
-      /** @default false */
-      high_priority: boolean;
-    };
-    UploadItem: {
-      id: string;
-      filename: string;
-      /** Format: int64 */
-      size_bytes: number;
-      /** Format: int64 */
-      received_bytes: number;
-      /** @enum {string} */
-      status: "receiving" | "processing" | "done" | "failed" | "cancelled";
-      /** @description Why processing failed (shown to the user) */
-      error?: string;
-      /** Format: uuid */
-      book_id?: string;
-      /** Format: date-time */
-      created_at: string;
-      /** Format: date-time */
-      updated_at: string;
-    };
-    JobStatus: {
-      /** Format: uuid */
-      id: string;
-      type: string;
-      /** @enum {string} */
-      status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
-      attempts: number;
-      last_error?: string;
-      result?: {
-        [key: string]: unknown;
-      };
-      /** Format: date-time */
-      created_at: string;
-      /** Format: date-time */
-      updated_at: string;
-    };
-    /** @enum {string} */
-    BookStatus: "processing" | "ready" | "quarantined" | "trashed";
-    MasterBook: {
-      /** Format: uuid */
-      id: string;
-      title: string;
-      authors: components["schemas"]["PersonRef"][];
-      series?: components["schemas"]["SeriesRef"];
-      status: components["schemas"]["BookStatus"];
-      status_reason?: string;
-      /** @enum {string} */
-      origin: "scan" | "upload" | "abs_import";
-      /** Format: uuid */
-      uploader_id?: string;
-      /** @description Relative to the library root */
-      folder_path: string;
-      /** Format: int64 */
-      size_bytes: number;
-      /** Format: int64 */
-      duration_ms: number;
-      /** Format: date-time */
-      trashed_at?: string;
-      /**
-       * Format: date-time
-       * @description When the Trash will purge it automatically
-       */
-      purge_at?: string;
-      /** Format: date-time */
-      created_at: string;
-      distributions: components["schemas"]["Distribution"][];
-    };
-    MasterBookPage: {
-      items: components["schemas"]["MasterBook"][];
-      next_cursor?: string;
-    };
-    DistributionCreate: {
-      /** Format: uuid */
-      book_id: string;
-      /** @enum {string} */
-      target_type: "group" | "user";
-      /** Format: uuid */
-      target_id: string;
-      note?: string;
-    };
-    Distribution: {
-      /** Format: uuid */
-      id: string;
-      /** Format: uuid */
-      book_id: string;
-      /** @enum {string} */
-      target_type: "group" | "user";
-      /** Format: uuid */
-      target_id: string;
-      target_name: string;
-      note?: string;
-      /** Format: date-time */
-      created_at: string;
-    };
-    EmptyTrashRequest: {
-      /** @description Must equal the number of books in the Trash */
-      confirm_count: number;
-      /** Format: password */
-      password: string;
-      totp_code: string;
-    };
-    Bookmark: {
-      /** Format: uuid */
-      id: string;
-      /** Format: uuid */
-      book_id: string;
-      /** Format: int64 */
-      position_ms: number;
-      note?: string;
-      /**
-       * Format: date-time
-       * @description Last-write-wins clock (client time, clamped)
-       */
-      updated_at: string;
-    };
-    BookmarkCreate: {
-      /**
-       * Format: uuid
-       * @description Client-generated id for idempotent offline creation
-       */
-      id?: string;
-      /** Format: uuid */
-      book_id: string;
-      /** Format: int64 */
-      position_ms: number;
-      note?: string;
-      /** Format: date-time */
-      client_ts?: string;
-    };
-    BookmarkPatch: {
-      /** Format: int64 */
-      position_ms?: number;
-      note?: string;
-      /** Format: date-time */
-      client_ts?: string;
-    };
-    Collection: {
-      /** Format: uuid */
-      id: string;
-      name: string;
-      description?: string;
-      /** @description Books in order (only books you can currently see) */
-      book_ids: string[];
-      /** Format: date-time */
-      updated_at: string;
-    };
-    CollectionCreate: {
-      /** Format: uuid */
-      id?: string;
-      name: string;
-      description?: string;
-      /** Format: date-time */
-      client_ts?: string;
-    };
-    CollectionPatch: {
-      name?: string;
-      description?: string;
-      /** Format: date-time */
-      client_ts?: string;
-    };
-    PushRegistration: {
-      /** Format: uuid */
-      device_id: string;
-      /** @description UnifiedPush endpoint URL (https) */
-      endpoint?: string;
-    };
-    PushSubscription: {
-      /** Format: uuid */
-      device_id: string;
-      /** @description Random server topic (128-bit) on this instance's ntfy */
-      topic: string;
-      /** @description Full topic URL to subscribe to, if ntfy is configured */
-      ntfy_url?: string;
-      endpoint?: string;
-    };
-    JobRef: {
-      /** Format: uuid */
-      job_id: string;
-    };
-    BackupFile: {
-      name: string;
-      /** Format: int64 */
-      size_bytes: number;
-      /** Format: date-time */
-      created_at: string;
-    };
-    OpStatus: {
-      /** Format: date-time */
-      at?: string;
-      ok?: boolean;
-      message?: string;
-    };
-    BackupStatus: {
-      backups: components["schemas"]["BackupFile"][];
-      last_backup?: components["schemas"]["OpStatus"];
-      last_scrub?: components["schemas"]["OpStatus"];
-      last_unclean_shutdown?: components["schemas"]["OpStatus"];
-    };
-  };
-  responses: {
-    /** @description Invalid request */
-    BadRequest: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        "application/json": components["schemas"]["Error"];
-      };
-    };
-    /** @description Not authenticated */
-    Unauthorized: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        "application/json": components["schemas"]["Error"];
-      };
-    };
-    /** @description Not allowed */
-    Forbidden: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        "application/json": components["schemas"]["Error"];
-      };
-    };
-    /** @description Not found (or not visible to you) */
-    NotFound: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        "application/json": components["schemas"]["Error"];
-      };
-    };
-    /** @description Conflict with current state */
-    Conflict: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        "application/json": components["schemas"]["Error"];
-      };
-    };
-    /** @description No longer available */
-    Gone: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        "application/json": components["schemas"]["Error"];
-      };
-    };
-    /** @description Rate limited */
-    TooManyRequests: {
-      headers: {
-        "Retry-After"?: number;
-        [name: string]: unknown;
-      };
-      content: {
-        "application/json": components["schemas"]["Error"];
-      };
-    };
-  };
-  parameters: {
-    BookId: string;
-    PersonId: string;
-    SessionId: string;
-    HlsProfile: components["schemas"]["HlsProfile"];
-    RequestId: string;
-    UserId: string;
-    GroupId: string;
-    BookmarkId: string;
-    CollectionId: string;
-    /** @description Opaque pagination cursor from `next_cursor` */
-    Cursor: string;
-    Limit: number;
-  };
-  requestBodies: never;
-  headers: never;
-  pathItems: never;
+    schemas: {
+        Error: {
+            /** @description Stable machine-readable code, e.g. `invalid_credentials`, `account_pending`, `rate_limited`. */
+            code: string;
+            /** @description Human-readable English message (clients show their own translated text by `code`). */
+            message: string;
+            details?: {
+                [key: string]: unknown;
+            };
+        };
+        Health: {
+            /** @enum {string} */
+            status: "ok" | "degraded";
+            version: string;
+        };
+        Instance: {
+            name: string;
+            /** @description Server semver */
+            version: string;
+            /** @example v1 */
+            api_version: string;
+            min_client_version: components["schemas"]["ClientVersionGuard"];
+            signup_open: boolean;
+            /** @description True until the first-run wizard is finished */
+            setup_required: boolean;
+            privacy_text?: string;
+            terms_text?: string;
+            copyright_contact?: string;
+            oidc_providers: components["schemas"]["OidcProvider"][];
+        };
+        /** @description Clients below `required` must block with "Update required"; below `recommended` show a soft banner. */
+        ClientVersionGuard: {
+            android?: components["schemas"]["VersionPair"];
+            wear?: components["schemas"]["VersionPair"];
+            web?: components["schemas"]["VersionPair"];
+            windows?: components["schemas"]["VersionPair"];
+        };
+        VersionPair: {
+            required: string;
+            recommended: string;
+        };
+        OidcProvider: {
+            id: string;
+            display_name: string;
+        };
+        /** @enum {string} */
+        Platform: "android" | "wear" | "web" | "windows" | "other";
+        SignupRequest: {
+            username: string;
+            /** Format: password */
+            password: string;
+            /** Format: email */
+            email?: string;
+            /** @description Optional note to the admin */
+            message?: string;
+            age_confirmed: boolean;
+            terms_accepted: boolean;
+        };
+        SignupAccepted: {
+            /** @enum {string} */
+            status: "pending";
+        };
+        DeviceInfo: {
+            /**
+             * Format: uuid
+             * @description Generated once per install
+             */
+            device_id: string;
+            device_name: string;
+            platform: components["schemas"]["Platform"];
+            app_version: string;
+        };
+        LoginRequest: {
+            username: string;
+            /** Format: password */
+            password: string;
+            device: components["schemas"]["DeviceInfo"];
+        };
+        LoginResponse: {
+            /** @enum {string} */
+            status: "ok" | "totp_required";
+            tokens?: components["schemas"]["TokenPair"];
+            /** @description Present when `status = totp_required`; valid for 5 minutes. */
+            totp_challenge?: string;
+            user?: components["schemas"]["Me"];
+        };
+        TotpVerifyRequest: {
+            totp_challenge: string;
+            code?: string;
+            recovery_code?: string;
+        };
+        TotpEnrollment: {
+            /** @description Base32 secret */
+            secret: string;
+            otpauth_uri: string;
+        };
+        TotpConfirmRequest: {
+            code: string;
+        };
+        RecoveryCodes: {
+            codes: string[];
+        };
+        RefreshRequest: {
+            refresh_token: string;
+        };
+        TokenPair: {
+            access_token: string;
+            /** Format: date-time */
+            access_expires_at: string;
+            /** @description Empty for web clients (cookie is set instead) */
+            refresh_token: string;
+            /** Format: date-time */
+            refresh_expires_at: string;
+        };
+        /** @enum {string} */
+        UserRole: "admin" | "user";
+        /** @enum {string} */
+        UserStatus: "pending" | "active" | "restricted" | "suspended" | "banned" | "deleted";
+        Me: {
+            /** Format: uuid */
+            id: string;
+            username: string;
+            display_name: string;
+            /** Format: email */
+            email?: string;
+            role: components["schemas"]["UserRole"];
+            status: components["schemas"]["UserStatus"];
+            totp_enabled: boolean;
+            /**
+             * Format: int64
+             * @description 0 = unlimited
+             */
+            quota_bytes: number;
+            /** Format: int64 */
+            used_bytes: number;
+            /** @example en */
+            locale: string;
+            permissions: components["schemas"]["EffectivePermissions"];
+            /** @description Moderator warning to show once on login, if any. */
+            notice?: string;
+        };
+        /** @description Result of authz evaluation (status → role → user overrides → tags → instance defaults). */
+        EffectivePermissions: {
+            can_upload: boolean;
+            can_edit_metadata: boolean;
+            can_delete_own: boolean;
+            can_share: boolean;
+            can_review: boolean;
+            can_post_public: boolean;
+        };
+        Session: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            device_id: string;
+            device_name: string;
+            platform: components["schemas"]["Platform"];
+            app_version: string;
+            /** Format: date-time */
+            last_seen_at: string;
+            /** Format: date-time */
+            created_at: string;
+            /** @description This is the session making the request */
+            current: boolean;
+        };
+        PersonRef: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        SeriesRef: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description Position in the series as text (e.g. "1", "2.5") */
+            index?: string;
+        };
+        TagRef: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @enum {string} */
+            kind: "genre" | "custom";
+        };
+        /** @enum {string} */
+        LibrarySource: "own_upload" | "distribution" | "recommendation";
+        BookSummary: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            subtitle?: string;
+            authors: components["schemas"]["PersonRef"][];
+            narrators: components["schemas"]["PersonRef"][];
+            series?: components["schemas"]["SeriesRef"];
+            /** Format: int64 */
+            duration_ms: number;
+            /** @description Relative URL; add `?size=` */
+            cover_url: string;
+            source: components["schemas"]["LibrarySource"];
+            progress?: components["schemas"]["Progress"];
+            /** Format: date-time */
+            added_at?: string;
+            hidden?: boolean;
+            /**
+             * Format: date-time
+             * @description Set on the recently_removed shelf
+             */
+            removed_at?: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        BookDetail: components["schemas"]["BookSummary"] & {
+            description?: string;
+            publisher?: string;
+            published_year?: number;
+            language?: string;
+            isbn?: string;
+            asin?: string;
+            /** Format: int64 */
+            size_bytes: number;
+            has_epub: boolean;
+            tags: components["schemas"]["TagRef"][];
+            files: components["schemas"]["BookFile"][];
+            chapters: components["schemas"]["Chapter"][];
+        };
+        /** @description One audio file. `offset_ms` maps it onto the global book timeline. */
+        BookFile: {
+            /** Format: uuid */
+            id: string;
+            index: number;
+            /** Format: int64 */
+            offset_ms: number;
+            /** Format: int64 */
+            duration_ms: number;
+            /** Format: int64 */
+            size_bytes: number;
+            /** @example aac */
+            codec: string;
+            bitrate_kbps?: number;
+            /** @example audio/mp4 */
+            mime_type: string;
+            sha256: string;
+        };
+        /** @description Chapter on the global book timeline (across files). */
+        Chapter: {
+            index: number;
+            title: string;
+            /** Format: int64 */
+            start_ms: number;
+            /** Format: int64 */
+            end_ms: number;
+        };
+        LibraryPage: {
+            items: components["schemas"]["BookSummary"][];
+            /** @description Absent on the last page */
+            next_cursor?: string;
+        };
+        PersonPage: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            books: components["schemas"]["BookSummary"][];
+        };
+        SeriesPage: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            books: components["schemas"]["BookSummary"][];
+        };
+        Progress: {
+            /** Format: uuid */
+            book_id: string;
+            /** Format: int64 */
+            position_ms: number;
+            /** Format: uuid */
+            device_id: string;
+            device_name?: string;
+            /** Format: date-time */
+            client_ts: string;
+            /**
+             * Format: date-time
+             * @description Server receive time
+             */
+            updated_at: string;
+            /** Format: float */
+            speed: number;
+            /** Format: date-time */
+            finished_at?: string;
+        };
+        ProgressUpdate: {
+            /** Format: int64 */
+            position_ms: number;
+            /** Format: uuid */
+            device_id: string;
+            /** Format: date-time */
+            client_ts: string;
+            /** Format: float */
+            speed: number;
+            finished?: boolean;
+            /**
+             * Format: date-time
+             * @description When this device last successfully synced progress for this book.
+             *     Used to detect writes made in the same offline window.
+             */
+            last_synced_at?: string;
+            /** @description Echo a `conflict_id` from a 409 to force this write after the user chose. */
+            resolution?: string;
+        };
+        ProgressWriteResult: {
+            /** @description False when the write was older (by `client_ts`) than the stored record and was ignored. */
+            applied: boolean;
+            progress: components["schemas"]["Progress"];
+        };
+        ProgressConflict: {
+            /** @enum {string} */
+            code: "progress_conflict";
+            conflict_id: string;
+            server: components["schemas"]["Progress"];
+            incoming: components["schemas"]["Progress"];
+        };
+        Tombstone: {
+            /** @enum {string} */
+            entity: "library_entry" | "progress" | "bookmark" | "collection";
+            /** @description Entity id (for library_entry and progress: the book id) */
+            id: string;
+            /** Format: date-time */
+            deleted_at: string;
+        };
+        SyncDelta: {
+            /** @description Pass as `since` next time */
+            cursor: string;
+            has_more: boolean;
+            /** @description True when this is a full snapshot (no `since`) */
+            full?: boolean;
+            /** @description Books that became visible or whose metadata changed */
+            library: components["schemas"]["BookSummary"][];
+            progress: components["schemas"]["Progress"][];
+            bookmarks: components["schemas"]["Bookmark"][];
+            collections: components["schemas"]["Collection"][];
+            tombstones: components["schemas"]["Tombstone"][];
+        };
+        /**
+         * @description `low` = HE-AAC 32 kbps mono, `medium` = AAC 64 kbps stereo
+         * @enum {string}
+         */
+        HlsProfile: "low" | "medium";
+        StreamUrlRequest: {
+            /**
+             * @default original
+             * @enum {string}
+             */
+            profile: "original" | "low" | "medium";
+        };
+        StreamUrls: {
+            /** Format: date-time */
+            expires_at: string;
+            /** @description Present for `original` */
+            files?: {
+                /** Format: uuid */
+                file_id: string;
+                url: string;
+            }[];
+            /** @description Present for `low`/`medium` */
+            hls_url?: string;
+            cover_url?: string;
+        };
+        SetupStatus: {
+            setup_required: boolean;
+            /** @description A database is already chosen (config.json exists); the wizard will reuse it */
+            database_configured?: boolean;
+        };
+        SetupDatabase: {
+            /**
+             * @default sqlite
+             * @enum {string}
+             */
+            dialect: "sqlite" | "postgres";
+            /** @description Postgres connection string. Ignored for SQLite (stored at /config/simpleapb.db). */
+            dsn?: string;
+        };
+        SetupCheckResult: {
+            ok: boolean;
+            message?: string;
+        };
+        SetupLibrary: {
+            /** @default /library */
+            path: string;
+        };
+        LibraryCheck: {
+            exists: boolean;
+            writable: boolean;
+            /** @description True when the folder has no files yet (a warning, not an error) */
+            empty: boolean;
+            message?: string;
+        };
+        SmtpSettings: {
+            host: string;
+            port: number;
+            /** @enum {string} */
+            tls: "starttls" | "tls" | "none";
+            username?: string;
+            /** Format: password */
+            password?: string;
+            /** Format: email */
+            from: string;
+        };
+        SmtpTestRequest: {
+            smtp: components["schemas"]["SmtpSettings"];
+            /** Format: email */
+            to: string;
+        };
+        NtfySettings: {
+            /** @description How the server reaches ntfy, e.g. http://ntfy:80 */
+            internal_url?: string;
+            /** @description How devices reach ntfy */
+            public_url?: string;
+            /** @description Access token; generated automatically when empty */
+            token?: string;
+        };
+        SetupAdmin: {
+            username: string;
+            /** Format: password */
+            password: string;
+            display_name?: string;
+            /** Format: email */
+            email?: string;
+            /** @description Secret from POST /setup/totp */
+            totp_secret: string;
+            totp_code: string;
+        };
+        SetupRequest: {
+            admin: components["schemas"]["SetupAdmin"];
+            database: components["schemas"]["SetupDatabase"];
+            /** @default /library */
+            library_path: string;
+            /** @description Public base URL, e.g. https://books.example.com */
+            base_url: string;
+            smtp?: components["schemas"]["SmtpSettings"];
+            ntfy?: components["schemas"]["NtfySettings"];
+            instance_name: string;
+            privacy_text?: string;
+            terms_text?: string;
+            /** @default true */
+            signup_open: boolean;
+            /** @default 80 */
+            egress_mbps: number;
+        };
+        SetupResult: {
+            /** Format: uuid */
+            admin_id: string;
+            /** @description The admin's one-time recovery codes. Shown once. */
+            recovery_codes: string[];
+        };
+        SignupRequestItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            user_id: string;
+            username: string;
+            email?: string;
+            message?: string;
+            /** @enum {string} */
+            status: "pending" | "approved" | "denied";
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            decided_at?: string;
+        };
+        ReasonRequest: {
+            reason?: string;
+        };
+        AdminUser: {
+            /** Format: uuid */
+            id: string;
+            username: string;
+            display_name: string;
+            email?: string;
+            role: components["schemas"]["UserRole"];
+            status: components["schemas"]["UserStatus"];
+            status_reason?: string;
+            /** Format: date-time */
+            status_until?: string;
+            totp_enabled: boolean;
+            /** Format: int64 */
+            quota_bytes: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        AdminUserPatch: {
+            /** @description Why; written to the audit log */
+            reason: string;
+            /** @enum {string} */
+            status?: "active" | "restricted" | "suspended" | "banned";
+            /**
+             * Format: date-time
+             * @description Suspension end (status = suspended)
+             */
+            status_until?: string;
+            role?: components["schemas"]["UserRole"];
+            /** Format: int64 */
+            quota_bytes?: number;
+            /** @description Warning shown to the user on next login; empty clears it */
+            notice?: string;
+        };
+        Group: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            builtin: boolean;
+            /** @description Bandwidth priority class */
+            high_priority: boolean;
+            members: number;
+        };
+        GroupCreate: {
+            name: string;
+            /** @default false */
+            high_priority: boolean;
+        };
+        UploadItem: {
+            id: string;
+            filename: string;
+            /** Format: int64 */
+            size_bytes: number;
+            /** Format: int64 */
+            received_bytes: number;
+            /** @enum {string} */
+            status: "receiving" | "processing" | "done" | "failed" | "cancelled";
+            /** @description Why processing failed (shown to the user) */
+            error?: string;
+            /** Format: uuid */
+            book_id?: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        JobStatus: {
+            /** Format: uuid */
+            id: string;
+            type: string;
+            /** @enum {string} */
+            status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+            attempts: number;
+            last_error?: string;
+            result?: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /** @enum {string} */
+        BookStatus: "processing" | "ready" | "quarantined" | "trashed";
+        MasterBook: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            authors: components["schemas"]["PersonRef"][];
+            series?: components["schemas"]["SeriesRef"];
+            status: components["schemas"]["BookStatus"];
+            status_reason?: string;
+            /** @enum {string} */
+            origin: "scan" | "upload" | "abs_import";
+            /** Format: uuid */
+            uploader_id?: string;
+            /** @description Relative to the library root */
+            folder_path: string;
+            /** Format: int64 */
+            size_bytes: number;
+            /** Format: int64 */
+            duration_ms: number;
+            /** Format: date-time */
+            trashed_at?: string;
+            /**
+             * Format: date-time
+             * @description When the Trash will purge it automatically
+             */
+            purge_at?: string;
+            /** Format: date-time */
+            created_at: string;
+            distributions: components["schemas"]["Distribution"][];
+        };
+        MasterBookPage: {
+            items: components["schemas"]["MasterBook"][];
+            next_cursor?: string;
+        };
+        DistributionCreate: {
+            /** Format: uuid */
+            book_id: string;
+            /** @enum {string} */
+            target_type: "group" | "user";
+            /** Format: uuid */
+            target_id: string;
+            note?: string;
+        };
+        Distribution: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            book_id: string;
+            /** @enum {string} */
+            target_type: "group" | "user";
+            /** Format: uuid */
+            target_id: string;
+            target_name: string;
+            note?: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        EmptyTrashRequest: {
+            /** @description Must equal the number of books in the Trash */
+            confirm_count: number;
+            /** Format: password */
+            password: string;
+            totp_code: string;
+        };
+        Bookmark: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            book_id: string;
+            /** Format: int64 */
+            position_ms: number;
+            note?: string;
+            /**
+             * Format: date-time
+             * @description Last-write-wins clock (client time, clamped)
+             */
+            updated_at: string;
+        };
+        BookmarkCreate: {
+            /**
+             * Format: uuid
+             * @description Client-generated id for idempotent offline creation
+             */
+            id?: string;
+            /** Format: uuid */
+            book_id: string;
+            /** Format: int64 */
+            position_ms: number;
+            note?: string;
+            /** Format: date-time */
+            client_ts?: string;
+        };
+        BookmarkPatch: {
+            /** Format: int64 */
+            position_ms?: number;
+            note?: string;
+            /** Format: date-time */
+            client_ts?: string;
+        };
+        Collection: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            description?: string;
+            /** @description Books in order (only books you can currently see) */
+            book_ids: string[];
+            /** Format: date-time */
+            updated_at: string;
+        };
+        CollectionCreate: {
+            /** Format: uuid */
+            id?: string;
+            name: string;
+            description?: string;
+            /** Format: date-time */
+            client_ts?: string;
+        };
+        CollectionPatch: {
+            name?: string;
+            description?: string;
+            /** Format: date-time */
+            client_ts?: string;
+        };
+        PushRegistration: {
+            /** Format: uuid */
+            device_id: string;
+            /** @description UnifiedPush endpoint URL (https) */
+            endpoint?: string;
+        };
+        PushSubscription: {
+            /** Format: uuid */
+            device_id: string;
+            /** @description Random server topic (128-bit) on this instance's ntfy */
+            topic: string;
+            /** @description Full topic URL to subscribe to, if ntfy is configured */
+            ntfy_url?: string;
+            endpoint?: string;
+        };
+        JobRef: {
+            /** Format: uuid */
+            job_id: string;
+        };
+        BackupFile: {
+            name: string;
+            /** Format: int64 */
+            size_bytes: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        OpStatus: {
+            /** Format: date-time */
+            at?: string;
+            ok?: boolean;
+            message?: string;
+        };
+        BackupStatus: {
+            backups: components["schemas"]["BackupFile"][];
+            last_backup?: components["schemas"]["OpStatus"];
+            last_scrub?: components["schemas"]["OpStatus"];
+            last_unclean_shutdown?: components["schemas"]["OpStatus"];
+        };
+    };
+    responses: {
+        /** @description Invalid request */
+        BadRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Not authenticated */
+        Unauthorized: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Not allowed */
+        Forbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Not found (or not visible to you) */
+        NotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Conflict with current state */
+        Conflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description No longer available */
+        Gone: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Rate limited */
+        TooManyRequests: {
+            headers: {
+                "Retry-After"?: number;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+    };
+    parameters: {
+        BookId: string;
+        PersonId: string;
+        SessionId: string;
+        HlsProfile: components["schemas"]["HlsProfile"];
+        RequestId: string;
+        UserId: string;
+        GroupId: string;
+        BookmarkId: string;
+        CollectionId: string;
+        /** @description Opaque pagination cursor from `next_cursor` */
+        Cursor: string;
+        Limit: number;
+    };
+    requestBodies: never;
+    headers: never;
+    pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-  getHealth: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Server is up */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Health"];
-        };
-      };
-    };
-  };
-  getInstance: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Instance info */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Instance"];
-        };
-      };
-    };
-  };
-  signup: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SignupRequest"];
-      };
-    };
-    responses: {
-      /** @description Request received; an admin must approve it */
-      202: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SignupAccepted"];
-        };
-      };
-      400: components["responses"]["BadRequest"];
-      403: components["responses"]["Forbidden"];
-      409: components["responses"]["Conflict"];
-      429: components["responses"]["TooManyRequests"];
-    };
-  };
-  login: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["LoginRequest"];
-      };
-    };
-    responses: {
-      /** @description Logged in, or second factor needed */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["LoginResponse"];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-      429: components["responses"]["TooManyRequests"];
-    };
-  };
-  verifyTotp: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["TotpVerifyRequest"];
-      };
-    };
-    responses: {
-      /** @description Logged in */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["LoginResponse"];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      429: components["responses"]["TooManyRequests"];
-    };
-  };
-  enrollTotp: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Enrollment started; confirm with a code to activate */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["TotpEnrollment"];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      409: components["responses"]["Conflict"];
-    };
-  };
-  confirmTotp: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["TotpConfirmRequest"];
-      };
-    };
-    responses: {
-      /** @description TOTP active */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RecoveryCodes"];
-        };
-      };
-      400: components["responses"]["BadRequest"];
-      401: components["responses"]["Unauthorized"];
-    };
-  };
-  refreshTokens: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: {
-      content: {
-        "application/json": components["schemas"]["RefreshRequest"];
-      };
-    };
-    responses: {
-      /** @description New tokens */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["TokenPair"];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-    };
-  };
-  logout: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Logged out */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      401: components["responses"]["Unauthorized"];
-    };
-  };
-  getMe: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Current user */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Me"];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-    };
-  };
-  listMySessions: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Sessions */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Session"][];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-    };
-  };
-  revokeMySession: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        sessionId: components["parameters"]["SessionId"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Revoked */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      401: components["responses"]["Unauthorized"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  listLibrary: {
-    parameters: {
-      query?: {
-        shelf?: "all" | "in_progress" | "not_started" | "finished" | "archived" | "recently_removed";
-        series?: string;
-        author?: string;
-        narrator?: string;
-        /** @description Genre or custom book tag id */
-        tag?: string;
-        collection?: string;
-        /** @description Full-text search over title/author/narrator/series */
-        q?: string;
-        sort?: "recent_added" | "recent_played" | "title" | "author" | "series" | "duration";
-        /** @description Opaque pagination cursor from `next_cursor` */
-        cursor?: components["parameters"]["Cursor"];
-        limit?: components["parameters"]["Limit"];
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description A page of books */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["LibraryPage"];
-        };
-      };
-      400: components["responses"]["BadRequest"];
-      401: components["responses"]["Unauthorized"];
-    };
-  };
-  getBook: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        bookId: components["parameters"]["BookId"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Book */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["BookDetail"];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  removeFromMyLibrary: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        bookId: components["parameters"]["BookId"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Removed from my library */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      401: components["responses"]["Unauthorized"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  restoreToMyLibrary: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        bookId: components["parameters"]["BookId"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Restored */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      401: components["responses"]["Unauthorized"];
-      404: components["responses"]["NotFound"];
-      410: components["responses"]["Gone"];
-    };
-  };
-  hideInMyLibrary: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        bookId: components["parameters"]["BookId"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Archived */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      401: components["responses"]["Unauthorized"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  getAuthor: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        personId: components["parameters"]["PersonId"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Author */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PersonPage"];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  getNarrator: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        personId: components["parameters"]["PersonId"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Narrator */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PersonPage"];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  getSeries: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        seriesId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Series */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SeriesPage"];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  getProgress: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        bookId: components["parameters"]["BookId"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Progress */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Progress"];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  putProgress: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        bookId: components["parameters"]["BookId"];
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ProgressUpdate"];
-      };
-    };
-    responses: {
-      /** @description Stored (or ignored as older than the stored record — see `applied`) */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ProgressWriteResult"];
-        };
-      };
-      400: components["responses"]["BadRequest"];
-      401: components["responses"]["Unauthorized"];
-      404: components["responses"]["NotFound"];
-      /** @description Position conflict between devices; the user must choose */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ProgressConflict"];
-        };
-      };
-    };
-  };
-  getSyncDelta: {
-    parameters: {
-      query?: {
-        /** @description Opaque cursor from a previous response */
-        since?: string;
-        limit?: components["parameters"]["Limit"];
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Delta */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SyncDelta"];
-        };
-      };
-      400: components["responses"]["BadRequest"];
-      401: components["responses"]["Unauthorized"];
-      /** @description Cursor too old (change log pruned); do a full sync without `since` */
-      410: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Error"];
-        };
-      };
-    };
-  };
-  getBookFile: {
-    parameters: {
-      query?: {
-        /** @description Set for bulk downloads (offline copies). Unset = live playback, which gets a guaranteed share of bandwidth (bitrate × 1.5) before downloads are served. */
-        download?: boolean;
-      };
-      header?: {
-        Range?: string;
-      };
-      path: {
-        bookId: components["parameters"]["BookId"];
-        fileId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Whole file */
-      200: {
-        headers: {
-          "Accept-Ranges"?: "bytes";
-          [name: string]: unknown;
-        };
-        content: {
-          "audio/*": string;
-        };
-      };
-      /** @description Partial content */
-      206: {
-        headers: {
-          "Content-Range"?: string;
-          [name: string]: unknown;
-        };
-        content: {
-          "audio/*": string;
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      404: components["responses"]["NotFound"];
-      /** @description Range not satisfiable */
-      416: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  getHlsPlaylist: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        bookId: components["parameters"]["BookId"];
-        profile: components["parameters"]["HlsProfile"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description HLS media playlist */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/vnd.apple.mpegurl": string;
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  getHlsSegment: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        bookId: components["parameters"]["BookId"];
-        profile: components["parameters"]["HlsProfile"];
-        segment: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Segment */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/octet-stream": string;
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  createStreamUrl: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        bookId: components["parameters"]["BookId"];
-      };
-      cookie?: never;
-    };
-    requestBody?: {
-      content: {
-        "application/json": components["schemas"]["StreamUrlRequest"];
-      };
-    };
-    responses: {
-      /** @description Signed URLs */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["StreamUrls"];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  getBookCover: {
-    parameters: {
-      query?: {
-        size?: 128 | 256 | 512 | 1024;
-      };
-      header?: never;
-      path: {
-        bookId: components["parameters"]["BookId"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description JPEG cover */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "image/jpeg": string;
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  getSetupStatus: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Status */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SetupStatus"];
-        };
-      };
-    };
-  };
-  testSetupDatabase: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SetupDatabase"];
-      };
-    };
-    responses: {
-      /** @description Result */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SetupCheckResult"];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      409: components["responses"]["Conflict"];
-    };
-  };
-  testSetupLibrary: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SetupLibrary"];
-      };
-    };
-    responses: {
-      /** @description Result */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["LibraryCheck"];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      409: components["responses"]["Conflict"];
-    };
-  };
-  testSetupSmtp: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SmtpTestRequest"];
-      };
-    };
-    responses: {
-      /** @description Result */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SetupCheckResult"];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      409: components["responses"]["Conflict"];
-    };
-  };
-  createSetupTotp: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": {
-          username: string;
-        };
-      };
-    };
-    responses: {
-      /** @description Secret to show as a QR code */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["TotpEnrollment"];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      409: components["responses"]["Conflict"];
-    };
-  };
-  completeSetup: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SetupRequest"];
-      };
-    };
-    responses: {
-      /** @description Instance is set up; sign in as the admin */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SetupResult"];
-        };
-      };
-      400: components["responses"]["BadRequest"];
-      401: components["responses"]["Unauthorized"];
-      409: components["responses"]["Conflict"];
-    };
-  };
-  listSignupRequests: {
-    parameters: {
-      query?: {
-        status?: "pending" | "approved" | "denied";
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Requests, oldest first */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SignupRequestItem"][];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-    };
-  };
-  approveSignupRequest: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        requestId: components["parameters"]["RequestId"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Approved */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  denySignupRequest: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        requestId: components["parameters"]["RequestId"];
-      };
-      cookie?: never;
-    };
-    requestBody?: {
-      content: {
-        "application/json": components["schemas"]["ReasonRequest"];
-      };
-    };
-    responses: {
-      /** @description Denied */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  listUsers: {
-    parameters: {
-      query?: {
-        status?: components["schemas"]["UserStatus"];
-        limit?: components["parameters"]["Limit"];
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Users */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["AdminUser"][];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-    };
-  };
-  patchUser: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        userId: components["parameters"]["UserId"];
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["AdminUserPatch"];
-      };
-    };
-    responses: {
-      /** @description Updated user */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["AdminUser"];
-        };
-      };
-      400: components["responses"]["BadRequest"];
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  listGroups: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Groups */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Group"][];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-    };
-  };
-  createGroup: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["GroupCreate"];
-      };
-    };
-    responses: {
-      /** @description Created */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Group"];
-        };
-      };
-      400: components["responses"]["BadRequest"];
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-      409: components["responses"]["Conflict"];
-    };
-  };
-  deleteGroup: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        groupId: components["parameters"]["GroupId"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Deleted */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  addGroupMember: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        groupId: components["parameters"]["GroupId"];
-        userId: components["parameters"]["UserId"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Added */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  removeGroupMember: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        groupId: components["parameters"]["GroupId"];
-        userId: components["parameters"]["UserId"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Removed */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  adminRevokeSession: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        sessionId: components["parameters"]["SessionId"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Revoked */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  listMyUploads: {
-    parameters: {
-      query?: {
-        limit?: components["parameters"]["Limit"];
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Uploads, newest first */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["UploadItem"][];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-    };
-  };
-  getJob: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        jobId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Job */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["JobStatus"];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  listMasterBooks: {
-    parameters: {
-      query?: {
-        status?: components["schemas"]["BookStatus"];
-        /** @description Title search */
-        q?: string;
-        /** @description Opaque pagination cursor from `next_cursor` */
-        cursor?: components["parameters"]["Cursor"];
-        limit?: components["parameters"]["Limit"];
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description A page of books */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["MasterBookPage"];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-    };
-  };
-  getMasterBook: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        bookId: components["parameters"]["BookId"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Book */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["MasterBook"];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  trashBook: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        bookId: components["parameters"]["BookId"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Trashed */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  restoreBook: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        bookId: components["parameters"]["BookId"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Restored */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-      404: components["responses"]["NotFound"];
-      409: components["responses"]["Conflict"];
-    };
-  };
-  purgeBook: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        bookId: components["parameters"]["BookId"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Purged */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-      404: components["responses"]["NotFound"];
-      409: components["responses"]["Conflict"];
-    };
-  };
-  emptyTrash: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["EmptyTrashRequest"];
-      };
-    };
-    responses: {
-      /** @description Purged */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            purged: number;
-          };
-        };
-      };
-      400: components["responses"]["BadRequest"];
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-    };
-  };
-  createDistribution: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["DistributionCreate"];
-      };
-    };
-    responses: {
-      /** @description Distributed */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Distribution"];
-        };
-      };
-      400: components["responses"]["BadRequest"];
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  revokeDistribution: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        distributionId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Revoked */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  scanLibrary: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Scan queued */
-      202: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            /** Format: uuid */
-            job_id: string;
-          };
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-    };
-  };
-  listBookmarks: {
-    parameters: {
-      query?: {
-        book_id?: string;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Bookmarks, by book then position */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Bookmark"][];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-    };
-  };
-  createBookmark: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["BookmarkCreate"];
-      };
-    };
-    responses: {
-      /** @description Created (or the existing bookmark with that id) */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Bookmark"];
-        };
-      };
-      400: components["responses"]["BadRequest"];
-      401: components["responses"]["Unauthorized"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  deleteBookmark: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        bookmarkId: components["parameters"]["BookmarkId"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Deleted */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      401: components["responses"]["Unauthorized"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  updateBookmark: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        bookmarkId: components["parameters"]["BookmarkId"];
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["BookmarkPatch"];
-      };
-    };
-    responses: {
-      /** @description The bookmark after the write (unchanged if the edit was older) */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Bookmark"];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  listCollections: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Collections */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Collection"][];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-    };
-  };
-  createCollection: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["CollectionCreate"];
-      };
-    };
-    responses: {
-      /** @description Created (or the existing collection with that id) */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Collection"];
-        };
-      };
-      400: components["responses"]["BadRequest"];
-      401: components["responses"]["Unauthorized"];
-    };
-  };
-  deleteCollection: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        collectionId: components["parameters"]["CollectionId"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Deleted */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      401: components["responses"]["Unauthorized"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  updateCollection: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        collectionId: components["parameters"]["CollectionId"];
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["CollectionPatch"];
-      };
-    };
-    responses: {
-      /** @description The collection after the write */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Collection"];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  addToCollection: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        collectionId: components["parameters"]["CollectionId"];
-        bookId: components["parameters"]["BookId"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Added */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      401: components["responses"]["Unauthorized"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  removeFromCollection: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        collectionId: components["parameters"]["CollectionId"];
-        bookId: components["parameters"]["BookId"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Removed */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      401: components["responses"]["Unauthorized"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  registerPush: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["PushRegistration"];
-      };
-    };
-    responses: {
-      /** @description Registered */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PushSubscription"];
-        };
-      };
-      400: components["responses"]["BadRequest"];
-      401: components["responses"]["Unauthorized"];
-    };
-  };
-  unregisterPush: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        deviceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Unregistered */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      401: components["responses"]["Unauthorized"];
-      404: components["responses"]["NotFound"];
-    };
-  };
-  getBackups: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Backup status */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["BackupStatus"];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-    };
-  };
-  runBackup: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Backup queued */
-      202: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["JobRef"];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-    };
-  };
-  runIntegrityCheck: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Scrub queued */
-      202: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["JobRef"];
-        };
-      };
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-    };
-  };
+    getHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Server is up */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Health"];
+                };
+            };
+        };
+    };
+    getInstance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Instance info */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Instance"];
+                };
+            };
+        };
+    };
+    signup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignupRequest"];
+            };
+        };
+        responses: {
+            /** @description Request received; an admin must approve it */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignupAccepted"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Logged in, or second factor needed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    verifyTotp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TotpVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Logged in */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    enrollTotp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Enrollment started; confirm with a code to activate */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TotpEnrollment"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    confirmTotp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TotpConfirmRequest"];
+            };
+        };
+        responses: {
+            /** @description TOTP active */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecoveryCodes"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    refreshTokens: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RefreshRequest"];
+            };
+        };
+        responses: {
+            /** @description New tokens */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenPair"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Logged out */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    getMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listMySessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sessions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Session"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    revokeMySession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listLibrary: {
+        parameters: {
+            query?: {
+                shelf?: "all" | "in_progress" | "not_started" | "finished" | "archived" | "recently_removed";
+                series?: string;
+                author?: string;
+                narrator?: string;
+                /** @description Genre or custom book tag id */
+                tag?: string;
+                collection?: string;
+                /** @description Full-text search over title/author/narrator/series */
+                q?: string;
+                sort?: "recent_added" | "recent_played" | "title" | "author" | "series" | "duration";
+                /** @description Opaque pagination cursor from `next_cursor` */
+                cursor?: components["parameters"]["Cursor"];
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of books */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    getBook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Book */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookDetail"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    removeFromMyLibrary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed from my library */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    restoreToMyLibrary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Restored */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            410: components["responses"]["Gone"];
+        };
+    };
+    hideInMyLibrary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Archived */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getAuthor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                personId: components["parameters"]["PersonId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Author */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getNarrator: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                personId: components["parameters"]["PersonId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Narrator */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getSeries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                seriesId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Series */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeriesPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Progress */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Progress"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    putProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgressUpdate"];
+            };
+        };
+        responses: {
+            /** @description Stored (or ignored as older than the stored record — see `applied`) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressWriteResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            /** @description Position conflict between devices; the user must choose */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressConflict"];
+                };
+            };
+        };
+    };
+    getSyncDelta: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor from a previous response */
+                since?: string;
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Delta */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncDelta"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Cursor too old (change log pruned); do a full sync without `since` */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getBookFile: {
+        parameters: {
+            query?: {
+                /** @description Set for bulk downloads (offline copies). Unset = live playback, which gets a guaranteed share of bandwidth (bitrate × 1.5) before downloads are served. */
+                download?: boolean;
+            };
+            header?: {
+                Range?: string;
+            };
+            path: {
+                bookId: components["parameters"]["BookId"];
+                fileId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Whole file */
+            200: {
+                headers: {
+                    "Accept-Ranges"?: "bytes";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "audio/*": string;
+                };
+            };
+            /** @description Partial content */
+            206: {
+                headers: {
+                    "Content-Range"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "audio/*": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            /** @description Range not satisfiable */
+            416: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getHlsPlaylist: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+                profile: components["parameters"]["HlsProfile"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description HLS media playlist */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.apple.mpegurl": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getHlsSegment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+                profile: components["parameters"]["HlsProfile"];
+                segment: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Segment */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createStreamUrl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["StreamUrlRequest"];
+            };
+        };
+        responses: {
+            /** @description Signed URLs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StreamUrls"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getBookCover: {
+        parameters: {
+            query?: {
+                size?: 128 | 256 | 512 | 1024;
+            };
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description JPEG cover */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getSetupStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetupStatus"];
+                };
+            };
+        };
+    };
+    testSetupDatabase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetupDatabase"];
+            };
+        };
+        responses: {
+            /** @description Result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetupCheckResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    testSetupLibrary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetupLibrary"];
+            };
+        };
+        responses: {
+            /** @description Result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryCheck"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    testSetupSmtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SmtpTestRequest"];
+            };
+        };
+        responses: {
+            /** @description Result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetupCheckResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    createSetupTotp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    username: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Secret to show as a QR code */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TotpEnrollment"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    completeSetup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetupRequest"];
+            };
+        };
+        responses: {
+            /** @description Instance is set up; sign in as the admin */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetupResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listSignupRequests: {
+        parameters: {
+            query?: {
+                status?: "pending" | "approved" | "denied";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Requests, oldest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignupRequestItem"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    approveSignupRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: components["parameters"]["RequestId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Approved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    denySignupRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: components["parameters"]["RequestId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description Denied */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listUsers: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["UserStatus"];
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Users */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUser"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    patchUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: components["parameters"]["UserId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminUserPatch"];
+            };
+        };
+        responses: {
+            /** @description Updated user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUser"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listGroups: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Groups */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Group"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GroupCreate"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Group"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    deleteGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: components["parameters"]["GroupId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    addGroupMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: components["parameters"]["GroupId"];
+                userId: components["parameters"]["UserId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Added */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    removeGroupMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: components["parameters"]["GroupId"];
+                userId: components["parameters"]["UserId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    adminRevokeSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listMyUploads: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Uploads, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadItem"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    getJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobStatus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listMasterBooks: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["BookStatus"];
+                /** @description Title search */
+                q?: string;
+                /** @description Opaque pagination cursor from `next_cursor` */
+                cursor?: components["parameters"]["Cursor"];
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of books */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MasterBookPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getMasterBook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Book */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MasterBook"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    trashBook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Trashed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    restoreBook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Restored */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    purgeBook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Purged */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    emptyTrash: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmptyTrashRequest"];
+            };
+        };
+        responses: {
+            /** @description Purged */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        purged: number;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createDistribution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DistributionCreate"];
+            };
+        };
+        responses: {
+            /** @description Distributed */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Distribution"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    revokeDistribution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                distributionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    scanLibrary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Scan queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        job_id: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listBookmarks: {
+        parameters: {
+            query?: {
+                book_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bookmarks, by book then position */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Bookmark"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createBookmark: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookmarkCreate"];
+            };
+        };
+        responses: {
+            /** @description Created (or the existing bookmark with that id) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Bookmark"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteBookmark: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookmarkId: components["parameters"]["BookmarkId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateBookmark: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookmarkId: components["parameters"]["BookmarkId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookmarkPatch"];
+            };
+        };
+        responses: {
+            /** @description The bookmark after the write (unchanged if the edit was older) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Bookmark"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listCollections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Collections */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Collection"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectionCreate"];
+            };
+        };
+        responses: {
+            /** @description Created (or the existing collection with that id) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Collection"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    deleteCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collectionId: components["parameters"]["CollectionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collectionId: components["parameters"]["CollectionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectionPatch"];
+            };
+        };
+        responses: {
+            /** @description The collection after the write */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Collection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    addToCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collectionId: components["parameters"]["CollectionId"];
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Added */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    removeFromCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collectionId: components["parameters"]["CollectionId"];
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    registerPush: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PushRegistration"];
+            };
+        };
+        responses: {
+            /** @description Registered */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PushSubscription"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    unregisterPush: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Unregistered */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getBackups: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Backup status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupStatus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    runBackup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Backup queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRef"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    runIntegrityCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Scrub queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRef"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
 }
