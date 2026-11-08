@@ -40,12 +40,12 @@ cp deploy/.env.example deploy/.env
 Edit `deploy/.env` (at least `SIMPLEAPB_LIBRARY` and `NTFY_PUBLIC_URL`), then:
 
 ```bash
-docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d
+docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build
 ```
 
 ```bash
 docker compose -f deploy/docker-compose.yml logs simpleapb | grep setup_token
 ```
 
-Then follow `docs/SETUP-API.md` for the wizard and admin login. The API reference is
+`--build` builds the server image from this repository (release images on GHCR come with Phase 6). Then follow `docs/SETUP-API.md` for the wizard and admin login. The API reference is
 `docs/API.md`; uploads use any tus client (e.g. `tusc`, or tus-js-client) against `/api/v1/uploads/`.

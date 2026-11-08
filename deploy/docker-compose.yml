@@ -18,6 +18,11 @@ name: simpleapb
 services:
   simpleapb:
     image: ghcr.io/quip1/simple-apb-server:${SIMPLEAPB_VERSION:-latest}
+    # Until release images are published (Phase 6), build from this repo:
+    #   docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
     restart: unless-stopped
     stop_grace_period: 30s
     environment:
