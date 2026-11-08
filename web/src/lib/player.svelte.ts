@@ -571,7 +571,13 @@ function mediaSessionMetadata(): void {
     title: book.title,
     artist: book.authors.map((a) => a.name).join(", "),
     album: book.series?.name ?? "",
-    artwork: !book.has_cover ? [] : [256, 512, 1024].map((s) => ({ src: `${cover}?size=${s}`, sizes: `${s}x${s}`, type: "image/jpeg" })),
+    artwork: !book.has_cover
+      ? []
+      : [256, 512, 1024].map((s) => ({
+          src: `${cover}${cover.includes("?") ? "&" : "?"}size=${s}`,
+          sizes: `${s}x${s}`,
+          type: "image/jpeg",
+        })),
   });
   const ms = navigator.mediaSession;
   const set = (action: MediaSessionAction, fn: MediaSessionActionHandler) => {

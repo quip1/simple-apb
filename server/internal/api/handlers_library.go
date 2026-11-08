@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -47,7 +48,11 @@ func limitOf(l *int, def int) int {
 	return min(*l, 200)
 }
 
-func coverURL(id string) string { return "/api/" + version.APIVersion + "/books/" + id + "/cover" }
+// coverURL carries the book's change time, so a new cover isn't hidden by
+// the browser cache (covers are cached for a day).
+func coverURL(b *store.Book) string {
+	return "/api/" + version.APIVersion + "/books/" + b.ID + "/cover?v=" + strconv.FormatInt(b.UpdatedAt, 36)
+}
 
 func personRefs(ns []store.Named) []PersonRef {
 	out := make([]PersonRef, 0, len(ns))
@@ -100,7 +105,7 @@ func (s *Server) summaries(ctx context.Context, items []*store.LibraryItem) ([]B
 		added := msTime(it.AddedAt)
 		out = append(out, BookSummary{
 			Id: mustUUID(b.ID), Title: b.Title, Subtitle: strPtr(b.Subtitle), Authors: personRefs(authors[b.ID]),
-			Narrators: personRefs(narrators[b.ID]), Series: seriesRef(b), DurationMs: b.DurationMS, CoverUrl: coverURL(b.ID), HasCover: b.CoverPath != "",
+			Narrators: personRefs(narrators[b.ID]), Series: seriesRef(b), DurationMs: b.DurationMS, CoverUrl: coverURL(b), HasCover: b.CoverPath != "",
 			Source: LibrarySource(it.Source), Progress: progressOut(b.ID, it), AddedAt: &added, Hidden: &hidden,
 			RemovedAt: msTimePtr(it.RemovedAt), UpdatedAt: msTime(b.UpdatedAt),
 		})
@@ -202,6 +207,9 @@ func (s *Server) GetBook(ctx context.Context, req GetBookRequestObject) (GetBook
 	}
 	mine := b.UploaderID == p.User.ID
 	d.UploadedByMe = &mine
+	if err := s.bookEditState(ctx, p, b, &d); err != nil {
+		return nil, err
+	}
 	if b.PublishedYear > 0 {
 		y := int(b.PublishedYear)
 		d.PublishedYear = &y

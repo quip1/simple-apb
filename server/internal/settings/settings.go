@@ -17,8 +17,9 @@ import (
 const (
 	KeyInstance    = "instance"
 	KeyLibrary     = "library"
-	KeySMTP        = "smtp" // secret
-	KeyNtfy        = "ntfy" // secret
+	KeySMTP        = "smtp"     // secret
+	KeyNtfy        = "ntfy"     // secret
+	KeyMetadata    = "metadata" // secret (Google Books API key)
 	KeyBandwidth   = "bandwidth"
 	KeyAuth        = "auth"
 	KeyPermissions = "permission_defaults"
@@ -73,6 +74,16 @@ type Quotas struct {
 	DefaultQuotaBytes int64 `json:"default_quota_bytes"` // 0 = unlimited
 }
 
+// Metadata providers (brief §6.12). Threshold is the score (0–1) a match
+// needs to be applied automatically; below it the book needs review.
+type Metadata struct {
+	OpenLibrary  bool    `json:"open_library"`
+	GoogleBooks  bool    `json:"google_books"`
+	GoogleAPIKey string  `json:"google_api_key"`
+	Audnexus     bool    `json:"audnexus"`
+	Threshold    float64 `json:"threshold"`
+}
+
 // Auth settings.
 type Auth struct {
 	RequireTOTPAll bool `json:"require_totp_all"`
@@ -82,6 +93,11 @@ type Auth struct {
 func DefaultInstance() Instance   { return Instance{Name: "Simple APB", SignupOpen: true} }
 func DefaultLibrary() Library     { return Library{Path: "/library"} }
 func DefaultBandwidth() Bandwidth { return Bandwidth{EgressMbps: 80, HLSCacheGB: 10} }
+
+// DefaultMetadata turns every provider on (brief §6.12).
+func DefaultMetadata() Metadata {
+	return Metadata{OpenLibrary: true, GoogleBooks: true, Audnexus: true, Threshold: 0.8}
+}
 
 // Store loads and saves settings.
 type Store struct {
@@ -127,6 +143,12 @@ func (s Store) Bandwidth(ctx context.Context) (Bandwidth, error) {
 	return v, s.get(ctx, KeyBandwidth, &v)
 }
 
+// Metadata returns metadata provider settings.
+func (s Store) Metadata(ctx context.Context) (Metadata, error) {
+	v := DefaultMetadata()
+	return v, s.get(ctx, KeyMetadata, &v)
+}
+
 // Auth returns auth settings.
 func (s Store) Auth(ctx context.Context) (Auth, error) {
 	var v Auth
@@ -164,6 +186,6 @@ func (s Store) SetupCompleted(ctx context.Context) (bool, error) {
 
 // Set stores a group. Secret groups are encrypted.
 func (s Store) Set(ctx context.Context, key string, value any) error {
-	secret := key == KeySMTP || key == KeyNtfy
+	secret := key == KeySMTP || key == KeyNtfy || key == KeyMetadata
 	return store.SetSetting(ctx, s.Q, s.Enc, key, value, secret)
 }

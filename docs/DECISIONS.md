@@ -575,8 +575,8 @@ quota (brief §6.11). The copyright contact (Q10) is shown in the app footer whe
 them as formulas.
 
 **Not yet:** duplicates (with the book tools), book tools
-(Phase 5), updates and crash reports (Phase 6), OIDC and metadata-provider settings (Phase 6 and
-the metadata milestone).
+(Phase 5), updates and crash reports (Phase 6), OIDC settings (Phase 6). Metadata-provider
+settings arrived with ADR-0035.
 
 ## ADR-0033 — Password reset links without a table
 
@@ -629,6 +629,53 @@ apps can add them when they need them).
 
 **Warnings.** The sign-in response already carries an admin's notice once; the web app now shows
 it in a dialog after signing in.
+
+## ADR-0035 — The metadata pipeline
+
+**Order (brief §6.12).** Embedded tags are read at import (ADR-0015). Every newly imported book,
+scanned or uploaded, then gets a `metadata_match` job. The job asks the enabled providers in order:
+Audnexus (ASIN only), Google Books, Open Library. It never touches a field that already has a value
+or is locked. A hand edit (`PATCH /books/{id}`) saves the fields and adds them to
+`books.locked_fields`, so no later match can change them; `unlock` releases them. Admins can edit any
+book, uploaders with `can_edit_metadata` only their own (`authz.EditBookMetadata`).
+
+**Matching and confidence.** A shared ASIN or ISBN (ISBN-10 is converted to ISBN-13 and the check
+digit is verified) scores 1. Otherwise the title counts 70 % and the best author 30 %. Both are
+normalized first (case, accents, punctuation, a leading article, bracketed notes and words like
+"unabridged") and compared with an edit-distance ratio or word overlap, whichever is higher, so
+"Lindqvist, Mara" matches "Mara Lindqvist". With no author known, the title alone can score at most
+0.85. Candidates at or above the threshold (default 0.8, adjustable from 0.5 to 1) are applied,
+best first, filling only the fields that are still empty. Below the threshold nothing is applied:
+the book gets "needs review" and appears in the Metadata tab of the moderation inbox. Any hand
+edit, or "Keep as is", clears the flag. A no-match also counts as needs review, because an admin
+should look at a book nobody could identify.
+
+**What each provider contributes.** An Open Library search result describes a whole work, so its
+ISBN and publisher lists mix every edition. They are used only when the search was by ISBN; a
+title search gives the title, authors, first publication year, language, subjects (as genres) and
+cover. Google Books gives publisher, date, description, ISBN and categories. Audnexus gives
+narrators, series and position, genres and the summary (HTML is converted to plain text).
+
+**Network behaviour.** Requests carry a `SimpleAPB/<version>` User-Agent. Each provider has its own
+process-wide spacing (Audnexus about one request a second, as its maintainers ask). HTTP 429/503
+counts as rate limited. A run fails, and the job retries with backoff, only when every provider it
+actually asked failed; a provider with nothing to look up (Audnexus without an ASIN) doesn't count.
+So an offline instance or Google's keyless quota (which runs out quickly on shared networks)
+doesn't break matching. Admins can add a Google Books API key; it is stored encrypted and never
+shown again.
+
+**Covers.** A provider cover is used only for a book with no cover. It is downloaded only from
+known provider image hosts over HTTPS, including Open Library's redirect to archive.org storage,
+so a cover URL can't make the server fetch arbitrary or internal addresses. It must be at most
+10 MB and a real JPEG or PNG between 32 and 6000 px; PNG is converted to JPEG. It is written
+crash-safely as `cover.jpg` in the book folder (an existing `cover.jpg` the book doesn't use is
+never overwritten), or to the cache if the library is read-only. `cover_url` now carries
+`?v=<change time>`, so browsers fetch a new cover at once despite the one-day cache. Clients add
+`size` with `&`.
+
+**Not done.** No `metadata.json` sidecar is written yet (brief §6.4 calls it optional); hand edits
+live in the database and survive re-scans, because a re-scan only replaces files and chapters.
+Moving a book folder after its title or author changes is left to the book tools (Phase 5).
 
 ---
 

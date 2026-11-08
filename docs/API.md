@@ -2,7 +2,7 @@
 
 > **Generated** from `server/openapi.yaml` by `web/scripts/gen-api-docs.mjs`. Do not edit by hand.
 
-Version **0.10.0** · base path `/api/v1`
+Version **0.11.0** · base path `/api/v1`
 
 REST API for Simple APB. All endpoints live under `/api/v1`.
 
@@ -60,12 +60,16 @@ REST API for Simple APB. All endpoints live under `/api/v1`.
 | GET | `/library` | My library (own uploads ∪ distributions, minus removed/hidden/filtered/taken down) | yes | 200, 400, 401 |
 | GET | `/library/facets` | Series, authors, narrators or tags in my library, with book counts | yes | 200, 400, 401 |
 | GET | `/books/{bookId}` | Book detail (files, chapters, my progress) | yes | 200, 401, 404 |
+| PATCH | `/books/{bookId}` | Edit a book's metadata (edited fields are locked; brief §6.12) | yes | 200, 400, 401, 403, 404 |
 | DELETE | `/me/library/{bookId}` | Remove a book from my view (restorable for 30 days; master copy is kept) | yes | 204, 401, 404 |
 | POST | `/me/library/{bookId}/restore` | Restore a book from "Recently removed", or un-archive it | yes | 204, 401, 404, 410 |
 | POST | `/me/library/{bookId}/hide` | Archive (hide) a book in my library | yes | 204, 401, 404 |
 | GET | `/authors/{personId}` | Author page (books visible to me) | yes | 200, 401, 404 |
 | GET | `/narrators/{personId}` | Narrator page (books visible to me) | yes | 200, 401, 404 |
 | GET | `/series/{seriesId}` | Series page (books in order, visible to me) | yes | 200, 401, 404 |
+| PUT | `/books/{bookId}/cover` | Use a cover image from a metadata provider (same permission as editing) | yes | 204, 400, 401, 403, 404, 502 |
+| GET | `/books/{bookId}/metadata/candidates` | Look a book up with the metadata providers, best match first (editors only) | yes | 200, 401, 403, 404, 502 |
+| POST | `/books/{bookId}/metadata/refresh` | Run the metadata pipeline for a book again (editors only) | yes | 202, 401, 403, 404 |
 
 ### progress
 
@@ -190,6 +194,8 @@ REST API for Simple APB. All endpoints live under `/api/v1`.
 | POST | `/admin/reports/{reportId}/resolve` | Close a report, and every other open report about the same thing | yes | 204, 400, 401, 403, 404, 409 |
 | POST | `/admin/reviews/{reviewId}/hide` | Hide a review from everyone but its author (a reason is required) | yes | 204, 400, 401, 403, 404 |
 | DELETE | `/admin/reviews/{reviewId}/hide` | Show a hidden review again | yes | 204, 401, 403, 404 |
+| GET | `/admin/metadata-review` | Books whose online match was too uncertain to apply ("needs review"), oldest first | yes | 200, 400, 401, 403 |
+| POST | `/admin/metadata-review/{bookId}/dismiss` | Keep a book's metadata as it is and clear "needs review" | yes | 204, 401, 403, 404 |
 
 ## Schemas
 
@@ -526,6 +532,9 @@ Enum: `own_upload`, `distribution`, `recommendation`
 | `size_bytes` | integer (int64) | yes |  |
 | `has_epub` | boolean | yes |  |
 | `uploaded_by_me` | boolean |  | You uploaded it (you may share it, given the permission) |
+| `can_edit` | boolean |  | You may edit its metadata (admin, or your upload with can_edit_metadata) |
+| `locked_fields` | array of `MetadataField` |  | Hand-edited fields (editors only) |
+| `needs_review` | boolean |  | The online match was uncertain (editors only) |
 | `tags` | array of `TagRef` | yes |  |
 | `files` | array of `BookFile` | yes |  |
 | `chapters` | array of `Chapter` | yes |  |
@@ -1098,6 +1107,7 @@ Explicit values; a missing key means "not overridden"
 | `permission_defaults` | `EffectivePermissions` | yes |  |
 | `smtp` | `SmtpSettingsView` | yes |  |
 | `ntfy` | `NtfySettingsView` | yes |  |
+| `metadata` | `MetadataSettingsView` | yes |  |
 
 ### AdminSettingsPatch
 
@@ -1110,6 +1120,7 @@ Explicit values; a missing key means "not overridden"
 | `permission_defaults` | `PermissionOverridesInput` |  |  |
 | `smtp` | `SmtpSettingsPatch` |  |  |
 | `ntfy` | `NtfySettingsPatch` |  |  |
+| `metadata` | `MetadataSettingsPatch` |  |  |
 
 ### DashboardEgress
 
@@ -1125,6 +1136,7 @@ Explicit values; a missing key means "not overridden"
 | `signup_requests` | integer | yes |  |
 | `review_queue` | integer | yes |  |
 | `reports` | integer | yes |  |
+| `metadata_review` | integer | yes |  |
 
 ### InstanceSettings
 
@@ -1569,4 +1581,96 @@ Enum: `copyright`, `inappropriate`, `spam`, `harassment`, `wrong_metadata`, `oth
 |---|---|---|---|
 | `action` | string: dismiss \| hide_review \| takedown \| resolved | yes |  |
 | `note` | string | yes |  |
+
+### MetadataField
+
+Enum: `title`, `subtitle`, `description`, `publisher`, `published_year`, `language`, `isbn`, `asin`, `authors`, `narrators`, `series`, `genres`
+
+### SeriesInput
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `name` | string | yes | Empty removes the book from its series |
+| `index` | string |  |  |
+
+### BookMetadataPatch
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `title` | string |  |  |
+| `subtitle` | string |  |  |
+| `description` | string |  |  |
+| `publisher` | string |  |  |
+| `published_year` | integer |  | 0 clears it |
+| `language` | string |  |  |
+| `isbn` | string |  |  |
+| `asin` | string |  |  |
+| `authors` | array of string |  |  |
+| `narrators` | array of string |  |  |
+| `series` | `SeriesInput` |  |  |
+| `genres` | array of string |  |  |
+| `unlock` | array of `MetadataField` |  |  |
+
+### MetadataCandidate
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `provider` | string: openlibrary \| googlebooks \| audnexus | yes |  |
+| `score` | number | yes | Match confidence 0–1 |
+| `title` | string | yes |  |
+| `subtitle` | string |  |  |
+| `authors` | array of string | yes |  |
+| `narrators` | array of string | yes |  |
+| `series` | string |  |  |
+| `series_index` | string |  |  |
+| `published_year` | integer |  |  |
+| `publisher` | string |  |  |
+| `description` | string |  |  |
+| `language` | string |  |  |
+| `isbn` | string |  |  |
+| `asin` | string |  |  |
+| `genres` | array of string | yes |  |
+| `cover_url` | string |  |  |
+
+### CoverFromUrl
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `url` | string | yes |  |
+
+### MetadataReviewItem
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `book` | `BookRef` | yes |  |
+| `authors` | array of string | yes |  |
+| `score` | number |  |  |
+| `created_at` | string (date-time) | yes |  |
+
+### MetadataReviewPage
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `items` | array of `MetadataReviewItem` | yes |  |
+| `next_cursor` | string |  |  |
+
+### MetadataSettingsView
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `open_library` | boolean | yes |  |
+| `google_books` | boolean | yes |  |
+| `google_books_key_set` | boolean | yes |  |
+| `audnexus` | boolean | yes |  |
+| `threshold` | number | yes | Score a match needs to be applied automatically (0.5–1) |
+
+### MetadataSettingsPatch
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `open_library` | boolean |  |  |
+| `google_books` | boolean |  |  |
+| `google_books_key` | string |  | Write-only; empty clears it |
+| `audnexus` | boolean |  |  |
+| `threshold` | number |  |  |
 

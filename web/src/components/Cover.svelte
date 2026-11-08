@@ -11,6 +11,8 @@
 
   let failed = $state(false);
   const double = $derived(size >= 1024 ? 1024 : size * 2);
+  // cover_url may already carry a query (a cache-busting version).
+  const join = $derived(src.includes("?") ? "&" : "?");
   const initials = $derived(
     title
       .split(/\s+/)
@@ -26,8 +28,8 @@
     <div class="fallback" aria-hidden="true"><span>{initials}</span></div>
   {:else}
     <img
-      src="{src}?size={size}"
-      srcset="{src}?size={size} 1x, {src}?size={double} 2x"
+      src="{src}{join}size={size}"
+      srcset="{src}{join}size={size} 1x, {src}{join}size={double} 2x"
       alt=""
       loading={eager ? "eager" : "lazy"}
       decoding="async"

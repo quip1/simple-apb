@@ -1,21 +1,23 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <script lang="ts">
-  // Moderation inbox (brief §6.16): one view with tabs. Metadata "needs
-  // review" joins with the metadata pipeline, duplicates with the book tools.
+  // Moderation inbox (brief §6.16): one view with tabs. Duplicates join with
+  // the book tools (Phase 5).
   import { api, type Schemas } from "../../api/client";
   import AdminLayout from "../../components/AdminLayout.svelte";
   import { t } from "../../lib/i18n";
   import { live } from "../../lib/live.svelte";
   import { navigate, route } from "../../lib/router.svelte";
+  import MetadataReview from "./inbox/MetadataReview.svelte";
   import Reports from "./inbox/Reports.svelte";
   import ReviewQueue from "./inbox/ReviewQueue.svelte";
   import Signups from "./inbox/Signups.svelte";
 
-  type Tab = "signups" | "review" | "reports";
+  type Tab = "signups" | "review" | "reports" | "metadata";
   const TABS: { id: Tab; key: string; count: keyof Schemas["InboxCounts"] }[] = [
     { id: "signups", key: "admin.inbox.tab_signups", count: "signup_requests" },
     { id: "review", key: "admin.inbox.tab_review", count: "review_queue" },
     { id: "reports", key: "admin.inbox.tab_reports", count: "reports" },
+    { id: "metadata", key: "admin.inbox.tab_metadata", count: "metadata_review" },
   ];
 
   const tab = $derived((TABS.find((x) => x.id === route.query.get("tab"))?.id ?? "signups") as Tab);
@@ -72,8 +74,10 @@
       <Signups onchange={loadCounts} />
     {:else if tab === "review"}
       <ReviewQueue onchange={loadCounts} />
-    {:else}
+    {:else if tab === "reports"}
       <Reports onchange={loadCounts} />
+    {:else}
+      <MetadataReview onchange={loadCounts} />
     {/if}
   </div>
 </AdminLayout>

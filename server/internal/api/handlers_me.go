@@ -240,7 +240,7 @@ func (s *Server) GetMyStats(ctx context.Context, req GetMyStatsRequestObject) (G
 			return StatsBook{}, false
 		}
 		return StatsBook{BookId: mustUUID(id), Title: b.Title, Authors: personRefs(authors[id]),
-			CoverUrl: coverURL(id), HasCover: b.CoverPath != "", ListenedMs: ms}, true
+			CoverUrl: coverURL(b), HasCover: b.CoverPath != "", ListenedMs: ms}, true
 	}
 	for _, r := range top {
 		if sb, ok := statsBook(r.ID, r.MS); ok {

@@ -3,7 +3,7 @@
   // Book detail (brief §7.4): cover, people, series, description, chapters,
   // bookmarks, ratings and reviews, who is listening; play, mark finished,
   // add to collection, archive, remove, recommend, share (your uploads),
-  // report. Metadata editing comes with the metadata pipeline (milestone 6).
+  // report, edit details (editors, brief §6.12).
   import { api, deviceId, putProgress, type Book, type Schemas } from "../api/client";
   import Alert from "../components/Alert.svelte";
   import Bookmarks from "../components/Bookmarks.svelte";
@@ -12,6 +12,7 @@
   import CollectionPicker from "../components/CollectionPicker.svelte";
   import Cover from "../components/Cover.svelte";
   import Dialog from "../components/Dialog.svelte";
+  import MetadataDialog from "../components/MetadataDialog.svelte";
   import ProgressBar from "../components/ProgressBar.svelte";
   import RecommendDialog from "../components/RecommendDialog.svelte";
   import ReportDialog from "../components/ReportDialog.svelte";
@@ -35,6 +36,7 @@
   let recommendOpen = $state(false);
   let shareOpen = $state(false);
   let reportOpen = $state(false);
+  let editOpen = $state(false);
   let listeners = $state<Schemas["Listener"][]>([]);
 
   async function load(bookId: string) {
@@ -186,6 +188,9 @@
         </div>
       {/if}
 
+      {#if book.needs_review}
+        <Alert>{t("meta.needs_review_banner")}</Alert>
+      {/if}
       {#if notice}<Alert kind="ok">{notice}</Alert>{/if}
       {#if error}<Alert kind="error">{error}</Alert>{/if}
 
@@ -208,6 +213,9 @@
           {/if}
           {#if canRecommend}
             <Button variant="secondary" onclick={() => (recommendOpen = true)}>{t("book.recommend")}</Button>
+          {/if}
+          {#if book.can_edit}
+            <Button variant="secondary" onclick={() => (editOpen = true)}>{t("book.edit")}</Button>
           {/if}
           {#if canShare}
             <Button variant="secondary" onclick={() => (shareOpen = true)}>{t("book.share")}</Button>
@@ -276,6 +284,17 @@
   <CollectionPicker bookId={book.id} open={pickerOpen} onclose={() => (pickerOpen = false)} />
   <RecommendDialog open={recommendOpen} bookId={book.id} title={book.title} onclose={() => (recommendOpen = false)} />
   <ShareDialog open={shareOpen} kind="book" id={book.id} title={book.title} onclose={() => (shareOpen = false)} />
+  {#if book.can_edit}
+    <MetadataDialog
+      open={editOpen}
+      {book}
+      onclose={() => (editOpen = false)}
+      onsaved={(b) => {
+        book = b;
+        notice = t("meta.saved");
+      }}
+    />
+  {/if}
   <ReportDialog open={reportOpen} targets={[{ kind: "book", id: book.id, label: book.title }]} onclose={() => (reportOpen = false)} />
   <Dialog open={removeOpen} title={t("book.remove_title")} onclose={() => (removeOpen = false)}>
     <p>{t("book.remove_body")}</p>

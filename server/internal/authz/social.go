@@ -71,6 +71,12 @@ func CollectionShare(s Subject, t ShareTarget) bool {
 	return t != TargetOtherGroup
 }
 
+// EditBookMetadata decides who may edit a book's metadata (brief §6.12):
+// admins anywhere, users with can_edit_metadata only on their own uploads.
+func EditBookMetadata(s Subject, uploader bool) bool {
+	return Allowed(s, Admin) || (uploader && Allowed(s, EditMetadata))
+}
+
 // SeeHiddenReviews reports whether the subject sees reviews a moderator
 // hid (authors always see their own).
 func SeeHiddenReviews(s Subject, author bool) bool {

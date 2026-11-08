@@ -1,6 +1,6 @@
 # Architecture (as built)
 
-> Updated as each phase lands. Current state: **Phase 1 accepted; Phase 2 milestones 1–5** (web foundation, player screens, account and stats, admin panel, moderation and social).
+> Updated as each phase lands. Current state: **Phase 1 accepted; Phase 2 milestones 1–6** (web foundation, player screens, account and stats, admin panel, moderation and social, metadata pipeline).
 
 ## Overview
 
@@ -43,6 +43,7 @@
 | Web app | `web/src`, embedded via `server/internal/web` | Svelte 5 SPA: setup wizard, sign-in, sign-up, 2FA; Home, Library, book/author/series pages, Now playing, Stats, Settings, Security; dark + e-ink themes; i18n (ADR-0026) |
 | Admin panel | `web/src/pages/admin` (lazy-loaded), `server/internal/api/handlers_panel.go`, `handlers_settings.go`, `internal/sysinfo` | dashboard, users/groups/tags, master store, Trash, takedowns, audit log + CSV, backups, settings (ADR-0032) |
 | Social & moderation | `internal/authz/social.go`, `internal/store/social.go`, `internal/api/handlers_social.go`, `web/src/pages/admin/inbox` | reviews and ratings, recommendations, who's listening, reports, sharing your uploads (Public via the review queue), collection sharing, inbox tabs (ADR-0034) |
+| Metadata | `internal/metadata`, `internal/store/metadata.go`, `internal/api/handlers_metadata.go`, `web/src/components/MetadataDialog.svelte` | Open Library, Google Books and Audnexus providers, confidence scoring, fill-only matching job after import, locked hand edits, needs-review inbox tab, provider covers (ADR-0035) |
 | Web player | `web/src/lib/player.svelte.ts`, `live.svelte.ts` | one `<audio>` on the book timeline (multi-file or HLS via hls.js), signed stream links, progress sync + conflict prompt, Media Session, `/ws` hints (ADR-0029) |
 | TS client | `web/src/api` | generated types + cookie/CSRF/refresh-aware client |
 | Kotlin client | `android/core-api` | generated at build time |
@@ -63,7 +64,7 @@ Errors are typed (`httpError`, `auth.Error`, `setup.Error`, `store.ErrNotFound`�
 | `library` | master store, user libraries, distribution |
 | `scanner` | folder watch + import |
 | `media` | ffprobe/ffmpeg, chapters, transcoding, HLS |
-| `metadata` | providers and matching |
+| `metadata` | providers (Open Library, Google Books, Audnexus), scoring, the matching job, provider covers |
 | `sync` | progress, bookmarks, conflicts, delta sync |
 | `stream` | range serving, bandwidth shaping |
 | `push`, `mail` | ntfy publisher, SMTP |

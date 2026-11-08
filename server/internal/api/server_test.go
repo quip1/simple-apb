@@ -37,6 +37,8 @@ type harness struct {
 	dir string
 	// db is the wizard's database choice: {"dialect":"sqlite"} or a Postgres DSN.
 	db map[string]any
+	// meta fakes the online metadata providers (tests never use the internet).
+	meta *fakeMeta
 }
 
 // forEachDialect runs fn on SQLite, and on Postgres when
@@ -86,10 +88,11 @@ func newHarness(t *testing.T) *harness {
 	if err != nil {
 		t.Fatal(err)
 	}
+	meta := newFakeMeta(t)
 	bg, cancel := context.WithCancel(context.Background())
 	srv := &Server{Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Secrets: secrets,
 		Setup:      &setup.Service{Paths: paths, Secrets: secrets, Token: "test-setup-token"},
-		AppOptions: AppOptions{Paths: paths, Tools: media.DefaultTools()},
+		AppOptions: AppOptions{Paths: paths, Tools: media.DefaultTools(), Metadata: meta.endpoints()},
 		BaseCtx:    bg,
 	}
 	ts := httptest.NewServer(srv.Router())
@@ -101,7 +104,7 @@ func newHarness(t *testing.T) *harness {
 			_ = a.DB.Close()
 		}
 	})
-	return &harness{t: t, srv: srv, ts: ts, dir: dir, db: map[string]any{"dialect": "sqlite"}}
+	return &harness{t: t, srv: srv, ts: ts, dir: dir, db: map[string]any{"dialect": "sqlite"}, meta: meta}
 }
 
 type resp struct {

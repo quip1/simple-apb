@@ -352,7 +352,14 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Edit a book's metadata (edited fields are locked; brief §6.12)
+         * @description Admins may edit any book, users with `can_edit_metadata` only books they
+         *     uploaded. Every field you send is saved and locked, so the online
+         *     providers never overwrite it; `unlock` releases fields again. Editing
+         *     clears the book's "needs review" flag.
+         */
+        patch: operations["updateBookMetadata"];
         trace?: never;
     };
     "/me/library/{bookId}": {
@@ -598,7 +605,11 @@ export interface paths {
         };
         /** Cover image (resized variant) */
         get: operations["getBookCover"];
-        put?: never;
+        /**
+         * Use a cover image from a metadata provider (same permission as editing)
+         * @description The URL must come from a provider's image host (as returned in candidates).
+         */
+        put: operations["setBookCoverFromUrl"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1852,6 +1863,77 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/books/{bookId}/metadata/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Look a book up with the metadata providers, best match first (editors only)
+         * @description Without `title`/`author` the book's own ISBN, ASIN, title and first author are used.
+         */
+        get: operations["listMetadataCandidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/books/{bookId}/metadata/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run the metadata pipeline for a book again (editors only) */
+        post: operations["refreshBookMetadata"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/metadata-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Books whose online match was too uncertain to apply ("needs review"), oldest first */
+        get: operations["listMetadataReview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/metadata-review/{bookId}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Keep a book's metadata as it is and clear "needs review" */
+        post: operations["dismissMetadataReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2162,6 +2244,12 @@ export interface components {
             has_epub: boolean;
             /** @description You uploaded it (you may share it, given the permission) */
             uploaded_by_me?: boolean;
+            /** @description You may edit its metadata (admin, or your upload with can_edit_metadata) */
+            can_edit?: boolean;
+            /** @description Hand-edited fields (editors only) */
+            locked_fields?: components["schemas"]["MetadataField"][];
+            /** @description The online match was uncertain (editors only) */
+            needs_review?: boolean;
             tags: components["schemas"]["TagRef"][];
             files: components["schemas"]["BookFile"][];
             chapters: components["schemas"]["Chapter"][];
@@ -2740,6 +2828,7 @@ export interface components {
             permission_defaults: components["schemas"]["EffectivePermissions"];
             smtp: components["schemas"]["SmtpSettingsView"];
             ntfy: components["schemas"]["NtfySettingsView"];
+            metadata: components["schemas"]["MetadataSettingsView"];
         };
         AdminSettingsPatch: {
             instance?: components["schemas"]["InstanceSettingsPatch"];
@@ -2749,6 +2838,7 @@ export interface components {
             permission_defaults?: components["schemas"]["PermissionOverridesInput"];
             smtp?: components["schemas"]["SmtpSettingsPatch"];
             ntfy?: components["schemas"]["NtfySettingsPatch"];
+            metadata?: components["schemas"]["MetadataSettingsPatch"];
         };
         DashboardEgress: {
             /**
@@ -2766,6 +2856,7 @@ export interface components {
             signup_requests: number;
             review_queue: number;
             reports: number;
+            metadata_review: number;
         };
         InstanceSettings: {
             name: string;
@@ -3161,6 +3252,79 @@ export interface components {
             /** @enum {string} */
             action: "dismiss" | "hide_review" | "takedown" | "resolved";
             note: string;
+        };
+        /** @enum {string} */
+        MetadataField: "title" | "subtitle" | "description" | "publisher" | "published_year" | "language" | "isbn" | "asin" | "authors" | "narrators" | "series" | "genres";
+        SeriesInput: {
+            /** @description Empty removes the book from its series */
+            name: string;
+            index?: string;
+        };
+        BookMetadataPatch: {
+            title?: string;
+            subtitle?: string;
+            description?: string;
+            publisher?: string;
+            /** @description 0 clears it */
+            published_year?: number;
+            language?: string;
+            isbn?: string;
+            asin?: string;
+            authors?: string[];
+            narrators?: string[];
+            series?: components["schemas"]["SeriesInput"];
+            genres?: string[];
+            unlock?: components["schemas"]["MetadataField"][];
+        };
+        MetadataCandidate: {
+            /** @enum {string} */
+            provider: "openlibrary" | "googlebooks" | "audnexus";
+            /** @description Match confidence 0–1 */
+            score: number;
+            title: string;
+            subtitle?: string;
+            authors: string[];
+            narrators: string[];
+            series?: string;
+            series_index?: string;
+            published_year?: number;
+            publisher?: string;
+            description?: string;
+            language?: string;
+            isbn?: string;
+            asin?: string;
+            genres: string[];
+            cover_url?: string;
+        };
+        CoverFromUrl: {
+            url: string;
+        };
+        MetadataReviewItem: {
+            book: components["schemas"]["BookRef"];
+            authors: string[];
+            score?: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        MetadataReviewPage: {
+            items: components["schemas"]["MetadataReviewItem"][];
+            next_cursor?: string;
+        };
+        MetadataSettingsView: {
+            open_library: boolean;
+            google_books: boolean;
+            google_books_key_set: boolean;
+            audnexus: boolean;
+            /** @description Score a match needs to be applied automatically (0.5–1) */
+            threshold: number;
+        };
+        MetadataSettingsPatch: {
+            open_library?: boolean;
+            google_books?: boolean;
+            /** @description Write-only; empty clears it */
+            google_books_key?: string;
+            audnexus?: boolean;
+            threshold?: number;
         };
     };
     responses: {
@@ -3774,6 +3938,36 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    updateBookMetadata: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookMetadataPatch"];
+            };
+        };
+        responses: {
+            /** @description The book after the edit */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookDetail"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     removeFromMyLibrary: {
         parameters: {
             query?: never;
@@ -4141,6 +4335,8 @@ export interface operations {
         parameters: {
             query?: {
                 size?: 128 | 256 | 512 | 1024;
+                /** @description Cache buster; `cover_url` already carries it (add `size` with `&`) */
+                v?: string;
             };
             header?: never;
             path: {
@@ -4161,6 +4357,43 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    setBookCoverFromUrl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoverFromUrl"];
+            };
+        };
+        responses: {
+            /** @description Cover saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The image couldn't be downloaded */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     getSetupStatus: {
@@ -6414,6 +6647,118 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Shown */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listMetadataCandidates: {
+        parameters: {
+            query?: {
+                title?: string;
+                author?: string;
+            };
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Candidates (at most 5 per provider) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataCandidate"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Every metadata provider failed (offline, or rate-limited) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    refreshBookMetadata: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRef"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listMetadataReview: {
+        parameters: {
+            query?: {
+                /** @description Opaque pagination cursor from `next_cursor` */
+                cursor?: components["parameters"]["Cursor"];
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of books */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataReviewPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    dismissMetadataReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cleared */
             204: {
                 headers: {
                     [name: string]: unknown;

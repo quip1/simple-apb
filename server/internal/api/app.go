@@ -4,6 +4,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"github.com/quip1/simple-apb/server/internal/jobs"
 	"github.com/quip1/simple-apb/server/internal/library"
 	"github.com/quip1/simple-apb/server/internal/media"
+	"github.com/quip1/simple-apb/server/internal/metadata"
 	"github.com/quip1/simple-apb/server/internal/push"
 	"github.com/quip1/simple-apb/server/internal/settings"
 	"github.com/quip1/simple-apb/server/internal/store"
@@ -45,6 +47,7 @@ type App struct {
 	Hub     *Hub
 	Push    *push.Notifier
 	Backup  *backup.Service
+	Meta    *metadata.Service
 	hlsCap  int64
 	// StartedAt is when the server started (dashboard uptime).
 	StartedAt time.Time
@@ -60,6 +63,8 @@ type AppOptions struct {
 	Tools          media.Tools
 	TrustedProxies bool // whether X-Forwarded-* may be honored (tus Location URLs)
 	JobWorkers     int
+	// Metadata are the provider endpoints (zero value: the public services).
+	Metadata metadata.Endpoints
 }
 
 // NewApp wires the services for an open, set-up database.
@@ -94,6 +99,16 @@ func NewApp(ctx context.Context, db *store.DB, secrets *config.Secrets, log *slo
 	a.Auth.OnSignup = func(ctx context.Context, q store.Querier, requestID string) {
 		_ = push.Enqueue(ctx, q, push.Recipients{Admins: true}, push.Event{Type: push.SignupRequest, ID: requestID})
 	}
+	endpoints := o.Metadata
+	if endpoints.OpenLibrary == "" {
+		endpoints = metadata.DefaultEndpoints()
+	}
+	a.Meta = &metadata.Service{DB: db, Endpoints: endpoints, SaveCover: a.Lib.SaveCover, Log: log,
+		Config: func(ctx context.Context) (metadata.Config, error) {
+			m, err := a.Settings().Metadata(ctx)
+			return metadata.Config{OpenLibrary: m.OpenLibrary, GoogleBooks: m.GoogleBooks, GoogleAPIKey: m.GoogleAPIKey,
+				Audnexus: m.Audnexus, Threshold: m.Threshold}, err
+		}}
 	a.Backup = newBackupService(a, o.Paths.Backups)
 	a.Backup.PGDump = os.Getenv("SIMPLEAPB_PG_DUMP")
 	a.registerJobs()
@@ -123,6 +138,17 @@ func (a *App) registerJobs() {
 		if err == nil && res.Pending > 0 {
 			// Something is still being copied; look again once it has settled.
 			_, _ = jobs.Enqueue(context.WithoutCancel(ctx), a.DB, library.JobScan, nil, time.Now().Add(library.SettleTime+5*time.Second), "")
+		}
+		return res, err
+	})
+	a.Jobs.Handle(metadata.JobMatch, func(ctx context.Context, j *jobs.Job) (any, error) {
+		var p metadata.MatchPayload
+		if err := j.Decode(&p); err != nil {
+			return nil, jobs.Permanent(err)
+		}
+		res, err := a.Meta.Match(ctx, p.BookID)
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, jobs.Permanent(err) // purged since
 		}
 		return res, err
 	})

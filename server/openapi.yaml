@@ -11,7 +11,7 @@
 openapi: 3.0.3
 info:
   title: Simple APB API
-  version: 0.10.0
+  version: 0.11.0
   description: |
     REST API for Simple APB. All endpoints live under `/api/v1`.
 
@@ -436,6 +436,32 @@ paths:
               schema: { $ref: "#/components/schemas/BookDetail" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [library]
+      operationId: updateBookMetadata
+      summary: Edit a book's metadata (edited fields are locked; brief §6.12)
+      description: |
+        Admins may edit any book, users with `can_edit_metadata` only books they
+        uploaded. Every field you send is saved and locked, so the online
+        providers never overwrite it; `unlock` releases fields again. Editing
+        clears the book's "needs review" flag.
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BookMetadataPatch" }
+      responses:
+        "200":
+          description: The book after the edit
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BookDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /me/library/{bookId}:
     delete:
@@ -740,6 +766,10 @@ paths:
         - name: size
           in: query
           schema: { type: integer, enum: [128, 256, 512, 1024], default: 512 }
+        - name: v
+          in: query
+          description: Cache buster; `cover_url` already carries it (add `size` with `&`)
+          schema: { type: string, maxLength: 32 }
       responses:
         "200":
           description: JPEG cover
@@ -748,6 +778,29 @@ paths:
               schema: { type: string, format: binary }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [library]
+      operationId: setBookCoverFromUrl
+      summary: Use a cover image from a metadata provider (same permission as editing)
+      description: The URL must come from a provider's image host (as returned in candidates).
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CoverFromUrl" }
+      responses:
+        "204": { description: Cover saved }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "502":
+          description: The image couldn't be downloaded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   # ───────────────────────────── Setup wizard ─────────────────────────
   /setup/status:
@@ -2337,6 +2390,86 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  # ───────────────────────────── Metadata ─────────────────────────────
+  /books/{bookId}/metadata/candidates:
+    get:
+      tags: [library]
+      operationId: listMetadataCandidates
+      summary: Look a book up with the metadata providers, best match first (editors only)
+      description: Without `title`/`author` the book's own ISBN, ASIN, title and first author are used.
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+        - name: title
+          in: query
+          schema: { type: string, maxLength: 300 }
+        - name: author
+          in: query
+          schema: { type: string, maxLength: 200 }
+      responses:
+        "200":
+          description: Candidates (at most 5 per provider)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/MetadataCandidate" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "502":
+          description: Every metadata provider failed (offline, or rate-limited)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /books/{bookId}/metadata/refresh:
+    post:
+      tags: [library]
+      operationId: refreshBookMetadata
+      summary: Run the metadata pipeline for a book again (editors only)
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "202":
+          description: Queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/JobRef" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/metadata-review:
+    get:
+      tags: [admin]
+      operationId: listMetadataReview
+      summary: Books whose online match was too uncertain to apply ("needs review"), oldest first
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: A page of books
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MetadataReviewPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/metadata-review/{bookId}/dismiss:
+    post:
+      tags: [admin]
+      operationId: dismissMetadataReview
+      summary: Keep a book's metadata as it is and clear "needs review"
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "204": { description: Cleared }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -2883,6 +3016,9 @@ components:
             size_bytes: { type: integer, format: int64 }
             has_epub: { type: boolean }
             uploaded_by_me: { type: boolean, description: "You uploaded it (you may share it, given the permission)" }
+            can_edit: { type: boolean, description: "You may edit its metadata (admin, or your upload with can_edit_metadata)" }
+            locked_fields: { type: array, items: { $ref: "#/components/schemas/MetadataField" }, description: "Hand-edited fields (editors only)" }
+            needs_review: { type: boolean, description: "The online match was uncertain (editors only)" }
             tags: { type: array, items: { $ref: "#/components/schemas/TagRef" } }
             files: { type: array, items: { $ref: "#/components/schemas/BookFile" } }
             chapters: { type: array, items: { $ref: "#/components/schemas/Chapter" } }
@@ -3490,7 +3626,7 @@ components:
 
     AdminSettings:
       type: object
-      required: [instance, auth, bandwidth, quotas, permission_defaults, smtp, ntfy]
+      required: [instance, auth, bandwidth, quotas, permission_defaults, smtp, ntfy, metadata]
       properties:
         instance: { $ref: "#/components/schemas/InstanceSettings" }
         auth: { $ref: "#/components/schemas/AuthSettings" }
@@ -3499,6 +3635,7 @@ components:
         permission_defaults: { $ref: "#/components/schemas/EffectivePermissions" }
         smtp: { $ref: "#/components/schemas/SmtpSettingsView" }
         ntfy: { $ref: "#/components/schemas/NtfySettingsView" }
+        metadata: { $ref: "#/components/schemas/MetadataSettingsView" }
 
     AdminSettingsPatch:
       type: object
@@ -3510,6 +3647,7 @@ components:
         permission_defaults: { $ref: "#/components/schemas/PermissionOverridesInput" }
         smtp: { $ref: "#/components/schemas/SmtpSettingsPatch" }
         ntfy: { $ref: "#/components/schemas/NtfySettingsPatch" }
+        metadata: { $ref: "#/components/schemas/MetadataSettingsPatch" }
 
     DashboardEgress:
       type: object
@@ -3520,11 +3658,12 @@ components:
 
     InboxCounts:
       type: object
-      required: [signup_requests, review_queue, reports]
+      required: [signup_requests, review_queue, reports, metadata_review]
       properties:
         signup_requests: { type: integer }
         review_queue: { type: integer }
         reports: { type: integer }
+        metadata_review: { type: integer }
 
     InstanceSettings:
       type: object
@@ -3978,3 +4117,94 @@ components:
       properties:
         action: { type: string, enum: [dismiss, hide_review, takedown, resolved] }
         note: { type: string, minLength: 1, maxLength: 1000 }
+
+    # ── Metadata ──
+    MetadataField:
+      type: string
+      enum: [title, subtitle, description, publisher, published_year, language, isbn, asin, authors, narrators, series, genres]
+
+    SeriesInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 300, description: "Empty removes the book from its series" }
+        index: { type: string, maxLength: 20 }
+
+    BookMetadataPatch:
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 500 }
+        subtitle: { type: string, maxLength: 500 }
+        description: { type: string, maxLength: 20000 }
+        publisher: { type: string, maxLength: 300 }
+        published_year: { type: integer, minimum: 0, maximum: 2100, description: "0 clears it" }
+        language: { type: string, maxLength: 35 }
+        isbn: { type: string, maxLength: 20 }
+        asin: { type: string, maxLength: 20 }
+        authors: { type: array, maxItems: 20, items: { type: string, maxLength: 200 } }
+        narrators: { type: array, maxItems: 20, items: { type: string, maxLength: 200 } }
+        series: { $ref: "#/components/schemas/SeriesInput" }
+        genres: { type: array, maxItems: 20, items: { type: string, maxLength: 100 } }
+        unlock: { type: array, items: { $ref: "#/components/schemas/MetadataField" } }
+
+    MetadataCandidate:
+      type: object
+      required: [provider, score, title, authors, narrators, genres]
+      properties:
+        provider: { type: string, enum: [openlibrary, googlebooks, audnexus] }
+        score: { type: number, description: "Match confidence 0–1" }
+        title: { type: string }
+        subtitle: { type: string }
+        authors: { type: array, items: { type: string } }
+        narrators: { type: array, items: { type: string } }
+        series: { type: string }
+        series_index: { type: string }
+        published_year: { type: integer }
+        publisher: { type: string }
+        description: { type: string }
+        language: { type: string }
+        isbn: { type: string }
+        asin: { type: string }
+        genres: { type: array, items: { type: string } }
+        cover_url: { type: string }
+
+    CoverFromUrl:
+      type: object
+      required: [url]
+      properties:
+        url: { type: string, maxLength: 2000 }
+
+    MetadataReviewItem:
+      type: object
+      required: [book, authors, created_at]
+      properties:
+        book: { $ref: "#/components/schemas/BookRef" }
+        authors: { type: array, items: { type: string } }
+        score: { type: number }
+        created_at: { type: string, format: date-time }
+
+    MetadataReviewPage:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/MetadataReviewItem" } }
+        next_cursor: { type: string }
+
+    MetadataSettingsView:
+      type: object
+      required: [open_library, google_books, google_books_key_set, audnexus, threshold]
+      properties:
+        open_library: { type: boolean }
+        google_books: { type: boolean }
+        google_books_key_set: { type: boolean }
+        audnexus: { type: boolean }
+        threshold: { type: number, description: "Score a match needs to be applied automatically (0.5–1)" }
+
+    MetadataSettingsPatch:
+      type: object
+      properties:
+        open_library: { type: boolean }
+        google_books: { type: boolean }
+        google_books_key: { type: string, maxLength: 200, description: "Write-only; empty clears it" }
+        audnexus: { type: boolean }
+        threshold: { type: number, minimum: 0.5, maximum: 1 }

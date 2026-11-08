@@ -153,6 +153,7 @@ func (l *Library) importNew(ctx context.Context, c Candidate) error {
 		return err
 	}
 	l.storeCover(ctx, id, a)
+	l.queueMatch(ctx, id)
 	return nil
 }
 

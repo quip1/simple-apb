@@ -155,6 +155,10 @@ func (s *Server) adminSettings(ctx context.Context) (AdminSettings, error) {
 	if err != nil {
 		return out, err
 	}
+	meta, err := st.Metadata(ctx)
+	if err != nil {
+		return out, err
+	}
 	tls := smtp.TLS
 	if tls == "" {
 		tls = "starttls"
@@ -170,6 +174,8 @@ func (s *Server) adminSettings(ctx context.Context) (AdminSettings, error) {
 		Smtp: SmtpSettingsView{Host: smtp.Host, Port: smtp.Port, Tls: SmtpSettingsViewTls(tls), Username: smtp.Username, From: smtp.From,
 			PasswordSet: smtp.Password != ""},
 		Ntfy: NtfySettingsView{InternalUrl: ntfy.InternalURL, PublicUrl: ntfy.PublicURL, TokenSet: ntfy.Token != ""},
+		Metadata: MetadataSettingsView{OpenLibrary: meta.OpenLibrary, GoogleBooks: meta.GoogleBooks, GoogleBooksKeySet: meta.GoogleAPIKey != "",
+			Audnexus: meta.Audnexus, Threshold: float32(meta.Threshold)},
 	}
 	return out, nil
 }
@@ -349,6 +355,38 @@ func (s *Server) UpdateAdminSettings(ctx context.Context, req UpdateAdminSetting
 				return err
 			}
 			changed = append(changed, "ntfy")
+		}
+		if p := b.Metadata; p != nil {
+			v, err := ts.Metadata(ctx)
+			if err != nil {
+				return err
+			}
+			if !maxLen(p.GoogleBooksKey, 200) {
+				return badRequest("text_too_long", "that text is too long")
+			}
+			if p.OpenLibrary != nil {
+				v.OpenLibrary = *p.OpenLibrary
+			}
+			if p.GoogleBooks != nil {
+				v.GoogleBooks = *p.GoogleBooks
+			}
+			if p.Audnexus != nil {
+				v.Audnexus = *p.Audnexus
+			}
+			if p.GoogleBooksKey != nil {
+				v.GoogleAPIKey = strings.TrimSpace(*p.GoogleBooksKey)
+			}
+			if p.Threshold != nil {
+				t := float64(*p.Threshold)
+				if t < 0.5 || t > 1 {
+					return badRequest("invalid_threshold", "the match threshold must be between 0.5 and 1")
+				}
+				v.Threshold = float64(int(t*100+0.5)) / 100
+			}
+			if err := ts.Set(ctx, settings.KeyMetadata, v); err != nil {
+				return err
+			}
+			changed = append(changed, "metadata")
 		}
 		// Secrets are never written to the audit log, only which groups changed.
 		return store.Audit(ctx, tx, store.AuditEntry{ActorID: admin, Action: "settings.update", IP: clientIP(ctx),

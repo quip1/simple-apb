@@ -72,3 +72,26 @@ func TestCollectionShareAndSocial(t *testing.T) {
 		}
 	}
 }
+
+func TestEditBookMetadata(t *testing.T) {
+	user := Subject{Status: "active", Role: "user", Defaults: DefaultCapabilities()}
+	noEdit := Subject{Status: "active", Role: "user", Defaults: DefaultCapabilities(), UserOverrides: map[Action]*bool{EditMetadata: b(false)}}
+	cases := []struct {
+		name     string
+		s        Subject
+		uploader bool
+		want     bool
+	}{
+		{"admin edits anything", Subject{Status: "active", Role: "admin"}, false, true},
+		{"uploader with the default permission", user, true, true},
+		{"not the uploader", user, false, false},
+		{"uploader without the permission", noEdit, true, false},
+		{"restricted uploader is read-only", Subject{Status: "restricted", Role: "user", Defaults: DefaultCapabilities()}, true, false},
+		{"suspended admin", Subject{Status: "suspended", Role: "admin"}, true, false},
+	}
+	for _, c := range cases {
+		if got := EditBookMetadata(c.s, c.uploader); got != c.want {
+			t.Errorf("%s: got %v, want %v", c.name, got, c.want)
+		}
+	}
+}

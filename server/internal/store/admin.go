@@ -349,15 +349,17 @@ func likePrefix(s string) string {
 // ── dashboard counts ──
 
 // InboxCounts are the open items of the moderation inbox.
-type InboxCounts struct{ Signups, Reviews, Reports int64 }
+type InboxCounts struct{ Signups, Reviews, Reports, Metadata int64 }
 
-// CountInbox counts pending sign-ups, review-queue items and open reports.
+// CountInbox counts pending sign-ups, review-queue items, open reports and
+// books whose metadata needs review.
 func CountInbox(ctx context.Context, q Querier) (InboxCounts, error) {
 	var c InboxCounts
 	err := q.QueryRow(ctx, `SELECT
 		(SELECT COUNT(*) FROM signup_requests WHERE status = 'pending'),
 		(SELECT COUNT(*) FROM review_queue WHERE status = 'pending'),
-		(SELECT COUNT(*) FROM reports WHERE status = 'open')`).Scan(&c.Signups, &c.Reviews, &c.Reports)
+		(SELECT COUNT(*) FROM reports WHERE status = 'open'),
+		(SELECT COUNT(*) FROM books WHERE metadata_review = ? AND status IN ('ready', 'processing'))`, true).Scan(&c.Signups, &c.Reviews, &c.Reports, &c.Metadata)
 	return c, err
 }
 

@@ -223,6 +223,7 @@ func (l *Library) finishMove(ctx context.Context, u *uploadRow, staging string) 
 			return nil, err
 		}
 		l.coverAfterMove(ctx, b.ID, b.FolderPath)
+		l.queueMatch(ctx, b.ID)
 	}
 	if err := l.setUpload(ctx, l.DB, u.ID, "done", "", b.ID); err != nil {
 		return nil, err

@@ -110,7 +110,7 @@ func (s *Server) GetAdminDashboard(ctx context.Context, _ GetAdminDashboardReque
 	if err != nil {
 		return nil, err
 	}
-	out.Inbox = InboxCounts{SignupRequests: int(c.Signups), ReviewQueue: int(c.Reviews), Reports: int(c.Reports)}
+	out.Inbox = InboxCounts{SignupRequests: int(c.Signups), ReviewQueue: int(c.Reviews), Reports: int(c.Reports), MetadataReview: int(c.Metadata)}
 	return GetAdminDashboard200JSONResponse(out), nil
 }
 

@@ -1,7 +1,8 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <script lang="ts">
   // Instance settings (brief §6.23): instance, sign-up, quotas, permission
-  // defaults, bandwidth, SMTP, ntfy, privacy/terms, copyright contact.
+  // defaults, bandwidth, SMTP, ntfy, metadata providers, privacy/terms,
+  // copyright contact.
   // Each section saves on its own; secrets are write-only.
   import { api, type Schemas } from "../../api/client";
   import AdminLayout from "../../components/AdminLayout.svelte";
@@ -46,6 +47,11 @@
   let ntfyInternal = $state("");
   let ntfyPublic = $state("");
   let ntfyToken = $state("");
+  let metaOL = $state(true);
+  let metaGB = $state(true);
+  let metaAX = $state(true);
+  let metaKey = $state("");
+  let metaThreshold = $state("80");
   let testTo = $state("");
   let testResult = $state<{ ok: boolean; message?: string } | null>(null);
 
@@ -71,6 +77,11 @@
     ntfyInternal = v.ntfy.internal_url;
     ntfyPublic = v.ntfy.public_url;
     ntfyToken = "";
+    metaOL = v.metadata.open_library;
+    metaGB = v.metadata.google_books;
+    metaAX = v.metadata.audnexus;
+    metaKey = "";
+    metaThreshold = String(Math.round(v.metadata.threshold * 100));
   }
 
   async function load() {
@@ -248,6 +259,45 @@
           hint={s.ntfy.token_set ? t("admin.settings.secret_set") : t("admin.settings.secret_unset")}
         />
         {#if saved === "ntfy"}<Alert kind="ok">{t("settings.saved")}</Alert>{/if}
+        <div class="row"><Button type="submit">{t("common.save")}</Button></div>
+      </form>
+    </section>
+
+    <section class="card stack" aria-labelledby="st-meta">
+      <h2 id="st-meta">{t("admin.settings.metadata")}</h2>
+      <p class="muted">{t("admin.settings.metadata_intro")}</p>
+      <form
+        class="stack"
+        onsubmit={submit(() =>
+          save("metadata", {
+            metadata: {
+              open_library: metaOL,
+              google_books: metaGB,
+              audnexus: metaAX,
+              threshold: Number(metaThreshold) / 100,
+              ...(metaKey ? { google_books_key: metaKey } : {}),
+            },
+          }),
+        )}
+      >
+        <div><label class="check"><input type="checkbox" bind:checked={metaOL} /> {t("admin.settings.meta_openlibrary")}</label></div>
+        <div><label class="check"><input type="checkbox" bind:checked={metaGB} /> {t("admin.settings.meta_googlebooks")}</label></div>
+        <Field
+          label={t("admin.settings.meta_google_key")}
+          type="password"
+          bind:value={metaKey}
+          autocomplete="new-password"
+          hint={s.metadata.google_books_key_set ? t("admin.settings.secret_set") : t("admin.settings.meta_google_key_hint")}
+        />
+        <div><label class="check"><input type="checkbox" bind:checked={metaAX} /> {t("admin.settings.meta_audnexus")}</label></div>
+        <Field
+          label={t("admin.settings.meta_threshold")}
+          type="number"
+          inputmode="numeric"
+          bind:value={metaThreshold}
+          hint={t("admin.settings.meta_threshold_hint")}
+        />
+        {#if saved === "metadata"}<Alert kind="ok">{t("settings.saved")}</Alert>{/if}
         <div class="row"><Button type="submit">{t("common.save")}</Button></div>
       </form>
     </section>
