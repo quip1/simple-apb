@@ -136,6 +136,9 @@ func (l *Library) ProcessUpload(ctx context.Context, id string) (*UploadResult, 
 			if err := store.AddEntry(ctx, tx, u.UserID, dup.ID, "own_upload"); err != nil {
 				return err
 			}
+			if err := store.RecordChange(ctx, tx, u.UserID, store.EntityLibraryEntry, dup.ID, "upsert"); err != nil {
+				return err
+			}
 			if err := l.setUpload(ctx, tx, u.ID, "done", "", dup.ID); err != nil {
 				return err
 			}
@@ -214,6 +217,9 @@ func (l *Library) finishMove(ctx context.Context, u *uploadRow, staging string) 
 		}
 		_ = os.Remove(filepath.Join(target, moveNote))
 		if err := store.SetBookStatus(ctx, l.DB, b.ID, "ready", ""); err != nil {
+			return nil, err
+		}
+		if err := store.RecordChange(ctx, l.DB, u.UserID, store.EntityLibraryEntry, b.ID, "upsert"); err != nil {
 			return nil, err
 		}
 		l.coverAfterMove(ctx, b.ID, b.FolderPath)

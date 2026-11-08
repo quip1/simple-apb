@@ -218,6 +218,7 @@ func ListLibrary(ctx context.Context, q Querier, userID string, f LibraryFilter)
 	where := []string{visibleFilter}
 	args := []any{userID, userID, userID, userID, userID}
 	switch f.Shelf {
+	case "any": // every visible book, whatever its shelf (delta-sync snapshots)
 	case "", "all":
 		where = append(where, "v.removed_at IS NULL AND v.hidden_at IS NULL")
 	case "archived":
@@ -270,7 +271,7 @@ func ListLibrary(ctx context.Context, q Querier, userID string, f LibraryFilter)
 		order = `CASE WHEN fa.name IS NULL THEN 1 ELSE 0 END, lower(fa.name), b.sort_title, b.id`
 	}
 	limit := f.Limit
-	if limit <= 0 || limit > 200 {
+	if limit <= 0 || (limit > 200 && f.Shelf != "any") {
 		limit = 50
 	}
 	args = append(args, limit, f.Offset)

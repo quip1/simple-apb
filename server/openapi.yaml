@@ -11,7 +11,7 @@
 openapi: 3.0.3
 info:
   title: Simple APB API
-  version: 0.4.0
+  version: 0.5.0
   description: |
     REST API for Simple APB. All endpoints live under `/api/v1`.
 
@@ -456,9 +456,14 @@ paths:
       summary: Everything that changed for me since a cursor
       description: |
         The single call clients make on reconnect. Omit `since` for a full
-        snapshot. Returns library visibility changes, progress, and tombstones
-        (bookmarks/collections join in Phase 1). Page with `next_cursor` while
-        `has_more` is true; store the final cursor.
+        snapshot. Returns library visibility changes, progress, bookmarks,
+        collections and tombstones. While `has_more` is true, call again with
+        the returned `cursor`; store the final one. A tombstone for a
+        `library_entry` means the book is no longer visible to you.
+
+        Open clients can also connect to the WebSocket at `/ws` (Bearer header or
+        session cookie), which sends `{"type":"changed","seq":N}` hints so they
+        sync immediately.
       parameters:
         - name: since
           in: query
@@ -1126,6 +1131,163 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  # ───────────────────────── Bookmarks & collections ──────────────────
+  /me/bookmarks:
+    get:
+      tags: [progress]
+      operationId: listBookmarks
+      summary: My bookmarks (optionally for one book)
+      parameters:
+        - name: book_id
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Bookmarks, by book then position
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Bookmark" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [progress]
+      operationId: createBookmark
+      summary: Add a bookmark
+      description: "Clients may send their own `id` (UUID) so an offline-created bookmark syncs idempotently: re-sending the same id returns the existing bookmark."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BookmarkCreate" }
+      responses:
+        "201":
+          description: Created (or the existing bookmark with that id)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Bookmark" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /me/bookmarks/{bookmarkId}:
+    patch:
+      tags: [progress]
+      operationId: updateBookmark
+      summary: Edit a bookmark (last write wins by client_ts)
+      parameters:
+        - $ref: "#/components/parameters/BookmarkId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BookmarkPatch" }
+      responses:
+        "200":
+          description: The bookmark after the write (unchanged if the edit was older)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Bookmark" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [progress]
+      operationId: deleteBookmark
+      summary: Delete a bookmark (leaves a tombstone for other devices)
+      parameters:
+        - $ref: "#/components/parameters/BookmarkId"
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /me/collections:
+    get:
+      tags: [progress]
+      operationId: listCollections
+      summary: My collections
+      responses:
+        "200":
+          description: Collections
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Collection" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [progress]
+      operationId: createCollection
+      summary: Create a collection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CollectionCreate" }
+      responses:
+        "201":
+          description: Created (or the existing collection with that id)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Collection" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /me/collections/{collectionId}:
+    patch:
+      tags: [progress]
+      operationId: updateCollection
+      summary: Rename or describe a collection (last write wins by client_ts)
+      parameters:
+        - $ref: "#/components/parameters/CollectionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CollectionPatch" }
+      responses:
+        "200":
+          description: The collection after the write
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Collection" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [progress]
+      operationId: deleteCollection
+      summary: Delete a collection (books are not affected)
+      parameters:
+        - $ref: "#/components/parameters/CollectionId"
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /me/collections/{collectionId}/books/{bookId}:
+    put:
+      tags: [progress]
+      operationId: addToCollection
+      summary: Add a book to a collection
+      parameters:
+        - $ref: "#/components/parameters/CollectionId"
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "204": { description: Added }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [progress]
+      operationId: removeFromCollection
+      summary: Remove a book from a collection
+      parameters:
+        - $ref: "#/components/parameters/CollectionId"
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "204": { description: Removed }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1182,6 +1344,16 @@ components:
       schema: { type: string, format: uuid }
     GroupId:
       name: groupId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    BookmarkId:
+      name: bookmarkId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    CollectionId:
+      name: collectionId
       in: path
       required: true
       schema: { type: string, format: uuid }
@@ -1621,7 +1793,7 @@ components:
 
     SyncDelta:
       type: object
-      required: [cursor, has_more, library, progress, tombstones]
+      required: [cursor, has_more, library, progress, bookmarks, collections, tombstones]
       properties:
         cursor: { type: string, description: "Pass as `since` next time" }
         has_more: { type: boolean }
@@ -1633,6 +1805,12 @@ components:
         progress:
           type: array
           items: { $ref: "#/components/schemas/Progress" }
+        bookmarks:
+          type: array
+          items: { $ref: "#/components/schemas/Bookmark" }
+        collections:
+          type: array
+          items: { $ref: "#/components/schemas/Collection" }
         tombstones:
           type: array
           items: { $ref: "#/components/schemas/Tombstone" }
@@ -1926,3 +2104,60 @@ components:
         confirm_count: { type: integer, minimum: 0, description: "Must equal the number of books in the Trash" }
         password: { type: string, format: password }
         totp_code: { type: string, pattern: '^[0-9]{6}$' }
+
+    # ── bookmarks & collections ──
+    Bookmark:
+      type: object
+      required: [id, book_id, position_ms, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        book_id: { type: string, format: uuid }
+        position_ms: { type: integer, format: int64 }
+        note: { type: string }
+        updated_at: { type: string, format: date-time, description: "Last-write-wins clock (client time, clamped)" }
+
+    BookmarkCreate:
+      type: object
+      required: [book_id, position_ms]
+      properties:
+        id: { type: string, format: uuid, description: "Client-generated id for idempotent offline creation" }
+        book_id: { type: string, format: uuid }
+        position_ms: { type: integer, format: int64, minimum: 0 }
+        note: { type: string, maxLength: 2000 }
+        client_ts: { type: string, format: date-time }
+
+    BookmarkPatch:
+      type: object
+      properties:
+        position_ms: { type: integer, format: int64, minimum: 0 }
+        note: { type: string, maxLength: 2000 }
+        client_ts: { type: string, format: date-time }
+
+    Collection:
+      type: object
+      required: [id, name, book_ids, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        book_ids:
+          type: array
+          description: "Books in order (only books you can currently see)"
+          items: { type: string, format: uuid }
+        updated_at: { type: string, format: date-time }
+
+    CollectionCreate:
+      type: object
+      required: [name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, minLength: 1, maxLength: 100 }
+        description: { type: string, maxLength: 1000 }
+        client_ts: { type: string, format: date-time }
+
+    CollectionPatch:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        description: { type: string, maxLength: 1000 }
+        client_ts: { type: string, format: date-time }

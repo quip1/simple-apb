@@ -699,6 +699,35 @@ type BookSummary struct {
 	UpdatedAt time.Time     `json:"updated_at"`
 }
 
+// Bookmark defines model for Bookmark.
+type Bookmark struct {
+	BookId     openapi_types.UUID `json:"book_id"`
+	Id         openapi_types.UUID `json:"id"`
+	Note       *string            `json:"note,omitempty"`
+	PositionMs int64              `json:"position_ms"`
+
+	// UpdatedAt Last-write-wins clock (client time, clamped)
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// BookmarkCreate defines model for BookmarkCreate.
+type BookmarkCreate struct {
+	BookId   openapi_types.UUID `json:"book_id"`
+	ClientTs *time.Time         `json:"client_ts,omitempty"`
+
+	// Id Client-generated id for idempotent offline creation
+	Id         *openapi_types.UUID `json:"id,omitempty"`
+	Note       *string             `json:"note,omitempty"`
+	PositionMs int64               `json:"position_ms"`
+}
+
+// BookmarkPatch defines model for BookmarkPatch.
+type BookmarkPatch struct {
+	ClientTs   *time.Time `json:"client_ts,omitempty"`
+	Note       *string    `json:"note,omitempty"`
+	PositionMs *int64     `json:"position_ms,omitempty"`
+}
+
 // Chapter Chapter on the global book timeline (across files).
 type Chapter struct {
 	EndMs   int64  `json:"end_ms"`
@@ -713,6 +742,31 @@ type ClientVersionGuard struct {
 	Wear    *VersionPair `json:"wear,omitempty"`
 	Web     *VersionPair `json:"web,omitempty"`
 	Windows *VersionPair `json:"windows,omitempty"`
+}
+
+// Collection defines model for Collection.
+type Collection struct {
+	// BookIds Books in order (only books you can currently see)
+	BookIds     []openapi_types.UUID `json:"book_ids"`
+	Description *string              `json:"description,omitempty"`
+	Id          openapi_types.UUID   `json:"id"`
+	Name        string               `json:"name"`
+	UpdatedAt   time.Time            `json:"updated_at"`
+}
+
+// CollectionCreate defines model for CollectionCreate.
+type CollectionCreate struct {
+	ClientTs    *time.Time          `json:"client_ts,omitempty"`
+	Description *string             `json:"description,omitempty"`
+	Id          *openapi_types.UUID `json:"id,omitempty"`
+	Name        string              `json:"name"`
+}
+
+// CollectionPatch defines model for CollectionPatch.
+type CollectionPatch struct {
+	ClientTs    *time.Time `json:"client_ts,omitempty"`
+	Description *string    `json:"description,omitempty"`
+	Name        *string    `json:"name,omitempty"`
 }
 
 // DeviceInfo defines model for DeviceInfo.
@@ -1211,6 +1265,9 @@ type StreamUrls struct {
 
 // SyncDelta defines model for SyncDelta.
 type SyncDelta struct {
+	Bookmarks   []Bookmark   `json:"bookmarks"`
+	Collections []Collection `json:"collections"`
+
 	// Cursor Pass as `since` next time
 	Cursor string `json:"cursor"`
 
@@ -1308,6 +1365,12 @@ type VersionPair struct {
 
 // BookId defines model for BookId.
 type BookId = openapi_types.UUID
+
+// BookmarkId defines model for BookmarkId.
+type BookmarkId = openapi_types.UUID
+
+// CollectionId defines model for CollectionId.
+type CollectionId = openapi_types.UUID
 
 // Cursor defines model for Cursor.
 type Cursor = string
@@ -1418,6 +1481,11 @@ type ListLibraryParamsShelf string
 // ListLibraryParamsSort defines parameters for ListLibrary.
 type ListLibraryParamsSort string
 
+// ListBookmarksParams defines parameters for ListBookmarks.
+type ListBookmarksParams struct {
+	BookId *openapi_types.UUID `form:"book_id,omitempty" json:"book_id,omitempty"`
+}
+
 // GetSyncDeltaParams defines parameters for GetSyncDelta.
 type GetSyncDeltaParams struct {
 	// Since Opaque cursor from a previous response
@@ -1467,6 +1535,18 @@ type VerifyTotpJSONRequestBody = TotpVerifyRequest
 
 // CreateStreamUrlJSONRequestBody defines body for CreateStreamUrl for application/json ContentType.
 type CreateStreamUrlJSONRequestBody = StreamUrlRequest
+
+// CreateBookmarkJSONRequestBody defines body for CreateBookmark for application/json ContentType.
+type CreateBookmarkJSONRequestBody = BookmarkCreate
+
+// UpdateBookmarkJSONRequestBody defines body for UpdateBookmark for application/json ContentType.
+type UpdateBookmarkJSONRequestBody = BookmarkPatch
+
+// CreateCollectionJSONRequestBody defines body for CreateCollection for application/json ContentType.
+type CreateCollectionJSONRequestBody = CollectionCreate
+
+// UpdateCollectionJSONRequestBody defines body for UpdateCollection for application/json ContentType.
+type UpdateCollectionJSONRequestBody = CollectionPatch
 
 // PutProgressJSONRequestBody defines body for PutProgress for application/json ContentType.
 type PutProgressJSONRequestBody = ProgressUpdate
@@ -1599,6 +1679,36 @@ type ServerInterface interface {
 	// GetMe The current user
 	// (GET /me)
 	GetMe(w http.ResponseWriter, r *http.Request)
+	// ListBookmarks My bookmarks (optionally for one book)
+	// (GET /me/bookmarks)
+	ListBookmarks(w http.ResponseWriter, r *http.Request, params ListBookmarksParams)
+	// CreateBookmark Add a bookmark
+	// (POST /me/bookmarks)
+	CreateBookmark(w http.ResponseWriter, r *http.Request)
+	// DeleteBookmark Delete a bookmark (leaves a tombstone for other devices)
+	// (DELETE /me/bookmarks/{bookmarkId})
+	DeleteBookmark(w http.ResponseWriter, r *http.Request, bookmarkId BookmarkId)
+	// UpdateBookmark Edit a bookmark (last write wins by client_ts)
+	// (PATCH /me/bookmarks/{bookmarkId})
+	UpdateBookmark(w http.ResponseWriter, r *http.Request, bookmarkId BookmarkId)
+	// ListCollections My collections
+	// (GET /me/collections)
+	ListCollections(w http.ResponseWriter, r *http.Request)
+	// CreateCollection Create a collection
+	// (POST /me/collections)
+	CreateCollection(w http.ResponseWriter, r *http.Request)
+	// DeleteCollection Delete a collection (books are not affected)
+	// (DELETE /me/collections/{collectionId})
+	DeleteCollection(w http.ResponseWriter, r *http.Request, collectionId CollectionId)
+	// UpdateCollection Rename or describe a collection (last write wins by client_ts)
+	// (PATCH /me/collections/{collectionId})
+	UpdateCollection(w http.ResponseWriter, r *http.Request, collectionId CollectionId)
+	// RemoveFromCollection Remove a book from a collection
+	// (DELETE /me/collections/{collectionId}/books/{bookId})
+	RemoveFromCollection(w http.ResponseWriter, r *http.Request, collectionId CollectionId, bookId BookId)
+	// AddToCollection Add a book to a collection
+	// (PUT /me/collections/{collectionId}/books/{bookId})
+	AddToCollection(w http.ResponseWriter, r *http.Request, collectionId CollectionId, bookId BookId)
 	// RemoveFromMyLibrary Remove a book from my view (restorable for 30 days; master copy is kept)
 	// (DELETE /me/library/{bookId})
 	RemoveFromMyLibrary(w http.ResponseWriter, r *http.Request, bookId BookId)
@@ -1881,6 +1991,66 @@ func (_ Unimplemented) ListLibrary(w http.ResponseWriter, r *http.Request, param
 // GetMe The current user
 // (GET /me)
 func (_ Unimplemented) GetMe(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListBookmarks My bookmarks (optionally for one book)
+// (GET /me/bookmarks)
+func (_ Unimplemented) ListBookmarks(w http.ResponseWriter, r *http.Request, params ListBookmarksParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CreateBookmark Add a bookmark
+// (POST /me/bookmarks)
+func (_ Unimplemented) CreateBookmark(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteBookmark Delete a bookmark (leaves a tombstone for other devices)
+// (DELETE /me/bookmarks/{bookmarkId})
+func (_ Unimplemented) DeleteBookmark(w http.ResponseWriter, r *http.Request, bookmarkId BookmarkId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UpdateBookmark Edit a bookmark (last write wins by client_ts)
+// (PATCH /me/bookmarks/{bookmarkId})
+func (_ Unimplemented) UpdateBookmark(w http.ResponseWriter, r *http.Request, bookmarkId BookmarkId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListCollections My collections
+// (GET /me/collections)
+func (_ Unimplemented) ListCollections(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CreateCollection Create a collection
+// (POST /me/collections)
+func (_ Unimplemented) CreateCollection(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteCollection Delete a collection (books are not affected)
+// (DELETE /me/collections/{collectionId})
+func (_ Unimplemented) DeleteCollection(w http.ResponseWriter, r *http.Request, collectionId CollectionId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UpdateCollection Rename or describe a collection (last write wins by client_ts)
+// (PATCH /me/collections/{collectionId})
+func (_ Unimplemented) UpdateCollection(w http.ResponseWriter, r *http.Request, collectionId CollectionId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RemoveFromCollection Remove a book from a collection
+// (DELETE /me/collections/{collectionId}/books/{bookId})
+func (_ Unimplemented) RemoveFromCollection(w http.ResponseWriter, r *http.Request, collectionId CollectionId, bookId BookId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// AddToCollection Add a book to a collection
+// (PUT /me/collections/{collectionId}/books/{bookId})
+func (_ Unimplemented) AddToCollection(w http.ResponseWriter, r *http.Request, collectionId CollectionId, bookId BookId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -3066,6 +3236,255 @@ func (siw *ServerInterfaceWrapper) GetMe(w http.ResponseWriter, r *http.Request)
 	handler.ServeHTTP(w, r)
 }
 
+// ListBookmarks operation middleware
+func (siw *ServerInterfaceWrapper) ListBookmarks(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListBookmarksParams
+
+	// ------------- Optional query parameter "book_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "book_id", r.URL.Query(), &params.BookId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "book_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "book_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListBookmarks(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateBookmark operation middleware
+func (siw *ServerInterfaceWrapper) CreateBookmark(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateBookmark(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteBookmark operation middleware
+func (siw *ServerInterfaceWrapper) DeleteBookmark(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "bookmarkId" -------------
+	var bookmarkId BookmarkId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bookmarkId", chi.URLParam(r, "bookmarkId"), &bookmarkId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bookmarkId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteBookmark(w, r, bookmarkId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateBookmark operation middleware
+func (siw *ServerInterfaceWrapper) UpdateBookmark(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "bookmarkId" -------------
+	var bookmarkId BookmarkId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bookmarkId", chi.URLParam(r, "bookmarkId"), &bookmarkId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bookmarkId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateBookmark(w, r, bookmarkId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCollections operation middleware
+func (siw *ServerInterfaceWrapper) ListCollections(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCollections(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateCollection operation middleware
+func (siw *ServerInterfaceWrapper) CreateCollection(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateCollection(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCollection operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCollection(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "collectionId" -------------
+	var collectionId CollectionId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "collectionId", chi.URLParam(r, "collectionId"), &collectionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "collectionId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCollection(w, r, collectionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateCollection operation middleware
+func (siw *ServerInterfaceWrapper) UpdateCollection(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "collectionId" -------------
+	var collectionId CollectionId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "collectionId", chi.URLParam(r, "collectionId"), &collectionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "collectionId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateCollection(w, r, collectionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveFromCollection operation middleware
+func (siw *ServerInterfaceWrapper) RemoveFromCollection(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "collectionId" -------------
+	var collectionId CollectionId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "collectionId", chi.URLParam(r, "collectionId"), &collectionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "collectionId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "bookId" -------------
+	var bookId BookId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bookId", chi.URLParam(r, "bookId"), &bookId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bookId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveFromCollection(w, r, collectionId, bookId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AddToCollection operation middleware
+func (siw *ServerInterfaceWrapper) AddToCollection(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "collectionId" -------------
+	var collectionId CollectionId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "collectionId", chi.URLParam(r, "collectionId"), &collectionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "collectionId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "bookId" -------------
+	var bookId BookId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bookId", chi.URLParam(r, "bookId"), &bookId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bookId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddToCollection(w, r, collectionId, bookId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RemoveFromMyLibrary operation middleware
 func (siw *ServerInterfaceWrapper) RemoveFromMyLibrary(w http.ResponseWriter, r *http.Request) {
 
@@ -3810,6 +4229,36 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/admin/library/scan", wrapper.ScanLibrary)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/bookmarks", wrapper.ListBookmarks)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/me/bookmarks", wrapper.CreateBookmark)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/me/bookmarks/{bookmarkId}", wrapper.DeleteBookmark)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/me/bookmarks/{bookmarkId}", wrapper.UpdateBookmark)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/collections", wrapper.ListCollections)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/me/collections", wrapper.CreateCollection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/me/collections/{collectionId}", wrapper.DeleteCollection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/me/collections/{collectionId}", wrapper.UpdateCollection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/me/collections/{collectionId}/books/{bookId}", wrapper.RemoveFromCollection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/me/collections/{collectionId}/books/{bookId}", wrapper.AddToCollection)
 	})
 
 	return r
@@ -5916,6 +6365,471 @@ func (response GetMe401JSONResponse) VisitGetMeResponse(w http.ResponseWriter) e
 	return err
 }
 
+type ListBookmarksRequestObject struct {
+	Params ListBookmarksParams
+}
+
+type ListBookmarksResponseObject interface {
+	VisitListBookmarksResponse(w http.ResponseWriter) error
+}
+
+type ListBookmarks200JSONResponse []Bookmark
+
+func (response ListBookmarks200JSONResponse) VisitListBookmarksResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBookmarks401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListBookmarks401JSONResponse) VisitListBookmarksResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBookmarkRequestObject struct {
+	Body *CreateBookmarkJSONRequestBody
+}
+
+type CreateBookmarkResponseObject interface {
+	VisitCreateBookmarkResponse(w http.ResponseWriter) error
+}
+
+type CreateBookmark201JSONResponse Bookmark
+
+func (response CreateBookmark201JSONResponse) VisitCreateBookmarkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBookmark400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateBookmark400JSONResponse) VisitCreateBookmarkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBookmark401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateBookmark401JSONResponse) VisitCreateBookmarkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBookmark404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CreateBookmark404JSONResponse) VisitCreateBookmarkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteBookmarkRequestObject struct {
+	BookmarkId BookmarkId `json:"bookmarkId"`
+}
+
+type DeleteBookmarkResponseObject interface {
+	VisitDeleteBookmarkResponse(w http.ResponseWriter) error
+}
+
+type DeleteBookmark204Response struct {
+}
+
+func (response DeleteBookmark204Response) VisitDeleteBookmarkResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteBookmark401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteBookmark401JSONResponse) VisitDeleteBookmarkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteBookmark404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteBookmark404JSONResponse) VisitDeleteBookmarkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBookmarkRequestObject struct {
+	BookmarkId BookmarkId `json:"bookmarkId"`
+	Body       *UpdateBookmarkJSONRequestBody
+}
+
+type UpdateBookmarkResponseObject interface {
+	VisitUpdateBookmarkResponse(w http.ResponseWriter) error
+}
+
+type UpdateBookmark200JSONResponse Bookmark
+
+func (response UpdateBookmark200JSONResponse) VisitUpdateBookmarkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBookmark401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateBookmark401JSONResponse) VisitUpdateBookmarkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBookmark404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateBookmark404JSONResponse) VisitUpdateBookmarkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCollectionsRequestObject struct {
+}
+
+type ListCollectionsResponseObject interface {
+	VisitListCollectionsResponse(w http.ResponseWriter) error
+}
+
+type ListCollections200JSONResponse []Collection
+
+func (response ListCollections200JSONResponse) VisitListCollectionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCollections401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListCollections401JSONResponse) VisitListCollectionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCollectionRequestObject struct {
+	Body *CreateCollectionJSONRequestBody
+}
+
+type CreateCollectionResponseObject interface {
+	VisitCreateCollectionResponse(w http.ResponseWriter) error
+}
+
+type CreateCollection201JSONResponse Collection
+
+func (response CreateCollection201JSONResponse) VisitCreateCollectionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCollection400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateCollection400JSONResponse) VisitCreateCollectionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCollection401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateCollection401JSONResponse) VisitCreateCollectionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCollectionRequestObject struct {
+	CollectionId CollectionId `json:"collectionId"`
+}
+
+type DeleteCollectionResponseObject interface {
+	VisitDeleteCollectionResponse(w http.ResponseWriter) error
+}
+
+type DeleteCollection204Response struct {
+}
+
+func (response DeleteCollection204Response) VisitDeleteCollectionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteCollection401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteCollection401JSONResponse) VisitDeleteCollectionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCollection404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteCollection404JSONResponse) VisitDeleteCollectionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCollectionRequestObject struct {
+	CollectionId CollectionId `json:"collectionId"`
+	Body         *UpdateCollectionJSONRequestBody
+}
+
+type UpdateCollectionResponseObject interface {
+	VisitUpdateCollectionResponse(w http.ResponseWriter) error
+}
+
+type UpdateCollection200JSONResponse Collection
+
+func (response UpdateCollection200JSONResponse) VisitUpdateCollectionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCollection401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateCollection401JSONResponse) VisitUpdateCollectionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCollection404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateCollection404JSONResponse) VisitUpdateCollectionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveFromCollectionRequestObject struct {
+	CollectionId CollectionId `json:"collectionId"`
+	BookId       BookId       `json:"bookId"`
+}
+
+type RemoveFromCollectionResponseObject interface {
+	VisitRemoveFromCollectionResponse(w http.ResponseWriter) error
+}
+
+type RemoveFromCollection204Response struct {
+}
+
+func (response RemoveFromCollection204Response) VisitRemoveFromCollectionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RemoveFromCollection401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RemoveFromCollection401JSONResponse) VisitRemoveFromCollectionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveFromCollection404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response RemoveFromCollection404JSONResponse) VisitRemoveFromCollectionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddToCollectionRequestObject struct {
+	CollectionId CollectionId `json:"collectionId"`
+	BookId       BookId       `json:"bookId"`
+}
+
+type AddToCollectionResponseObject interface {
+	VisitAddToCollectionResponse(w http.ResponseWriter) error
+}
+
+type AddToCollection204Response struct {
+}
+
+func (response AddToCollection204Response) VisitAddToCollectionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type AddToCollection401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response AddToCollection401JSONResponse) VisitAddToCollectionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddToCollection404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response AddToCollection404JSONResponse) VisitAddToCollectionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type RemoveFromMyLibraryRequestObject struct {
 	BookId BookId `json:"bookId"`
 }
@@ -6983,6 +7897,36 @@ type StrictServerInterface interface {
 	// GetMe The current user
 	// (GET /me)
 	GetMe(ctx context.Context, request GetMeRequestObject) (GetMeResponseObject, error)
+	// ListBookmarks My bookmarks (optionally for one book)
+	// (GET /me/bookmarks)
+	ListBookmarks(ctx context.Context, request ListBookmarksRequestObject) (ListBookmarksResponseObject, error)
+	// CreateBookmark Add a bookmark
+	// (POST /me/bookmarks)
+	CreateBookmark(ctx context.Context, request CreateBookmarkRequestObject) (CreateBookmarkResponseObject, error)
+	// DeleteBookmark Delete a bookmark (leaves a tombstone for other devices)
+	// (DELETE /me/bookmarks/{bookmarkId})
+	DeleteBookmark(ctx context.Context, request DeleteBookmarkRequestObject) (DeleteBookmarkResponseObject, error)
+	// UpdateBookmark Edit a bookmark (last write wins by client_ts)
+	// (PATCH /me/bookmarks/{bookmarkId})
+	UpdateBookmark(ctx context.Context, request UpdateBookmarkRequestObject) (UpdateBookmarkResponseObject, error)
+	// ListCollections My collections
+	// (GET /me/collections)
+	ListCollections(ctx context.Context, request ListCollectionsRequestObject) (ListCollectionsResponseObject, error)
+	// CreateCollection Create a collection
+	// (POST /me/collections)
+	CreateCollection(ctx context.Context, request CreateCollectionRequestObject) (CreateCollectionResponseObject, error)
+	// DeleteCollection Delete a collection (books are not affected)
+	// (DELETE /me/collections/{collectionId})
+	DeleteCollection(ctx context.Context, request DeleteCollectionRequestObject) (DeleteCollectionResponseObject, error)
+	// UpdateCollection Rename or describe a collection (last write wins by client_ts)
+	// (PATCH /me/collections/{collectionId})
+	UpdateCollection(ctx context.Context, request UpdateCollectionRequestObject) (UpdateCollectionResponseObject, error)
+	// RemoveFromCollection Remove a book from a collection
+	// (DELETE /me/collections/{collectionId}/books/{bookId})
+	RemoveFromCollection(ctx context.Context, request RemoveFromCollectionRequestObject) (RemoveFromCollectionResponseObject, error)
+	// AddToCollection Add a book to a collection
+	// (PUT /me/collections/{collectionId}/books/{bookId})
+	AddToCollection(ctx context.Context, request AddToCollectionRequestObject) (AddToCollectionResponseObject, error)
 	// RemoveFromMyLibrary Remove a book from my view (restorable for 30 days; master copy is kept)
 	// (DELETE /me/library/{bookId})
 	RemoveFromMyLibrary(ctx context.Context, request RemoveFromMyLibraryRequestObject) (RemoveFromMyLibraryResponseObject, error)
@@ -8104,6 +9048,290 @@ func (sh *strictHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ListBookmarks operation middleware
+func (sh *strictHandler) ListBookmarks(w http.ResponseWriter, r *http.Request, params ListBookmarksParams) {
+	var request ListBookmarksRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListBookmarks(ctx, request.(ListBookmarksRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListBookmarks")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListBookmarksResponseObject); ok {
+		if err := validResponse.VisitListBookmarksResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateBookmark operation middleware
+func (sh *strictHandler) CreateBookmark(w http.ResponseWriter, r *http.Request) {
+	var request CreateBookmarkRequestObject
+
+	var body CreateBookmarkJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateBookmark(ctx, request.(CreateBookmarkRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateBookmark")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateBookmarkResponseObject); ok {
+		if err := validResponse.VisitCreateBookmarkResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteBookmark operation middleware
+func (sh *strictHandler) DeleteBookmark(w http.ResponseWriter, r *http.Request, bookmarkId BookmarkId) {
+	var request DeleteBookmarkRequestObject
+
+	request.BookmarkId = bookmarkId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteBookmark(ctx, request.(DeleteBookmarkRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteBookmark")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteBookmarkResponseObject); ok {
+		if err := validResponse.VisitDeleteBookmarkResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateBookmark operation middleware
+func (sh *strictHandler) UpdateBookmark(w http.ResponseWriter, r *http.Request, bookmarkId BookmarkId) {
+	var request UpdateBookmarkRequestObject
+
+	request.BookmarkId = bookmarkId
+
+	var body UpdateBookmarkJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateBookmark(ctx, request.(UpdateBookmarkRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateBookmark")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateBookmarkResponseObject); ok {
+		if err := validResponse.VisitUpdateBookmarkResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListCollections operation middleware
+func (sh *strictHandler) ListCollections(w http.ResponseWriter, r *http.Request) {
+	var request ListCollectionsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCollections(ctx, request.(ListCollectionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCollections")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListCollectionsResponseObject); ok {
+		if err := validResponse.VisitListCollectionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateCollection operation middleware
+func (sh *strictHandler) CreateCollection(w http.ResponseWriter, r *http.Request) {
+	var request CreateCollectionRequestObject
+
+	var body CreateCollectionJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateCollection(ctx, request.(CreateCollectionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateCollection")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateCollectionResponseObject); ok {
+		if err := validResponse.VisitCreateCollectionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteCollection operation middleware
+func (sh *strictHandler) DeleteCollection(w http.ResponseWriter, r *http.Request, collectionId CollectionId) {
+	var request DeleteCollectionRequestObject
+
+	request.CollectionId = collectionId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteCollection(ctx, request.(DeleteCollectionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteCollection")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteCollectionResponseObject); ok {
+		if err := validResponse.VisitDeleteCollectionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateCollection operation middleware
+func (sh *strictHandler) UpdateCollection(w http.ResponseWriter, r *http.Request, collectionId CollectionId) {
+	var request UpdateCollectionRequestObject
+
+	request.CollectionId = collectionId
+
+	var body UpdateCollectionJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateCollection(ctx, request.(UpdateCollectionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateCollection")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateCollectionResponseObject); ok {
+		if err := validResponse.VisitUpdateCollectionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RemoveFromCollection operation middleware
+func (sh *strictHandler) RemoveFromCollection(w http.ResponseWriter, r *http.Request, collectionId CollectionId, bookId BookId) {
+	var request RemoveFromCollectionRequestObject
+
+	request.CollectionId = collectionId
+	request.BookId = bookId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RemoveFromCollection(ctx, request.(RemoveFromCollectionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RemoveFromCollection")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RemoveFromCollectionResponseObject); ok {
+		if err := validResponse.VisitRemoveFromCollectionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AddToCollection operation middleware
+func (sh *strictHandler) AddToCollection(w http.ResponseWriter, r *http.Request, collectionId CollectionId, bookId BookId) {
+	var request AddToCollectionRequestObject
+
+	request.CollectionId = collectionId
+	request.BookId = bookId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AddToCollection(ctx, request.(AddToCollectionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AddToCollection")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AddToCollectionResponseObject); ok {
+		if err := validResponse.VisitAddToCollectionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // RemoveFromMyLibrary operation middleware
 func (sh *strictHandler) RemoveFromMyLibrary(w http.ResponseWriter, r *http.Request, bookId BookId) {
 	var request RemoveFromMyLibraryRequestObject
@@ -8634,183 +9862,197 @@ func (sh *strictHandler) GetHlsSegment(w http.ResponseWriter, r *http.Request, b
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
-	"/wEA",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

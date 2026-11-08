@@ -200,6 +200,9 @@ func (s *Server) CreateDistribution(ctx context.Context, req CreateDistributionR
 		if id, err = store.CreateDistribution(ctx, tx, bookID, string(b.TargetType), targetID, admin, deref(b.Note)); err != nil {
 			return err
 		}
+		if err := store.RecordBookChange(ctx, tx, bookID); err != nil {
+			return err
+		}
 		return store.Audit(ctx, tx, store.AuditEntry{ActorID: admin, Action: "distribution.create", ObjectType: "book", ObjectID: bookID,
 			IP: clientIP(ctx), Details: map[string]any{"target_type": string(b.TargetType), "target_id": targetID}})
 	})
@@ -227,6 +230,9 @@ func (s *Server) RevokeDistribution(ctx context.Context, req RevokeDistributionR
 	err = s.App().DB.InTx(ctx, func(tx *store.Tx) error {
 		bookID, err := store.RevokeDistribution(ctx, tx, id)
 		if err != nil {
+			return err
+		}
+		if err := store.RecordBookChange(ctx, tx, bookID); err != nil {
 			return err
 		}
 		return store.Audit(ctx, tx, store.AuditEntry{ActorID: admin, Action: "distribution.revoke", ObjectType: "book", ObjectID: bookID,

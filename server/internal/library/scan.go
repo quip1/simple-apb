@@ -69,6 +69,7 @@ func (l *Library) Scan(ctx context.Context, now time.Time) (*ScanResult, error) 
 		}
 		if kb.Status == "quarantined" && l.reasonIsMissing(ctx, kb.ID) {
 			if err := store.SetBookStatus(ctx, l.DB, kb.ID, "ready", ""); err == nil {
+				_ = store.RecordBookChange(ctx, l.DB, kb.ID)
 				res.Restored++
 			}
 		}
@@ -90,6 +91,7 @@ func (l *Library) Scan(ctx context.Context, now time.Time) (*ScanResult, error) 
 		if err := store.SetBookStatus(ctx, l.DB, kb.ID, "quarantined", reasonMissing); err != nil {
 			return res, err
 		}
+		_ = store.RecordBookChange(ctx, l.DB, kb.ID)
 		_ = store.Audit(ctx, l.DB, store.AuditEntry{Action: "book.files_missing", ObjectType: "book", ObjectID: kb.ID,
 			Details: map[string]any{"folder": folder}})
 		res.Missing++
@@ -165,6 +167,9 @@ func (l *Library) reimport(ctx context.Context, id string, c Candidate) error {
 			return err
 		}
 		if err := store.UpdateBookTotals(ctx, tx, id, a.Book.DurationMS, a.Book.SizeBytes, a.Book.Checksum); err != nil {
+			return err
+		}
+		if err := store.RecordBookChange(ctx, tx, id); err != nil {
 			return err
 		}
 		return store.Audit(ctx, tx, store.AuditEntry{Action: "book.rescan_update", ObjectType: "book", ObjectID: id})

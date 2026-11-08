@@ -397,9 +397,14 @@ export interface paths {
         /**
          * Everything that changed for me since a cursor
          * @description The single call clients make on reconnect. Omit `since` for a full
-         *     snapshot. Returns library visibility changes, progress, and tombstones
-         *     (bookmarks/collections join in Phase 1). Page with `next_cursor` while
-         *     `has_more` is true; store the final cursor.
+         *     snapshot. Returns library visibility changes, progress, bookmarks,
+         *     collections and tombstones. While `has_more` is true, call again with
+         *     the returned `cursor`; store the final one. A tombstone for a
+         *     `library_entry` means the book is no longer visible to you.
+         *
+         *     Open clients can also connect to the WebSocket at `/ws` (Bearer header or
+         *     session cookie), which sends `{"type":"changed","seq":N}` hints so they
+         *     sync immediately.
          */
         get: operations["getSyncDelta"];
         put?: never;
@@ -942,6 +947,99 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/bookmarks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My bookmarks (optionally for one book) */
+        get: operations["listBookmarks"];
+        put?: never;
+        /**
+         * Add a bookmark
+         * @description Clients may send their own `id` (UUID) so an offline-created bookmark syncs idempotently: re-sending the same id returns the existing bookmark.
+         */
+        post: operations["createBookmark"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/bookmarks/{bookmarkId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a bookmark (leaves a tombstone for other devices) */
+        delete: operations["deleteBookmark"];
+        options?: never;
+        head?: never;
+        /** Edit a bookmark (last write wins by client_ts) */
+        patch: operations["updateBookmark"];
+        trace?: never;
+    };
+    "/me/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My collections */
+        get: operations["listCollections"];
+        put?: never;
+        /** Create a collection */
+        post: operations["createCollection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/collections/{collectionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a collection (books are not affected) */
+        delete: operations["deleteCollection"];
+        options?: never;
+        head?: never;
+        /** Rename or describe a collection (last write wins by client_ts) */
+        patch: operations["updateCollection"];
+        trace?: never;
+    };
+    "/me/collections/{collectionId}/books/{bookId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Add a book to a collection */
+        put: operations["addToCollection"];
+        post?: never;
+        /** Remove a book from a collection */
+        delete: operations["removeFromCollection"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1282,6 +1380,8 @@ export interface components {
             /** @description Books that became visible or whose metadata changed */
             library: components["schemas"]["BookSummary"][];
             progress: components["schemas"]["Progress"][];
+            bookmarks: components["schemas"]["Bookmark"][];
+            collections: components["schemas"]["Collection"][];
             tombstones: components["schemas"]["Tombstone"][];
         };
         /**
@@ -1560,6 +1660,65 @@ export interface components {
             password: string;
             totp_code: string;
         };
+        Bookmark: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            book_id: string;
+            /** Format: int64 */
+            position_ms: number;
+            note?: string;
+            /**
+             * Format: date-time
+             * @description Last-write-wins clock (client time, clamped)
+             */
+            updated_at: string;
+        };
+        BookmarkCreate: {
+            /**
+             * Format: uuid
+             * @description Client-generated id for idempotent offline creation
+             */
+            id?: string;
+            /** Format: uuid */
+            book_id: string;
+            /** Format: int64 */
+            position_ms: number;
+            note?: string;
+            /** Format: date-time */
+            client_ts?: string;
+        };
+        BookmarkPatch: {
+            /** Format: int64 */
+            position_ms?: number;
+            note?: string;
+            /** Format: date-time */
+            client_ts?: string;
+        };
+        Collection: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            description?: string;
+            /** @description Books in order (only books you can currently see) */
+            book_ids: string[];
+            /** Format: date-time */
+            updated_at: string;
+        };
+        CollectionCreate: {
+            /** Format: uuid */
+            id?: string;
+            name: string;
+            description?: string;
+            /** Format: date-time */
+            client_ts?: string;
+        };
+        CollectionPatch: {
+            name?: string;
+            description?: string;
+            /** Format: date-time */
+            client_ts?: string;
+        };
     };
     responses: {
         /** @description Invalid request */
@@ -1635,6 +1794,8 @@ export interface components {
         RequestId: string;
         UserId: string;
         GroupId: string;
+        BookmarkId: string;
+        CollectionId: string;
         /** @description Opaque pagination cursor from `next_cursor` */
         Cursor: string;
         Limit: number;
@@ -3072,6 +3233,249 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    listBookmarks: {
+        parameters: {
+            query?: {
+                book_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bookmarks, by book then position */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Bookmark"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createBookmark: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookmarkCreate"];
+            };
+        };
+        responses: {
+            /** @description Created (or the existing bookmark with that id) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Bookmark"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteBookmark: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookmarkId: components["parameters"]["BookmarkId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateBookmark: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookmarkId: components["parameters"]["BookmarkId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookmarkPatch"];
+            };
+        };
+        responses: {
+            /** @description The bookmark after the write (unchanged if the edit was older) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Bookmark"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listCollections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Collections */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Collection"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectionCreate"];
+            };
+        };
+        responses: {
+            /** @description Created (or the existing collection with that id) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Collection"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    deleteCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collectionId: components["parameters"]["CollectionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collectionId: components["parameters"]["CollectionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectionPatch"];
+            };
+        };
+        responses: {
+            /** @description The collection after the write */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Collection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    addToCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collectionId: components["parameters"]["CollectionId"];
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Added */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    removeFromCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collectionId: components["parameters"]["CollectionId"];
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
         };
     };
 }

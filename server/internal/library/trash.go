@@ -37,6 +37,9 @@ func (l *Library) Trash(ctx context.Context, actor, bookID, ip string) error {
 		if err := store.SetBookStatus(ctx, tx, bookID, "trashed", "deleted by admin"); err != nil {
 			return err
 		}
+		if err := store.RecordBookChange(ctx, tx, bookID); err != nil {
+			return err
+		}
 		return store.Audit(ctx, tx, store.AuditEntry{ActorID: actor, Action: "book.trash", ObjectType: "book", ObjectID: bookID, IP: ip,
 			Details: map[string]any{"title": b.Title}})
 	})
@@ -53,6 +56,9 @@ func (l *Library) Restore(ctx context.Context, actor, bookID, ip string) error {
 			return store.ErrConflict
 		}
 		if err := store.SetBookStatus(ctx, tx, bookID, "ready", ""); err != nil {
+			return err
+		}
+		if err := store.RecordBookChange(ctx, tx, bookID); err != nil {
 			return err
 		}
 		return store.Audit(ctx, tx, store.AuditEntry{ActorID: actor, Action: "book.restore", ObjectType: "book", ObjectID: bookID, IP: ip})
@@ -78,6 +84,9 @@ func (l *Library) Purge(ctx context.Context, actor, bookID, ip string) error {
 	}
 	return l.DB.InTx(ctx, func(tx *store.Tx) error {
 		if err := store.DeleteBook(ctx, tx, bookID); err != nil {
+			return err
+		}
+		if err := store.RecordChange(ctx, tx, "", store.EntityBook, bookID, "delete"); err != nil {
 			return err
 		}
 		return store.Audit(ctx, tx, store.AuditEntry{ActorID: actor, Action: "book.purge", ObjectType: "book", ObjectID: bookID, IP: ip,

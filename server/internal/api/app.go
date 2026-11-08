@@ -20,6 +20,13 @@ import (
 	"github.com/quip1/simple-apb/server/internal/stream"
 )
 
+// JobSyncPrune trims the delta-sync change log; cursors older than
+// SyncLogRetention get 410 and do a full sync.
+const JobSyncPrune = "sync_prune"
+
+// SyncLogRetention is how long the change log is kept.
+const SyncLogRetention = 90 * 24 * time.Hour
+
 // JobHLSPrune evicts least-recently-used transcodes above the cache cap.
 const JobHLSPrune = "hls_prune"
 
@@ -33,6 +40,7 @@ type App struct {
 	Shaper  *stream.Shaper
 	HLS     *stream.HLS
 	Signer  stream.Signer
+	Hub     *Hub
 	hlsCap  int64
 	log     *slog.Logger
 }
@@ -74,6 +82,7 @@ func NewApp(ctx context.Context, db *store.DB, secrets *config.Secrets, log *slo
 		workers = 2
 	}
 	a.Jobs = jobs.NewRunner(db, log, workers)
+	a.Hub = NewHub(ctx, db)
 	a.registerJobs()
 	if a.Uploads, err = newUploadHandler(a, o.TrustedProxies); err != nil {
 		return nil, err
@@ -101,6 +110,10 @@ func (a *App) registerJobs() {
 		n, err := a.HLS.Prune(a.hlsCap)
 		return map[string]int{"books_evicted": n}, err
 	})
+	a.Jobs.Handle(JobSyncPrune, func(ctx context.Context, _ *jobs.Job) (any, error) {
+		low, err := store.PruneChanges(ctx, a.DB, a.Auth.Enc, time.Now().Add(-SyncLogRetention).UnixMilli())
+		return map[string]int64{"low_water_seq": low}, err
+	})
 	a.Jobs.Handle(library.JobPurgeTrash, func(ctx context.Context, _ *jobs.Job) (any, error) {
 		n, err := a.Lib.PurgeExpired(ctx, time.Now())
 		return map[string]int{"purged": n}, err
@@ -120,6 +133,8 @@ func (a *App) Start(ctx context.Context) {
 		a.log.Warn("requeued jobs interrupted by a previous shutdown", "count", n)
 	}
 	a.Shaper.Start(ctx)
+	go a.Hub.Run(ctx)
+	a.Jobs.Every(ctx, JobSyncPrune, 24*time.Hour, nil)
 	go func() { <-ctx.Done(); a.HLS.StopAll() }()
 	a.Jobs.Start(ctx)
 	a.Jobs.Every(ctx, JobHLSPrune, time.Hour, nil)

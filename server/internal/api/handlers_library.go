@@ -240,6 +240,9 @@ func (s *Server) RemoveFromMyLibrary(ctx context.Context, req RemoveFromMyLibrar
 		if err := store.SetEntryFlag(ctx, tx, p.User.ID, id, "removed_at", true); err != nil {
 			return err
 		}
+		if err := store.RecordChange(ctx, tx, p.User.ID, store.EntityLibraryEntry, id, "upsert"); err != nil {
+			return err
+		}
 		return store.Audit(ctx, tx, store.AuditEntry{ActorID: p.User.ID, Action: "library.remove", ObjectType: "book", ObjectID: id, IP: clientIP(ctx)})
 	})
 	if err != nil {
@@ -265,7 +268,13 @@ func (s *Server) RestoreToMyLibrary(ctx context.Context, req RestoreToMyLibraryR
 	if removed != nil && store.NowMS()-*removed > store.RecentlyRemovedWindowMS {
 		return nil, apiErr(http.StatusGone, "restore_window_passed", "this book was removed more than 30 days ago")
 	}
-	if err := store.RestoreEntry(ctx, db, p.User.ID, id); err != nil {
+	err = db.InTx(ctx, func(tx *store.Tx) error {
+		if err := store.RestoreEntry(ctx, tx, p.User.ID, id); err != nil {
+			return err
+		}
+		return store.RecordChange(ctx, tx, p.User.ID, store.EntityLibraryEntry, id, "upsert")
+	})
+	if err != nil {
 		return nil, err
 	}
 	return RestoreToMyLibrary204Response{}, nil
@@ -281,7 +290,13 @@ func (s *Server) HideInMyLibrary(ctx context.Context, req HideInMyLibraryRequest
 	if _, err := store.VisibleBook(ctx, db, p.User.ID, id); err != nil {
 		return nil, err
 	}
-	if err := store.SetEntryFlag(ctx, db, p.User.ID, id, "hidden_at", true); err != nil {
+	err = db.InTx(ctx, func(tx *store.Tx) error {
+		if err := store.SetEntryFlag(ctx, tx, p.User.ID, id, "hidden_at", true); err != nil {
+			return err
+		}
+		return store.RecordChange(ctx, tx, p.User.ID, store.EntityLibraryEntry, id, "upsert")
+	})
+	if err != nil {
 		return nil, err
 	}
 	return HideInMyLibrary204Response{}, nil

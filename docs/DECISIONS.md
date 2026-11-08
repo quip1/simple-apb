@@ -122,6 +122,8 @@ template bug triggered by our two `apiKey` security schemes.
 
 ## ADR-0008 — "Same offline window" for progress conflicts
 
+*(Implemented in M5 — see ADR-0020 for the final details.)*
+
 The brief returns 409 when two devices disagree by more than the threshold "within the same
 offline window". Proposed concrete rule (implemented in Phase 1): each `PUT /me/progress`
 carries `last_synced_at`, the time that device last synced this book. If the stored record
@@ -327,6 +329,45 @@ speaker on the LAN must reach the server by its public name, not the address the
 **Deferred:** a single "download whole book" endpoint (`GET /books/{id}/download`). Clients download
 per file with Range (resumable) and `?download=1`, which already covers offline copies on Android
 and Windows. A zip/m4b bundle can come later if a client needs it.
+
+---
+
+## ADR-0020 — Delta sync and last-write-wins, as built
+
+- **Conflict rule** (ADR-0008, implemented in `internal/sync.Decide`, table-tested). The conflict
+  check runs **before** "latest timestamp wins". Otherwise a device that listened offline for hours
+  but has an older clock reading would be silently overwritten — exactly the data loss the rule is
+  meant to prevent. A device moving within its own position never conflicts. The user's resolution
+  (`resolution: <conflict_id>`) always applies; its timestamp is bumped past the stored one so later
+  comparisons respect the choice, and the conflict row records the chosen position.
+- **Clocks.** Client timestamps more than 5 minutes in the future are clamped to server time, so one
+  device with a wrong clock can't win every comparison forever. Bookmarks and collections use the
+  same clamped client time as their last-write-wins clock (`updated_at`). Clients may supply their
+  own UUIDs, so creates made offline are idempotent when replayed.
+- **What the change log records.** Per-user changes (progress, bookmarks, collections, the user's
+  own library entry) carry the user id. Changes that can affect many users at once (distribution
+  added/revoked, Trash, purge, quarantine, re-import) are recorded once with no user. Joining or
+  leaving a group records one row per book distributed to that group, for that user. The delta
+  re-checks visibility for every mentioned book: visible → a summary, not visible → a
+  `library_entry` tombstone. This can occasionally send a tombstone for a book the client never had,
+  which clients ignore; it never reveals titles or metadata.
+- **Full snapshot** (no `since`) reads the cursor *first*, then gathers state, so anything changing
+  meanwhile is simply sent again next time. It isn't paged in v1 (10,000 summaries is a few MB,
+  once per device).
+- **Retention.** The change log is pruned after 90 days; a cursor older than the low-water mark gets
+  `410` and the client does a full snapshot.
+- **Deferred to Phase 2:** sharing collections with users and groups (`collection_shares`), alongside
+  the other social features.
+
+## ADR-0021 — `/ws` change hints
+
+`/ws` (Bearer header or session cookie) sends `{"type":"hello","seq":N}` on connect and
+`{"type":"changed","seq":N}` whenever the change log gains rows for that user (or for everyone). It
+carries no data — the client calls `GET /me/sync`. One notifier polls the change log every 500 ms
+instead of hooking every write path, so changes made by background jobs (imports, scans, purges) are
+covered automatically, and a hint can never be "lost" because a write forgot to publish one. The
+WebSocket library's Origin check blocks cross-site pages from opening the socket with a user's
+cookie. Pings every 30 s keep proxies from closing idle connections.
 
 ---
 

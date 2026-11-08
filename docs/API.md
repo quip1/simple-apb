@@ -2,7 +2,7 @@
 
 > **Generated** from `server/openapi.yaml` by `web/scripts/gen-api-docs.mjs`. Do not edit by hand.
 
-Version **0.4.0** · base path `/api/v1`
+Version **0.5.0** · base path `/api/v1`
 
 REST API for Simple APB. All endpoints live under `/api/v1`.
 
@@ -64,6 +64,16 @@ REST API for Simple APB. All endpoints live under `/api/v1`.
 | GET | `/me/progress/{bookId}` | My stored progress for a book | yes | 200, 401, 404 |
 | PUT | `/me/progress/{bookId}` | Report playback position | yes | 200, 400, 401, 404, 409 |
 | GET | `/me/sync` | Everything that changed for me since a cursor | yes | 200, 400, 401, 410 |
+| GET | `/me/bookmarks` | My bookmarks (optionally for one book) | yes | 200, 401 |
+| POST | `/me/bookmarks` | Add a bookmark | yes | 201, 400, 401, 404 |
+| PATCH | `/me/bookmarks/{bookmarkId}` | Edit a bookmark (last write wins by client_ts) | yes | 200, 401, 404 |
+| DELETE | `/me/bookmarks/{bookmarkId}` | Delete a bookmark (leaves a tombstone for other devices) | yes | 204, 401, 404 |
+| GET | `/me/collections` | My collections | yes | 200, 401 |
+| POST | `/me/collections` | Create a collection | yes | 201, 400, 401 |
+| PATCH | `/me/collections/{collectionId}` | Rename or describe a collection (last write wins by client_ts) | yes | 200, 401, 404 |
+| DELETE | `/me/collections/{collectionId}` | Delete a collection (books are not affected) | yes | 204, 401, 404 |
+| PUT | `/me/collections/{collectionId}/books/{bookId}` | Add a book to a collection | yes | 204, 401, 404 |
+| DELETE | `/me/collections/{collectionId}/books/{bookId}` | Remove a book from a collection | yes | 204, 401, 404 |
 
 ### media
 
@@ -486,6 +496,8 @@ Chapter on the global book timeline (across files).
 | `full` | boolean |  | True when this is a full snapshot (no `since`) |
 | `library` | array of `BookSummary` | yes | Books that became visible or whose metadata changed |
 | `progress` | array of `Progress` | yes |  |
+| `bookmarks` | array of `Bookmark` | yes |  |
+| `collections` | array of `Collection` | yes |  |
 | `tombstones` | array of `Tombstone` | yes |  |
 
 ### HlsProfile
@@ -754,4 +766,59 @@ Enum: `processing`, `ready`, `quarantined`, `trashed`
 | `confirm_count` | integer | yes | Must equal the number of books in the Trash |
 | `password` | string (password) | yes |  |
 | `totp_code` | string | yes |  |
+
+### Bookmark
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `book_id` | string (uuid) | yes |  |
+| `position_ms` | integer (int64) | yes |  |
+| `note` | string |  |  |
+| `updated_at` | string (date-time) | yes | Last-write-wins clock (client time, clamped) |
+
+### BookmarkCreate
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) |  | Client-generated id for idempotent offline creation |
+| `book_id` | string (uuid) | yes |  |
+| `position_ms` | integer (int64) | yes |  |
+| `note` | string |  |  |
+| `client_ts` | string (date-time) |  |  |
+
+### BookmarkPatch
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `position_ms` | integer (int64) |  |  |
+| `note` | string |  |  |
+| `client_ts` | string (date-time) |  |  |
+
+### Collection
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `name` | string | yes |  |
+| `description` | string |  |  |
+| `book_ids` | array of string | yes | Books in order (only books you can currently see) |
+| `updated_at` | string (date-time) | yes |  |
+
+### CollectionCreate
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) |  |  |
+| `name` | string | yes |  |
+| `description` | string |  |  |
+| `client_ts` | string (date-time) |  |  |
+
+### CollectionPatch
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `name` | string |  |  |
+| `description` | string |  |  |
+| `client_ts` | string (date-time) |  |  |
 

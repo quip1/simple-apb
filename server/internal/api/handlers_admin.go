@@ -68,6 +68,9 @@ func (s *Server) ApproveSignupRequest(ctx context.Context, req ApproveSignupRequ
 		if err := store.AddGroupMember(ctx, tx, pub, r.UserID); err != nil {
 			return err
 		}
+		if err := store.RecordGroupChange(ctx, tx, pub, r.UserID); err != nil {
+			return err
+		}
 		return store.Audit(ctx, tx, store.AuditEntry{ActorID: admin, Action: "user.approve", ObjectType: "user", ObjectID: r.UserID, IP: clientIP(ctx)})
 	})
 	if err != nil {
@@ -290,6 +293,9 @@ func (s *Server) AddGroupMember(ctx context.Context, req AddGroupMemberRequestOb
 		if err := store.AddGroupMember(ctx, tx, gid, uid); err != nil {
 			return err
 		}
+		if err := store.RecordGroupChange(ctx, tx, gid, uid); err != nil {
+			return err
+		}
 		return store.Audit(ctx, tx, store.AuditEntry{ActorID: admin, Action: "group.member_add", ObjectType: "group", ObjectID: gid,
 			IP: clientIP(ctx), Details: map[string]any{"user_id": uid}})
 	})
@@ -314,6 +320,9 @@ func (s *Server) RemoveGroupMember(ctx context.Context, req RemoveGroupMemberReq
 			return badRequest("builtin_group", "every approved user stays in the Public group")
 		}
 		if err := store.RemoveGroupMember(ctx, tx, gid, uid); err != nil {
+			return err
+		}
+		if err := store.RecordGroupChange(ctx, tx, gid, uid); err != nil {
 			return err
 		}
 		return store.Audit(ctx, tx, store.AuditEntry{ActorID: admin, Action: "group.member_remove", ObjectType: "group", ObjectID: gid,

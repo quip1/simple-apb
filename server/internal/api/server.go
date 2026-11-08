@@ -57,6 +57,7 @@ func (s *Server) Router() http.Handler {
 	uploads := func(w http.ResponseWriter, r *http.Request) { s.App().Uploads.ServeHTTP(w, r) }
 	r.HandleFunc(strings.TrimSuffix(uploadsBase, "/"), uploads)
 	r.HandleFunc(uploadsBase+"*", uploads)
+	r.HandleFunc("/ws", s.serveWS)
 
 	strict := NewStrictHandlerWithOptions(s, []StrictMiddlewareFunc{withRequest}, StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, _ *http.Request, err error) {
