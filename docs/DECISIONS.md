@@ -519,6 +519,38 @@ clients skip the cover request for books without one: before it, every coverless
 settings need Web Audio, which stops background playback in mobile browsers; casting and car mode
 are Android features; the web player is streaming-only (brief §9).
 
+## ADR-0030 — Account self-service
+
+**Decision.** `PATCH /me` edits display name, email, locale, the sync conflict threshold
+(1–30 minutes, brief §6.8), the "who's listening" opt-out and a free-form `prefs` object (≤ 8 KB,
+last write wins). `POST /me/password` checks the current password and signs out every *other*
+session. `POST /me/totp/disable` needs password + code and is refused while 2FA is required
+(admin, a tag, or instance-wide); `POST /me/recovery-codes` needs a code. `DELETE /me/sessions`
+signs out all other devices. Password and code re-checks share the per-account login rate limit.
+`Me` now carries `totp_required`, so clients don't guess it from the role.
+
+**Synced vs per-device preferences.** Skip lengths, the e-ink refresh interval, the left-handed
+layout and the default speed follow the account (`prefs`, snake_case keys shared with the other
+clients). Theme and stream quality stay per device: an e-ink reader and a phone on cellular want
+different answers.
+
+**Not here.** Data export and self-service account deletion are Phase 6 work (brief §16).
+
+## ADR-0031 — Listening stats
+
+**Decision.** `GET /me/stats?year=&tz=` is computed on request from `progress_events` (each
+progress write records from/to position and the device's start/end times). An event counts
+`min(position advance, wall-clock time)`: real time at any speed, pauses inside an event don't
+count, and a jump faster than 3.5× the elapsed time is a seek and counts zero. Days are calendar
+days in the client's IANA time zone (tzdata is embedded in the binary). An author gets the full
+time of each of their books. The longest streak is reported as a fun fact only (brief §6.17).
+
+**`finished_at` is the device's time.** It used to be the server's receive time, which puts a
+book finished offline (and synced later) on the wrong day or even year. It's now the write's
+`client_ts`, never later than now.
+
+**Known limit.** Below 1× speed the formula undercounts a little (events don't store speed).
+
 ---
 
 ## Open questions for Jacob

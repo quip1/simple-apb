@@ -228,7 +228,8 @@ func (s *Server) meFor(ctx context.Context, p *auth.Principal) (*Me, error) {
 	eff := authz.Effective(p.Subject)
 	me := &Me{
 		Id: mustUUID(u.ID), Username: u.Username, DisplayName: u.DisplayName,
-		Role: UserRole(u.Role), Status: UserStatus(u.Status), TotpEnabled: u.TOTPSecretEnc != "",
+		Role: UserRole(u.Role), Status: UserStatus(u.Status), TotpEnabled: u.TOTPSecretEnc != "", TotpRequired: p.TOTPRequired,
+		ConflictThresholdMinutes: int(u.ConflictThresholdMS / 60_000), ListeningVisible: u.ListeningVisible, Prefs: prefsOf(u.Prefs),
 		QuotaBytes: u.QuotaBytes, UsedBytes: used, Locale: u.Locale, Notice: strPtr(u.Notice),
 		Permissions: EffectivePermissions{
 			CanUpload: eff[authz.Upload], CanEditMetadata: eff[authz.EditMetadata], CanDeleteOwn: eff[authz.DeleteOwn],
@@ -297,4 +298,13 @@ func (s *Server) RevokeMySession(ctx context.Context, req RevokeMySessionRequest
 	_ = store.Audit(ctx, s.App().DB, store.AuditEntry{ActorID: p.User.ID, Action: "session.revoke", ObjectType: "session",
 		ObjectID: req.SessionId.String(), IP: clientIP(ctx)})
 	return RevokeMySession204Response{}, nil
+}
+
+// prefsOf decodes the stored preferences object (empty on anything odd).
+func prefsOf(raw string) map[string]any {
+	m := map[string]any{}
+	if raw != "" {
+		_ = json.Unmarshal([]byte(raw), &m)
+	}
+	return m
 }

@@ -2,7 +2,7 @@
 
 > **Generated** from `server/openapi.yaml` by `web/scripts/gen-api-docs.mjs`. Do not edit by hand.
 
-Version **0.7.0** · base path `/api/v1`
+Version **0.8.0** · base path `/api/v1`
 
 REST API for Simple APB. All endpoints live under `/api/v1`.
 
@@ -41,7 +41,13 @@ REST API for Simple APB. All endpoints live under `/api/v1`.
 | Method | Path | Summary | Auth | Responses |
 |---|---|---|---|---|
 | GET | `/me` | The current user | yes | 200, 401 |
+| PATCH | `/me` | Edit my profile and preferences | yes | 200, 400, 401, 409 |
+| POST | `/me/password` | Change my password (signs out my other devices) | yes | 204, 400, 401, 429 |
+| POST | `/me/totp/disable` | Turn off two-factor authentication | yes | 204, 401, 403, 429 |
+| POST | `/me/recovery-codes` | Replace my recovery codes (the old ones stop working) | yes | 200, 401, 409, 429 |
+| GET | `/me/stats` | My listening stats for a year (charts and year in review) | yes | 200, 400, 401 |
 | GET | `/me/sessions` | My device sessions | yes | 200, 401 |
+| DELETE | `/me/sessions` | Sign out all my other devices | yes | 204, 401 |
 | DELETE | `/me/sessions/{sessionId}` | Revoke one of my sessions | yes | 204, 401, 404 |
 | POST | `/devices/push-subscription` | Register this device for push notifications | yes | 200, 400, 401 |
 | DELETE | `/devices/push-subscription/{deviceId}` | Stop push notifications for a device | yes | 204, 401, 404 |
@@ -304,6 +310,83 @@ Enum: `pending`, `active`, `restricted`, `suspended`, `banned`, `deleted`
 | `locale` | string | yes |  |
 | `permissions` | `EffectivePermissions` | yes |  |
 | `notice` | string |  | Moderator warning to show once on login, if any. |
+| `totp_required` | boolean | yes | 2FA is required for this account (admin, a tag, or instance-wide) |
+| `conflict_threshold_minutes` | integer | yes | Progress differences larger than this between devices ask which position to keep |
+| `listening_visible` | boolean | yes | Show me in a book's "who's listening" |
+| `prefs` | object | yes | Client preferences synced across devices (opaque to the server, at most 8 KB) |
+
+### MePatch
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `display_name` | string |  |  |
+| `email` | string |  | Empty string removes it |
+| `locale` | string |  |  |
+| `conflict_threshold_minutes` | integer |  |  |
+| `listening_visible` | boolean |  |  |
+| `prefs` | object |  |  |
+
+### PasswordChange
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `current_password` | string (password) | yes |  |
+| `new_password` | string (password) | yes |  |
+
+### TotpDisable
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `password` | string (password) | yes |  |
+| `code` | string | yes |  |
+
+### TotpCode
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `code` | string | yes |  |
+
+### MyStats
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `year` | integer | yes |  |
+| `years` | array of integer | yes | Years with any listening, newest first |
+| `total_ms` | integer (int64) | yes |  |
+| `active_days` | integer | yes |  |
+| `longest_streak_days` | integer | yes | Fun fact only (no streak features) |
+| `books_finished` | integer | yes |  |
+| `days` | array of `StatsDay` | yes | Days with listening, in order |
+| `books` | array of `StatsBook` | yes | Time per book, most first (top 50) |
+| `authors` | array of `StatsAuthor` | yes | Top authors by listening time (top 20) |
+| `finished` | array of `StatsBook` | yes | Books finished this year, most recent first |
+
+### StatsDay
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `date` | string (date) | yes |  |
+| `listened_ms` | integer (int64) | yes |  |
+
+### StatsAuthor
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `name` | string | yes |  |
+| `listened_ms` | integer (int64) | yes |  |
+
+### StatsBook
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `book_id` | string (uuid) | yes |  |
+| `title` | string | yes |  |
+| `authors` | array of `PersonRef` | yes |  |
+| `cover_url` | string | yes |  |
+| `has_cover` | boolean | yes |  |
+| `listened_ms` | integer (int64) | yes | This year |
+| `finished_at` | string (date-time) |  |  |
 
 ### EffectivePermissions
 

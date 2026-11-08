@@ -28,6 +28,7 @@ type User struct {
 	Locale              string
 	ListeningVisible    bool
 	ConflictThresholdMS int64
+	Prefs               string // JSON object
 	FailedLogins        int64
 	LockedUntil         *int64
 	CreatedAt           int64
@@ -36,7 +37,7 @@ type User struct {
 
 const userCols = `id, username, display_name, email, password_hash, totp_secret, totp_enabled_at,
 	status, status_reason, status_until, notice, role, quota_bytes, locale, listening_visible,
-	conflict_threshold_ms, failed_logins, locked_until, created_at, updated_at`
+	conflict_threshold_ms, prefs, failed_logins, locked_until, created_at, updated_at`
 
 func scanUser(row interface{ Scan(...any) error }) (*User, error) {
 	var (
@@ -46,7 +47,7 @@ func scanUser(row interface{ Scan(...any) error }) (*User, error) {
 	)
 	err := row.Scan(&u.ID, &u.Username, &u.DisplayName, &email, &pw, &totp, &totpAt,
 		&u.Status, &reason, &until, &notice, &u.Role, &u.QuotaBytes, &u.Locale, &u.ListeningVisible,
-		&u.ConflictThresholdMS, &u.FailedLogins, &locked, &u.CreatedAt, &u.UpdatedAt)
+		&u.ConflictThresholdMS, &u.Prefs, &u.FailedLogins, &locked, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		return nil, notFound(err)
 	}
@@ -326,4 +327,52 @@ func ClaimTOTPStep(ctx context.Context, q Querier, userID string, step int64) (b
 	}
 	n, _ := res.RowsAffected()
 	return n == 1, nil
+}
+
+// ProfilePatch is a user's own edit of their profile and preferences.
+type ProfilePatch struct {
+	DisplayName, Email, Locale, Prefs *string
+	ConflictThresholdMS               *int64
+	ListeningVisible                  *bool
+}
+
+// UpdateProfile applies non-nil fields. An email clash → ErrConflict; changing
+// the email clears its verification.
+func UpdateProfile(ctx context.Context, q Querier, id string, p ProfilePatch) error {
+	sets, args := []string{}, []any{}
+	add := func(col string, v any) { sets, args = append(sets, col+" = ?"), append(args, v) }
+	if p.DisplayName != nil {
+		add("display_name", *p.DisplayName)
+	}
+	if p.Email != nil {
+		add("email", nullStr(*p.Email))
+		add("email_verified", false)
+	}
+	if p.Locale != nil {
+		add("locale", *p.Locale)
+	}
+	if p.Prefs != nil {
+		add("prefs", *p.Prefs)
+	}
+	if p.ConflictThresholdMS != nil {
+		add("conflict_threshold_ms", *p.ConflictThresholdMS)
+	}
+	if p.ListeningVisible != nil {
+		add("listening_visible", *p.ListeningVisible)
+	}
+	if len(sets) == 0 {
+		return nil
+	}
+	add("updated_at", NowMS())
+	res, err := q.Exec(ctx, `UPDATE users SET `+strings.Join(sets, ", ")+` WHERE id = ?`, append(args, id)...)
+	if IsUniqueViolation(err) {
+		return ErrConflict
+	}
+	return mustAffect(res, err)
+}
+
+// SetPasswordHash replaces a user's password hash.
+func SetPasswordHash(ctx context.Context, q Querier, id, hash string) error {
+	res, err := q.Exec(ctx, `UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?`, hash, NowMS(), id)
+	return mustAffect(res, err)
 }

@@ -220,7 +220,9 @@ func UpsertProgress(ctx context.Context, q Querier, w ProgressWrite) error {
 	if w.Finished != nil {
 		finishedExpr = "excluded.finished_at"
 		if *w.Finished {
-			fin = now
+			// When it was finished on the device (an offline write arrives
+			// later), never in the future.
+			fin = min(w.ClientTS, now)
 		}
 	}
 	_, err := q.Exec(ctx, `INSERT INTO progress (id, user_id, book_id, position_ms, device_id, client_ts, speed, finished_at, created_at, updated_at)

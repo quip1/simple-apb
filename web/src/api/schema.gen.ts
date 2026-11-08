@@ -184,6 +184,85 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /**
+         * Edit my profile and preferences
+         * @description Only the fields present are changed. `prefs` replaces the stored object (last write wins).
+         */
+        patch: operations["updateMe"];
+        trace?: never;
+    };
+    "/me/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change my password (signs out my other devices) */
+        post: operations["changeMyPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/totp/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Turn off two-factor authentication
+         * @description Needs the password and a current code. Refused (403 `totp_required`) for admins and when a tag or the instance requires 2FA.
+         */
+        post: operations["disableMyTotp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/recovery-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replace my recovery codes (the old ones stop working) */
+        post: operations["regenerateRecoveryCodes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My listening stats for a year (charts and year in review)
+         * @description Built from listening history. Listening time is real time (at 2× speed, an hour of
+         *     book counts as 30 minutes); seeks and pauses don't count. Days are calendar days in `tz`.
+         */
+        get: operations["getMyStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
         patch?: never;
         trace?: never;
     };
@@ -198,7 +277,8 @@ export interface paths {
         get: operations["listMySessions"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Sign out all my other devices */
+        delete: operations["revokeMyOtherSessions"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1280,6 +1360,88 @@ export interface components {
             permissions: components["schemas"]["EffectivePermissions"];
             /** @description Moderator warning to show once on login, if any. */
             notice?: string;
+            /** @description 2FA is required for this account (admin, a tag, or instance-wide) */
+            totp_required: boolean;
+            /** @description Progress differences larger than this between devices ask which position to keep */
+            conflict_threshold_minutes: number;
+            /** @description Show me in a book's "who's listening" */
+            listening_visible: boolean;
+            /** @description Client preferences synced across devices (opaque to the server, at most 8 KB) */
+            prefs: {
+                [key: string]: unknown;
+            };
+        };
+        MePatch: {
+            display_name?: string;
+            /** @description Empty string removes it */
+            email?: string;
+            locale?: string;
+            conflict_threshold_minutes?: number;
+            listening_visible?: boolean;
+            prefs?: {
+                [key: string]: unknown;
+            };
+        };
+        PasswordChange: {
+            /** Format: password */
+            current_password: string;
+            /** Format: password */
+            new_password: string;
+        };
+        TotpDisable: {
+            /** Format: password */
+            password: string;
+            code: string;
+        };
+        TotpCode: {
+            code: string;
+        };
+        MyStats: {
+            year: number;
+            /** @description Years with any listening, newest first */
+            years: number[];
+            /** Format: int64 */
+            total_ms: number;
+            active_days: number;
+            /** @description Fun fact only (no streak features) */
+            longest_streak_days: number;
+            books_finished: number;
+            /** @description Days with listening, in order */
+            days: components["schemas"]["StatsDay"][];
+            /** @description Time per book, most first (top 50) */
+            books: components["schemas"]["StatsBook"][];
+            /** @description Top authors by listening time (top 20) */
+            authors: components["schemas"]["StatsAuthor"][];
+            /** @description Books finished this year, most recent first */
+            finished: components["schemas"]["StatsBook"][];
+        };
+        StatsDay: {
+            /** Format: date */
+            date: string;
+            /** Format: int64 */
+            listened_ms: number;
+        };
+        StatsAuthor: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: int64 */
+            listened_ms: number;
+        };
+        StatsBook: {
+            /** Format: uuid */
+            book_id: string;
+            title: string;
+            authors: components["schemas"]["PersonRef"][];
+            cover_url: string;
+            has_cover: boolean;
+            /**
+             * Format: int64
+             * @description This year
+             */
+            listened_ms: number;
+            /** Format: date-time */
+            finished_at?: string;
         };
         /** @description Result of authz evaluation (status → role → user overrides → tags → instance defaults). */
         EffectivePermissions: {
@@ -2189,6 +2351,137 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
         };
     };
+    updateMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MePatch"];
+            };
+        };
+        responses: {
+            /** @description The updated user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    changeMyPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordChange"];
+            };
+        };
+        responses: {
+            /** @description Changed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    disableMyTotp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TotpDisable"];
+            };
+        };
+        responses: {
+            /** @description Turned off */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    regenerateRecoveryCodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TotpCode"];
+            };
+        };
+        responses: {
+            /** @description Ten new codes, shown once */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecoveryCodes"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    getMyStats: {
+        parameters: {
+            query?: {
+                /** @description Defaults to the current year in `tz` */
+                year?: number;
+                /** @description IANA time zone, e.g. Europe/Berlin */
+                tz?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Stats */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyStats"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
     listMySessions: {
         parameters: {
             query?: never;
@@ -2206,6 +2499,25 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Session"][];
                 };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    revokeMyOtherSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             401: components["responses"]["Unauthorized"];
         };

@@ -43,3 +43,20 @@ export function percent(part: number, whole: number): number {
 export function seriesLabel(s: { name: string; index?: string }): string {
   return s.index ? t("book.series_position", { series: s.name, index: s.index }) : s.name;
 }
+
+/** "3 minutes ago" — relative time in the current locale. */
+export function ago(iso: string, now = Date.now()): string {
+  const diffS = Math.round((Date.parse(iso) - now) / 1000);
+  const rtf = new Intl.RelativeTimeFormat(document.documentElement.lang || "en", { numeric: "auto" });
+  const abs = Math.abs(diffS);
+  if (abs < 60) return rtf.format(diffS, "second");
+  if (abs < 3600) return rtf.format(Math.round(diffS / 60), "minute");
+  if (abs < 86400) return rtf.format(Math.round(diffS / 3600), "hour");
+  return rtf.format(Math.round(diffS / 86400), "day");
+}
+
+/** Listening time: "45 min", "3 h 20 min", "120 h". */
+export function hours(ms: number): string {
+  if (ms >= 100 * 3600_000) return t("time.hours", { h: Math.round(ms / 3600_000) });
+  return duration(ms);
+}

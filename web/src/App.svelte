@@ -5,8 +5,9 @@
   import { t } from "./lib/i18n";
   import { live, startLive, stopLive } from "./lib/live.svelte";
   import { followRemoteProgress, restoreLastBook } from "./lib/player.svelte";
+  import { applyServerPrefs, detachServerPrefs } from "./lib/prefs.svelte";
   import { match, navigate, route } from "./lib/router.svelte";
-  import { loadSession, session } from "./lib/session.svelte";
+  import { loadSession, refreshMe, session } from "./lib/session.svelte";
   import BookDetail from "./pages/BookDetail.svelte";
   import EnrollTotp from "./pages/EnrollTotp.svelte";
   import Home from "./pages/Home.svelte";
@@ -14,7 +15,9 @@
   import Login from "./pages/Login.svelte";
   import PersonPage from "./pages/PersonPage.svelte";
   import Player from "./pages/Player.svelte";
+  import Security from "./pages/Security.svelte";
   import Settings from "./pages/Settings.svelte";
+  import Stats from "./pages/Stats.svelte";
   import Setup from "./pages/Setup.svelte";
   import Signup from "./pages/Signup.svelte";
 
@@ -38,7 +41,7 @@
   });
 
   // 2FA required but not set up: the server only allows /me and enrollment.
-  const mustEnroll = $derived(!!session.me && session.me.role === "admin" && !session.me.totp_enabled);
+  const mustEnroll = $derived(!!session.me && session.me.totp_required && !session.me.totp_enabled);
   const ready = $derived(!!session.me && !mustEnroll);
 
   // Signed in: live sync hints, and bring back the last book (paused).
@@ -46,7 +49,17 @@
     if (!ready) return;
     startLive();
     void restoreLastBook();
-    return stopLive;
+    return () => {
+      stopLive();
+      detachServerPrefs();
+    };
+  });
+  // Synced preferences follow the account (and other devices' changes).
+  $effect(() => {
+    if (ready && session.me) applyServerPrefs(session.me.prefs);
+  });
+  $effect(() => {
+    if (ready && live.tick > 0) void refreshMe();
   });
   $effect(() => {
     if (live.tick > 0) void followRemoteProgress();
@@ -83,6 +96,10 @@
       <Player />
     {:else if match("/settings", route.path)}
       <Settings />
+    {:else if match("/settings/security", route.path)}
+      <Security />
+    {:else if match("/stats", route.path)}
+      <Stats />
     {:else if params?.pattern === "/books/:id"}
       {#key params.id}<BookDetail id={params.id} />{/key}
     {:else if params?.pattern === "/authors/:id"}

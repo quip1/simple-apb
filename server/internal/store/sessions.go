@@ -133,3 +133,11 @@ func ListUserSessions(ctx context.Context, q Querier, userID string) ([]*Session
 	}
 	return out, rows.Err()
 }
+
+// RevokeOtherSessions revokes every live session of a user except keepID.
+func RevokeOtherSessions(ctx context.Context, q Querier, userID, keepID string) error {
+	now := NowMS()
+	_, err := q.Exec(ctx, `UPDATE sessions SET revoked_at = ?, updated_at = ?
+		WHERE user_id = ? AND id <> ? AND revoked_at IS NULL`, now, now, userID, keepID)
+	return err
+}

@@ -5,7 +5,7 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-**Current phase: 2 — Admin panel + web player** (milestones 1–2 done: web foundation, player screens). Phase 1 accepted 2026-11-08.
+**Current phase: 2 — Admin panel + web player** (milestones 1–3 done: web foundation, player screens, account and stats). Phase 1 accepted 2026-11-08.
 
 ### Added (Phase 2)
 - Web app foundation: Svelte 5 + Vite + TypeScript, embedded in the server binary with SPA fallback, strict CSP and caching; cookie auth with CSRF and transparent refresh; ICU i18n from the shared catalogs; dark and e-ink themes with accessible components (48 px targets, visible focus, labelled errors).
@@ -17,8 +17,15 @@ All notable changes to this project are documented here. The format follows
 - `GET /library/facets` and `BookSummary.has_cover` (ADR-0028); `openapi.yaml` 0.7.0.
 - ESLint for the web app, run in CI.
 
+- Account pages (milestone 3): Settings (profile, appearance, playback, sync conflict threshold, privacy) and Security (change password, turn 2FA on/off, new recovery codes, signed-in devices with sign-out). Playback preferences sync through the account; theme and quality stay per device (ADR-0030).
+- Stats page (milestone 3): time listened, books finished, active days, longest run of days, most listened book and author, last-30-days and weekly charts with table views, time per book, top authors, books finished (ADR-0031).
+- API: `PATCH /me`, `POST /me/password`, `POST /me/totp/disable`, `POST /me/recovery-codes`, `DELETE /me/sessions`, `GET /me/stats`; `Me` gains `totp_required`, `conflict_threshold_minutes`, `listening_visible`, `prefs`; `openapi.yaml` 0.8.0.
+
 ### Fixed (Phase 2)
 - The web client no longer signs you out when the server is briefly unreachable during a token refresh.
+- The web client no longer looks signed out after 15 idle minutes: when the access cookie has expired it now refreshes the session instead of showing the sign-in page.
+- A book's finished date is when it was finished on the device, not when the server heard about it (offline listening).
+- API tests: database-only test books get a real folder, so the background scan can't quarantine them mid-test (an intermittent Postgres failure).
 
 ## Phase 1
 

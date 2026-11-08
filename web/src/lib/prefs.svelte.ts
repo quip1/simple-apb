@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Per-browser preferences. They are conveniences for this device only, so
-// they live in localStorage (the brief's synced prefs come with the account
-// settings work).
+// Preferences. All are kept in localStorage; the ones that make sense on every
+// device (skip lengths, e-ink refresh, left-handed layout, default speed) are
+// also synced through the account (`prefs` on /me, last write wins). Quality,
+// layout and theme stay per device (a phone on cellular, an e-ink reader…).
+
+import { api } from "../api/client";
 
 export type Quality = "auto" | "original" | "medium" | "low";
 export type LibraryView = "grid" | "list";
@@ -43,12 +46,55 @@ function load(): Prefs {
 
 export const prefs = $state<Prefs>(load());
 
-export function savePrefs(): void {
+/** Synced keys and their names on the wire (shared with the other clients). */
+const SYNCED: [keyof Prefs, string][] = [
+  ["skipBackS", "skip_back_s"],
+  ["skipForwardS", "skip_forward_s"],
+  ["einkTickS", "eink_tick_s"],
+  ["leftHanded", "left_handed"],
+  ["speed", "default_speed"],
+];
+
+// The account's stored prefs (other clients' keys are kept when we write).
+let serverPrefs: Record<string, unknown> | null = null;
+let pushTimer: ReturnType<typeof setTimeout> | undefined;
+
+function saveLocal(): void {
   try {
     localStorage.setItem(KEY, JSON.stringify(prefs));
   } catch {
     /* not remembered; still applies for this visit */
   }
+}
+
+/** Adopt the account's synced prefs (after sign-in or a sync hint). */
+export function applyServerPrefs(p: Record<string, unknown>): void {
+  serverPrefs = { ...p };
+  const target = prefs as unknown as Record<string, unknown>;
+  for (const [key, wire] of SYNCED) {
+    const v = p[wire];
+    if (v !== undefined && typeof v === typeof DEFAULTS[key]) target[key] = v;
+  }
+  saveLocal();
+}
+
+/** Forget the account (sign-out): stop syncing. */
+export function detachServerPrefs(): void {
+  serverPrefs = null;
+  clearTimeout(pushTimer);
+}
+
+export function savePrefs(): void {
+  saveLocal();
+  if (!serverPrefs) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => {
+    if (!serverPrefs) return;
+    const next = { ...serverPrefs };
+    for (const [key, wire] of SYNCED) next[wire] = prefs[key];
+    serverPrefs = next;
+    void api.PATCH("/me", { body: { prefs: next } });
+  }, 800);
 }
 
 /** Small JSON helpers for other per-browser state. */

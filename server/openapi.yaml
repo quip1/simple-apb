@@ -11,7 +11,7 @@
 openapi: 3.0.3
 info:
   title: Simple APB API
-  version: 0.7.0
+  version: 0.8.0
   description: |
     REST API for Simple APB. All endpoints live under `/api/v1`.
 
@@ -228,6 +228,104 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Me" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+    patch:
+      tags: [me]
+      operationId: updateMe
+      summary: Edit my profile and preferences
+      description: Only the fields present are changed. `prefs` replaces the stored object (last write wins).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MePatch" }
+      responses:
+        "200":
+          description: The updated user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Me" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /me/password:
+    post:
+      tags: [me]
+      operationId: changeMyPassword
+      summary: Change my password (signs out my other devices)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PasswordChange" }
+      responses:
+        "204": { description: "Changed" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /me/totp/disable:
+    post:
+      tags: [me]
+      operationId: disableMyTotp
+      summary: Turn off two-factor authentication
+      description: Needs the password and a current code. Refused (403 `totp_required`) for admins and when a tag or the instance requires 2FA.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TotpDisable" }
+      responses:
+        "204": { description: "Turned off" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /me/recovery-codes:
+    post:
+      tags: [me]
+      operationId: regenerateRecoveryCodes
+      summary: Replace my recovery codes (the old ones stop working)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TotpCode" }
+      responses:
+        "200":
+          description: Ten new codes, shown once
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecoveryCodes" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /me/stats:
+    get:
+      tags: [me]
+      operationId: getMyStats
+      summary: My listening stats for a year (charts and year in review)
+      description: |
+        Built from listening history. Listening time is real time (at 2× speed, an hour of
+        book counts as 30 minutes); seeks and pauses don't count. Days are calendar days in `tz`.
+      parameters:
+        - name: year
+          in: query
+          description: Defaults to the current year in `tz`
+          schema: { type: integer, minimum: 2000, maximum: 2200 }
+        - name: tz
+          in: query
+          description: IANA time zone, e.g. Europe/Berlin
+          schema: { type: string, default: UTC, maxLength: 64 }
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MyStats" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
 
   /me/sessions:
     get:
@@ -242,6 +340,13 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/Session" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    delete:
+      tags: [me]
+      operationId: revokeMyOtherSessions
+      summary: Sign out all my other devices
+      responses:
+        "204": { description: "Revoked" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
   /me/sessions/{sessionId}:
@@ -1682,7 +1787,7 @@ components:
 
     Me:
       type: object
-      required: [id, username, display_name, role, status, totp_enabled, quota_bytes, used_bytes, locale, permissions]
+      required: [id, username, display_name, role, status, totp_enabled, totp_required, quota_bytes, used_bytes, locale, permissions, conflict_threshold_minutes, listening_visible, prefs]
       properties:
         id: { type: string, format: uuid }
         username: { type: string }
@@ -1698,6 +1803,101 @@ components:
         notice:
           type: string
           description: Moderator warning to show once on login, if any.
+        totp_required: { type: boolean, description: "2FA is required for this account (admin, a tag, or instance-wide)" }
+        conflict_threshold_minutes:
+          type: integer
+          minimum: 1
+          maximum: 30
+          description: Progress differences larger than this between devices ask which position to keep
+        listening_visible: { type: boolean, description: "Show me in a book's \"who's listening\"" }
+        prefs:
+          type: object
+          additionalProperties: true
+          description: Client preferences synced across devices (opaque to the server, at most 8 KB)
+
+    MePatch:
+      type: object
+      properties:
+        display_name: { type: string, minLength: 1, maxLength: 64 }
+        email: { type: string, maxLength: 254, description: "Empty string removes it" }
+        locale: { type: string, pattern: '^[a-z]{2,3}(-[A-Z]{2})?$' }
+        conflict_threshold_minutes: { type: integer, minimum: 1, maximum: 30 }
+        listening_visible: { type: boolean }
+        prefs: { type: object, additionalProperties: true }
+
+    PasswordChange:
+      type: object
+      required: [current_password, new_password]
+      properties:
+        current_password: { type: string, maxLength: 256, format: password }
+        new_password: { type: string, minLength: 10, maxLength: 256, format: password }
+
+    TotpDisable:
+      type: object
+      required: [password, code]
+      properties:
+        password: { type: string, maxLength: 256, format: password }
+        code: { type: string, pattern: '^[0-9]{6}$' }
+
+    TotpCode:
+      type: object
+      required: [code]
+      properties:
+        code: { type: string, pattern: '^[0-9]{6}$' }
+
+    MyStats:
+      type: object
+      required: [year, years, total_ms, active_days, longest_streak_days, books_finished, days, books, authors, finished]
+      properties:
+        year: { type: integer }
+        years: { type: array, description: "Years with any listening, newest first", items: { type: integer } }
+        total_ms: { type: integer, format: int64 }
+        active_days: { type: integer }
+        longest_streak_days: { type: integer, description: "Fun fact only (no streak features)" }
+        books_finished: { type: integer }
+        days:
+          type: array
+          description: Days with listening, in order
+          items: { $ref: "#/components/schemas/StatsDay" }
+        books:
+          type: array
+          description: Time per book, most first (top 50)
+          items: { $ref: "#/components/schemas/StatsBook" }
+        authors:
+          type: array
+          description: Top authors by listening time (top 20)
+          items: { $ref: "#/components/schemas/StatsAuthor" }
+        finished:
+          type: array
+          description: Books finished this year, most recent first
+          items: { $ref: "#/components/schemas/StatsBook" }
+
+    StatsDay:
+      type: object
+      required: [date, listened_ms]
+      properties:
+        date: { type: string, format: date }
+        listened_ms: { type: integer, format: int64 }
+
+    StatsAuthor:
+      type: object
+      required: [id, name, listened_ms]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        listened_ms: { type: integer, format: int64 }
+
+    StatsBook:
+      type: object
+      required: [book_id, title, authors, cover_url, has_cover, listened_ms]
+      properties:
+        book_id: { type: string, format: uuid }
+        title: { type: string }
+        authors: { type: array, items: { $ref: "#/components/schemas/PersonRef" } }
+        cover_url: { type: string }
+        has_cover: { type: boolean }
+        listened_ms: { type: integer, format: int64, description: "This year" }
+        finished_at: { type: string, format: date-time }
 
     EffectivePermissions:
       type: object

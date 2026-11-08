@@ -68,6 +68,8 @@ type Principal struct {
 	// MustEnrollTOTP: TOTP is required for this account but not set up yet;
 	// only enrollment endpoints, /me and logout are allowed.
 	MustEnrollTOTP bool
+	// TOTPRequired: admin, a tag, or the instance requires 2FA for this account.
+	TOTPRequired bool
 }
 
 // Can is shorthand for authz.Allowed on the principal.
@@ -434,7 +436,7 @@ func (s *Service) principal(ctx context.Context, u *store.User, sessionID string
 		},
 	}
 	required := u.Role == "admin" || tagRequiresTOTP || authSet.RequireTOTPAll
-	return &Principal{User: u, SessionID: sessionID, Subject: subj, MustEnrollTOTP: required && u.TOTPSecretEnc == ""}, nil
+	return &Principal{User: u, SessionID: sessionID, Subject: subj, TOTPRequired: required, MustEnrollTOTP: required && u.TOTPSecretEnc == ""}, nil
 }
 
 // ── TOTP enrollment for signed-in users ──

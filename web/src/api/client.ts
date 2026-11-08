@@ -78,7 +78,11 @@ export function createApiClient(opts: ClientOptions = {}) {
       .clone()
       .json()
       .catch(() => ({}))) as Partial<ApiError>;
-    if (body.code !== "invalid_token") return res;
+    // The access cookie expires with the token, so after 15 idle minutes the
+    // browser stops sending it and the server sees no session at all. The CSRF
+    // cookie lives as long as the refresh token: if it's there, refresh.
+    const expired = body.code === "invalid_token" || (body.code === "unauthenticated" && !!readCookie("sapb_csrf"));
+    if (!expired) return res;
     const outcome = await refresh();
     if (outcome === "ok") return send(retry);
     if (outcome === "denied") opts.onSignedOut?.();

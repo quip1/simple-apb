@@ -38,7 +38,7 @@ func testSyncFlow(t *testing.T, h *harness) {
 
 	// A 10-hour book distributed to alice (no audio needed for sync).
 	bookID, err := store.InsertBook(ctx, db, &store.NewBook{Meta: store.BookMeta{Title: "Long Book", Authors: []string{"A"}},
-		FolderPath: "x/Long Book", Origin: "scan", Status: "ready", DurationMS: 10 * 3600_000, Checksum: "c-long"})
+		FolderPath: h.bookFolder("x/Long Book"), Origin: "scan", Status: "ready", DurationMS: 10 * 3600_000, Checksum: "c-long"})
 	if err != nil {
 		t.Fatal(err)
 	}

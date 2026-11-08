@@ -1,6 +1,6 @@
 # Architecture (as built)
 
-> Updated as each phase lands. Current state: **Phase 1 accepted; Phase 2 milestones 1–2** (web foundation, player screens).
+> Updated as each phase lands. Current state: **Phase 1 accepted; Phase 2 milestones 1–3** (web foundation, player screens, account and stats).
 
 ## Overview
 
@@ -40,7 +40,7 @@
 | Operations | `internal/backup`, `internal/push`, `internal/library/scrub.go`, `internal/api/ops.go` | startup check, backups, scrubs, push (ADR-0022..0024) |
 | Crash harness | `cmd/simpleapb/crash_test.go` | SIGKILL durability test (ADR-0025) |
 | Deployment | `server/Dockerfile`, `deploy/docker-compose.yml` | image with ffmpeg + pg_dump 17; compose with ntfy, optional Postgres |
-| Web app | `web/src`, embedded via `server/internal/web` | Svelte 5 SPA: setup wizard, sign-in, sign-up, 2FA; Home, Library, book/author/series pages, Now playing, Settings; dark + e-ink themes; i18n (ADR-0026) |
+| Web app | `web/src`, embedded via `server/internal/web` | Svelte 5 SPA: setup wizard, sign-in, sign-up, 2FA; Home, Library, book/author/series pages, Now playing, Stats, Settings, Security; dark + e-ink themes; i18n (ADR-0026) |
 | Web player | `web/src/lib/player.svelte.ts`, `live.svelte.ts` | one `<audio>` on the book timeline (multi-file or HLS via hls.js), signed stream links, progress sync + conflict prompt, Media Session, `/ws` hints (ADR-0029) |
 | TS client | `web/src/api` | generated types + cookie/CSRF/refresh-aware client |
 | Kotlin client | `android/core-api` | generated at build time |

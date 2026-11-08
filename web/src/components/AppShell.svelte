@@ -17,6 +17,7 @@
   const tabs = [
     { href: "/", key: "nav.home" },
     { href: "/library", key: "nav.library" },
+    { href: "/stats", key: "nav.stats" },
     { href: "/settings", key: "nav.settings" },
   ];
 
