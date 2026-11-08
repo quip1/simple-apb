@@ -209,6 +209,7 @@ func (s *Server) CreateDistribution(ctx context.Context, req CreateDistributionR
 	if err != nil {
 		return nil, err
 	}
+	s.notifyDistribution(ctx, bookID, string(b.TargetType), targetID)
 	ds, err := store.ListDistributions(ctx, db, bookID)
 	if err != nil {
 		return nil, err

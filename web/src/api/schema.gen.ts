@@ -1040,6 +1040,83 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/devices/push-subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register this device for push notifications
+         * @description Send your UnifiedPush `endpoint` (from the distributor app, e.g. ntfy) and the server
+         *     POSTs events there. Without an endpoint you get a random server topic on this
+         *     instance's ntfy to subscribe to directly. Payloads never contain content, only
+         *     `{"type": "...", "id": "..."}`; fetch details from the API.
+         *     Event types: `upload_done`, `upload_failed`, `library_added`, and for admins
+         *     `signup_request`, `backup_failed`, `integrity_failed`, `unclean_shutdown`.
+         */
+        post: operations["registerPush"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/devices/push-subscription/{deviceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Stop push notifications for a device */
+        delete: operations["unregisterPush"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/backups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Database backups and the latest backup/scrub status */
+        get: operations["getBackups"];
+        put?: never;
+        /** Back up the database now */
+        post: operations["runBackup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/integrity-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Re-hash every library file against its stored checksum now */
+        post: operations["runIntegrityCheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1718,6 +1795,44 @@ export interface components {
             description?: string;
             /** Format: date-time */
             client_ts?: string;
+        };
+        PushRegistration: {
+            /** Format: uuid */
+            device_id: string;
+            /** @description UnifiedPush endpoint URL (https) */
+            endpoint?: string;
+        };
+        PushSubscription: {
+            /** Format: uuid */
+            device_id: string;
+            /** @description Random server topic (128-bit) on this instance's ntfy */
+            topic: string;
+            /** @description Full topic URL to subscribe to, if ntfy is configured */
+            ntfy_url?: string;
+            endpoint?: string;
+        };
+        JobRef: {
+            /** Format: uuid */
+            job_id: string;
+        };
+        BackupFile: {
+            name: string;
+            /** Format: int64 */
+            size_bytes: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        OpStatus: {
+            /** Format: date-time */
+            at?: string;
+            ok?: boolean;
+            message?: string;
+        };
+        BackupStatus: {
+            backups: components["schemas"]["BackupFile"][];
+            last_backup?: components["schemas"]["OpStatus"];
+            last_scrub?: components["schemas"]["OpStatus"];
+            last_unclean_shutdown?: components["schemas"]["OpStatus"];
         };
     };
     responses: {
@@ -3476,6 +3591,120 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    registerPush: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PushRegistration"];
+            };
+        };
+        responses: {
+            /** @description Registered */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PushSubscription"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    unregisterPush: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Unregistered */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getBackups: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Backup status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupStatus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    runBackup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Backup queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRef"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    runIntegrityCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Scrub queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRef"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
 }

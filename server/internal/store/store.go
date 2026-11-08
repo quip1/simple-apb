@@ -29,6 +29,8 @@ type Querier interface {
 type DB struct {
 	SQL     *sql.DB
 	dialect Dialect
+	// dsn is kept for pg_dump backups. Never log it (it may hold a password).
+	dsn string
 }
 
 // Wrap pairs a connection with its dialect.
@@ -44,8 +46,13 @@ func OpenDB(ctx context.Context, d Dialect, dsn string) (*DB, error) {
 		_ = sqlDB.Close()
 		return nil, err
 	}
-	return Wrap(sqlDB, d), nil
+	db := Wrap(sqlDB, d)
+	db.dsn = dsn
+	return db, nil
 }
+
+// DSN returns the connection string the DB was opened with (for backups).
+func (db *DB) DSN() string { return db.dsn }
 
 func (db *DB) Dialect() Dialect { return db.dialect }
 func (db *DB) Close() error     { return db.SQL.Close() }

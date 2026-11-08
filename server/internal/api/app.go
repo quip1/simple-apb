@@ -11,10 +11,12 @@ import (
 	"time"
 
 	"github.com/quip1/simple-apb/server/internal/auth"
+	"github.com/quip1/simple-apb/server/internal/backup"
 	"github.com/quip1/simple-apb/server/internal/config"
 	"github.com/quip1/simple-apb/server/internal/jobs"
 	"github.com/quip1/simple-apb/server/internal/library"
 	"github.com/quip1/simple-apb/server/internal/media"
+	"github.com/quip1/simple-apb/server/internal/push"
 	"github.com/quip1/simple-apb/server/internal/settings"
 	"github.com/quip1/simple-apb/server/internal/store"
 	"github.com/quip1/simple-apb/server/internal/stream"
@@ -41,6 +43,8 @@ type App struct {
 	HLS     *stream.HLS
 	Signer  stream.Signer
 	Hub     *Hub
+	Push    *push.Notifier
+	Backup  *backup.Service
 	hlsCap  int64
 	log     *slog.Logger
 }
@@ -83,7 +87,14 @@ func NewApp(ctx context.Context, db *store.DB, secrets *config.Secrets, log *slo
 	}
 	a.Jobs = jobs.NewRunner(db, log, workers)
 	a.Hub = NewHub(ctx, db)
+	a.Push = &push.Notifier{DB: db, Enc: secrets, Log: log}
+	a.Auth.OnSignup = func(ctx context.Context, q store.Querier, requestID string) {
+		_ = push.Enqueue(ctx, q, push.Recipients{Admins: true}, push.Event{Type: push.SignupRequest, ID: requestID})
+	}
+	a.Backup = newBackupService(a, o.Paths.Backups)
+	a.Backup.PGDump = os.Getenv("SIMPLEAPB_PG_DUMP")
 	a.registerJobs()
+	a.registerOpsJobs()
 	if a.Uploads, err = newUploadHandler(a, o.TrustedProxies); err != nil {
 		return nil, err
 	}
@@ -96,7 +107,13 @@ func (a *App) registerJobs() {
 		if err := j.Decode(&p); err != nil {
 			return nil, jobs.Permanent(err)
 		}
-		return a.Lib.ProcessUpload(ctx, p.UploadID)
+		res, err := a.Lib.ProcessUpload(ctx, p.UploadID)
+		if err == nil {
+			a.enqueueUploadPush(ctx, p.UploadID, false)
+		} else if jobs.IsPermanent(err) {
+			a.enqueueUploadPush(ctx, p.UploadID, true)
+		}
+		return res, err
 	})
 	a.Jobs.Handle(library.JobScan, func(ctx context.Context, _ *jobs.Job) (any, error) {
 		res, err := a.Lib.Scan(ctx, time.Now())
@@ -138,6 +155,7 @@ func (a *App) Start(ctx context.Context) {
 	go func() { <-ctx.Done(); a.HLS.StopAll() }()
 	a.Jobs.Start(ctx)
 	a.Jobs.Every(ctx, JobHLSPrune, time.Hour, nil)
+	a.scheduleOpsJobs(ctx)
 	a.Jobs.Every(ctx, library.JobScan, time.Hour, nil)
 	a.Jobs.Every(ctx, library.JobPurgeTrash, 24*time.Hour, nil)
 	a.Jobs.Every(ctx, library.JobPurgeRemoved, 24*time.Hour, nil)

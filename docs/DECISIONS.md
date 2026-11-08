@@ -371,6 +371,74 @@ cookie. Pings every 30 s keep proxies from closing idle connections.
 
 ---
 
+## ADR-0022 — Unclean-shutdown detection and the startup check
+
+`/config/simpleapb.running` is written (atomically) when the server starts and removed only after a
+clean shutdown — HTTP drained, jobs at a safe point, DB closed. If it exists at startup, the previous
+run was killed or lost power, and the server:
+1. runs `PRAGMA integrity_check` (SQLite) or pings Postgres,
+2. requeues jobs left `running`,
+3. deletes staging files with no upload record and re-queues imports for uploads stuck in
+   `processing` (uploads still `receiving` are left for tus clients to resume),
+4. queues a checksum check of files modified in the last 24 hours,
+5. records the outcome (shown in `GET /admin/backups`), writes the audit log and pushes
+   `unclean_shutdown` to admins.
+
+It keeps serving even if the integrity check fails, and says so loudly: the admin decides whether to
+restore a backup — the server never discards data on its own. Temp files left by interrupted atomic
+writes in `/config` are swept at start.
+
+## ADR-0023 — Backups and integrity scrubs
+
+- **Nightly DB backup at 03:00 UTC**, keeping the newest 14: `VACUUM INTO` for SQLite (consistent
+  while the server keeps writing), `pg_dump --format=custom` for Postgres. Snapshots are written
+  under a temp name, fsynced, renamed. The Postgres password travels in `PGPASSWORD`, never on the
+  command line; pgx-only DSN parameters (e.g. `search_path`) are translated into libpq `options`.
+  `pg_dump` must match the server's major version, so the image ships the PostgreSQL 17 client. A
+  missing `pg_dump` fails once (no retry storm) and pushes `backup_failed` to admins.
+- **Weekly scrub, Sunday 04:00 UTC:** every file of every ready book is re-hashed against its stored
+  checksum. A mismatch, a missing file or a book with no audio on record quarantines the book (hidden
+  from users, reason recorded, audit logged) and pushes `integrity_failed`. Restore from the library
+  mirror arrives with the mirror in Phase 6.
+- Scheduled jobs run at their time slot, not "on every start", so a crash loop never triggers repeated
+  full scrubs. Admins can run either on demand (`POST /admin/backups`, `POST /admin/integrity-check`).
+
+## ADR-0024 — Push delivery and SSRF protection
+
+Devices register either a **UnifiedPush endpoint** (the distributor app, usually ntfy, gives them a
+URL; the server POSTs there) or get a **random 128-bit topic** on the instance's own ntfy. Payloads
+are `{type, id}` only. Delivery is a background job and best-effort: apps also sync on start and via
+`/ws`, so a lost push loses nothing. Endpoints answering 404/410 are dropped.
+
+Because the server POSTs to URLs clients give it, endpoints must be `https` and must not resolve to
+loopback, private, link-local or metadata addresses. This is checked at registration **and again at
+connection time** inside the dialer, which defeats DNS rebinding. The only exception is the
+instance's configured ntfy host. Redirects aren't followed, and the ntfy access token is sent only to
+the instance's ntfy, never to third-party endpoints.
+
+## ADR-0025 — The SIGKILL crash harness
+
+`cmd/simpleapb/crash_test.go` builds the real binary and, for N rounds, drives concurrent work at it:
+- a resumable upload continuing from wherever the previous crash left it,
+- a stream of progress writes,
+- database backups,
+- library scans of books copied in non-atomically.
+
+It then kills the process at a random moment (SIGKILL / TerminateProcess — no cleanup runs).
+
+After every kill, with the server down, it asserts:
+- the DB passes `integrity_check`;
+- every ready book's files exist and match their checksums;
+- every finished backup is itself a valid database.
+
+After every restart, it asserts that the unclean shutdown was detected and that no acknowledged
+progress write was lost. At the end, the interrupted upload must complete and the recovery must be
+recorded as OK. CI runs 40 kills nightly. A process kill (unlike a power cut) keeps the OS page cache,
+so true power-loss behavior additionally relies on fsync discipline, WAL mode and ZFS — the harness
+proves the application's own ordering is right.
+
+---
+
 ## Open questions for Jacob
 
 | # | Question | Current choice (until answered) |

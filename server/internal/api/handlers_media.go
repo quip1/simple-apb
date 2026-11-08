@@ -139,15 +139,7 @@ func (s *Server) GetBookFile(ctx context.Context, req GetBookFileRequestObject) 
 	return nil, store.ErrNotFound
 }
 
-func bookFilePath(app *App, b *store.Book, f store.BookFile) string {
-	root := app.Lib.Root
-	folder := filepath.FromSlash(b.FolderPath)
-	// A single-file book whose folder_path is the file itself (several m4b per folder).
-	if strings.EqualFold(filepath.Ext(folder), filepath.Ext(f.Path)) && filepath.Base(folder) == f.Path {
-		return filepath.Join(root, folder)
-	}
-	return filepath.Join(root, folder, filepath.FromSlash(f.Path))
-}
+func bookFilePath(app *App, b *store.Book, f store.BookFile) string { return app.Lib.FilePath(b, f) }
 
 func (s *Server) hlsSource(ctx context.Context, b *store.Book) (stream.Source, error) {
 	app := s.App()

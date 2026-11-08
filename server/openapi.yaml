@@ -11,7 +11,7 @@
 openapi: 3.0.3
 info:
   title: Simple APB API
-  version: 0.5.0
+  version: 0.6.0
   description: |
     REST API for Simple APB. All endpoints live under `/api/v1`.
 
@@ -1288,6 +1288,89 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  # ───────────────────────────── Devices / push ───────────────────────
+  /devices/push-subscription:
+    post:
+      tags: [me]
+      operationId: registerPush
+      summary: Register this device for push notifications
+      description: |
+        Send your UnifiedPush `endpoint` (from the distributor app, e.g. ntfy) and the server
+        POSTs events there. Without an endpoint you get a random server topic on this
+        instance's ntfy to subscribe to directly. Payloads never contain content, only
+        `{"type": "...", "id": "..."}`; fetch details from the API.
+        Event types: `upload_done`, `upload_failed`, `library_added`, and for admins
+        `signup_request`, `backup_failed`, `integrity_failed`, `unclean_shutdown`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PushRegistration" }
+      responses:
+        "200":
+          description: Registered
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PushSubscription" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /devices/push-subscription/{deviceId}:
+    delete:
+      tags: [me]
+      operationId: unregisterPush
+      summary: Stop push notifications for a device
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Unregistered }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ─────────────────────── Admin: backups & integrity ─────────────────
+  /admin/backups:
+    get:
+      tags: [admin]
+      operationId: getBackups
+      summary: Database backups and the latest backup/scrub status
+      responses:
+        "200":
+          description: Backup status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BackupStatus" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [admin]
+      operationId: runBackup
+      summary: Back up the database now
+      responses:
+        "202":
+          description: Backup queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/JobRef" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/integrity-check:
+    post:
+      tags: [admin]
+      operationId: runIntegrityCheck
+      summary: Re-hash every library file against its stored checksum now
+      responses:
+        "202":
+          description: Scrub queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/JobRef" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -2161,3 +2244,50 @@ components:
         name: { type: string, minLength: 1, maxLength: 100 }
         description: { type: string, maxLength: 1000 }
         client_ts: { type: string, format: date-time }
+
+    # ── push & backups ──
+    PushRegistration:
+      type: object
+      required: [device_id]
+      properties:
+        device_id: { type: string, format: uuid }
+        endpoint: { type: string, description: "UnifiedPush endpoint URL (https)" }
+
+    PushSubscription:
+      type: object
+      required: [device_id, topic]
+      properties:
+        device_id: { type: string, format: uuid }
+        topic: { type: string, description: "Random server topic (128-bit) on this instance's ntfy" }
+        ntfy_url: { type: string, description: "Full topic URL to subscribe to, if ntfy is configured" }
+        endpoint: { type: string }
+
+    JobRef:
+      type: object
+      required: [job_id]
+      properties:
+        job_id: { type: string, format: uuid }
+
+    BackupFile:
+      type: object
+      required: [name, size_bytes, created_at]
+      properties:
+        name: { type: string }
+        size_bytes: { type: integer, format: int64 }
+        created_at: { type: string, format: date-time }
+
+    OpStatus:
+      type: object
+      properties:
+        at: { type: string, format: date-time }
+        ok: { type: boolean }
+        message: { type: string }
+
+    BackupStatus:
+      type: object
+      required: [backups]
+      properties:
+        backups: { type: array, items: { $ref: "#/components/schemas/BackupFile" } }
+        last_backup: { $ref: "#/components/schemas/OpStatus" }
+        last_scrub: { $ref: "#/components/schemas/OpStatus" }
+        last_unclean_shutdown: { $ref: "#/components/schemas/OpStatus" }

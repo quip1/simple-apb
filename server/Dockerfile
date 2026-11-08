@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Build context: repository root (docker build -f server/Dockerfile .)
-# Phase 0 skeleton; the web SPA build stage is added in Phase 2.
+# The web SPA build stage is added in Phase 2.
 
 FROM golang:1.27-alpine AS build
 WORKDIR /src/server
@@ -13,7 +13,9 @@ RUN CGO_ENABLED=0 go build -trimpath \
     -o /out/simpleapb ./cmd/simpleapb
 
 FROM alpine:3.22
-RUN apk add --no-cache ffmpeg ca-certificates tzdata \
+# ffmpeg/ffprobe: probing and transcoding. postgresql17-client: pg_dump for
+# backups when Postgres is used. tzdata/ca-certificates: TLS to SMTP/ntfy/providers.
+RUN apk add --no-cache ffmpeg postgresql17-client ca-certificates tzdata \
  && addgroup -S -g 10001 simpleapb \
  && adduser -S -D -H -u 10001 -G simpleapb simpleapb \
  && mkdir -p /config /library /cache /backups \
@@ -24,4 +26,8 @@ VOLUME ["/config", "/library", "/cache", "/backups"]
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD wget -qO- http://127.0.0.1:8080/api/v1/health || exit 1
+# Docker sends SIGTERM on stop; the server drains requests and jobs, closes the
+# DB and removes its lock file. A SIGKILL (or power cut) is detected on the
+# next start and triggers the startup check.
+STOPSIGNAL SIGTERM
 ENTRYPOINT ["/usr/local/bin/simpleapb"]

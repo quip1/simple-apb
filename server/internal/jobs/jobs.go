@@ -267,6 +267,51 @@ func (r *Runner) finish(ctx context.Context, j *Job, maxAttempts int64, result a
 	return err
 }
 
+// At schedules a job type at the times next(now) returns (e.g. "03:00 UTC
+// daily"). Unlike Every it does not fire on startup, so a restart never
+// triggers a heavy job (full scrub, backup) out of schedule.
+func (r *Runner) At(ctx context.Context, typ string, next func(time.Time) time.Time) {
+	r.wg.Add(1)
+	go func() {
+		defer r.wg.Done()
+		for {
+			when := next(time.Now())
+			if _, _, err := EnqueueUnique(ctx, r.DB, typ, nil, when); err != nil && ctx.Err() == nil {
+				r.Log.Error("schedule job", "type", typ, "err", err)
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(time.Until(when) + time.Minute):
+			}
+		}
+	}()
+}
+
+// DailyAt returns a schedule for hour:00 UTC every day.
+func DailyAt(hour int) func(time.Time) time.Time {
+	return func(now time.Time) time.Time {
+		n := now.UTC()
+		t := time.Date(n.Year(), n.Month(), n.Day(), hour, 0, 0, 0, time.UTC)
+		if !t.After(n) {
+			t = t.Add(24 * time.Hour)
+		}
+		return t
+	}
+}
+
+// WeeklyAt returns a schedule for the given weekday at hour:00 UTC.
+func WeeklyAt(day time.Weekday, hour int) func(time.Time) time.Time {
+	daily := DailyAt(hour)
+	return func(now time.Time) time.Time {
+		t := daily(now)
+		for t.Weekday() != day {
+			t = t.Add(24 * time.Hour)
+		}
+		return t
+	}
+}
+
 // Every schedules a job type at an interval (deduplicated with EnqueueUnique).
 func (r *Runner) Every(ctx context.Context, typ string, interval time.Duration, payload any) {
 	r.wg.Add(1)

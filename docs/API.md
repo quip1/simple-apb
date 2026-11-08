@@ -2,7 +2,7 @@
 
 > **Generated** from `server/openapi.yaml` by `web/scripts/gen-api-docs.mjs`. Do not edit by hand.
 
-Version **0.5.0** · base path `/api/v1`
+Version **0.6.0** · base path `/api/v1`
 
 REST API for Simple APB. All endpoints live under `/api/v1`.
 
@@ -43,6 +43,8 @@ REST API for Simple APB. All endpoints live under `/api/v1`.
 | GET | `/me` | The current user | yes | 200, 401 |
 | GET | `/me/sessions` | My device sessions | yes | 200, 401 |
 | DELETE | `/me/sessions/{sessionId}` | Revoke one of my sessions | yes | 204, 401, 404 |
+| POST | `/devices/push-subscription` | Register this device for push notifications | yes | 200, 400, 401 |
+| DELETE | `/devices/push-subscription/{deviceId}` | Stop push notifications for a device | yes | 204, 401, 404 |
 
 ### library
 
@@ -127,6 +129,9 @@ REST API for Simple APB. All endpoints live under `/api/v1`.
 | POST | `/admin/distributions` | Make a master-store book visible to a group or a user | yes | 201, 400, 401, 403, 404 |
 | DELETE | `/admin/distributions/{distributionId}` | Revoke a distribution | yes | 204, 401, 403, 404 |
 | POST | `/admin/library/scan` | Rescan the library folder now | yes | 202, 401, 403 |
+| GET | `/admin/backups` | Database backups and the latest backup/scrub status | yes | 200, 401, 403 |
+| POST | `/admin/backups` | Back up the database now | yes | 202, 401, 403 |
+| POST | `/admin/integrity-check` | Re-hash every library file against its stored checksum now | yes | 202, 401, 403 |
 
 ## Schemas
 
@@ -821,4 +826,51 @@ Enum: `processing`, `ready`, `quarantined`, `trashed`
 | `name` | string |  |  |
 | `description` | string |  |  |
 | `client_ts` | string (date-time) |  |  |
+
+### PushRegistration
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `device_id` | string (uuid) | yes |  |
+| `endpoint` | string |  | UnifiedPush endpoint URL (https) |
+
+### PushSubscription
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `device_id` | string (uuid) | yes |  |
+| `topic` | string | yes | Random server topic (128-bit) on this instance's ntfy |
+| `ntfy_url` | string |  | Full topic URL to subscribe to, if ntfy is configured |
+| `endpoint` | string |  |  |
+
+### JobRef
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `job_id` | string (uuid) | yes |  |
+
+### BackupFile
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `name` | string | yes |  |
+| `size_bytes` | integer (int64) | yes |  |
+| `created_at` | string (date-time) | yes |  |
+
+### OpStatus
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `at` | string (date-time) |  |  |
+| `ok` | boolean |  |  |
+| `message` | string |  |  |
+
+### BackupStatus
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `backups` | array of `BackupFile` | yes |  |
+| `last_backup` | `OpStatus` |  |  |
+| `last_scrub` | `OpStatus` |  |  |
+| `last_unclean_shutdown` | `OpStatus` |  |  |
 

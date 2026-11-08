@@ -65,6 +65,13 @@ jobs:
           cache-dependency-path: server/go.sum
       - name: Install ffmpeg (media and import integration tests use real audio)
         run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg
+      - name: Install pg_dump 17 (backups must match the server major version)
+        if: matrix.db == 'postgres'
+        run: |
+          sudo apt-get install -y -q postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -q --no-install-recommends postgresql-client-17
+          echo "SIMPLEAPB_PG_DUMP=/usr/lib/postgresql/17/bin/pg_dump" >> "$GITHUB_ENV"
       - run: go generate ./...
       - name: Generated Go code is committed and current
         run: git diff --exit-code -- internal/api/api.gen.go

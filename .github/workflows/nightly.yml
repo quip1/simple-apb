@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Nightly durability checks: the SIGKILL crash harness on both operating
+# systems the server is developed on.
+name: Nightly
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  crash-harness:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+      - name: Install ffmpeg
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg
+      - name: Kill the server 40 times mid-write and check every invariant
+        env:
+          SIMPLEAPB_CRASH_TEST: "1"
+          SIMPLEAPB_CRASH_ITERATIONS: "40"
+        run: go test -count=1 -v -timeout 20m -run TestCrashHarness ./cmd/simpleapb

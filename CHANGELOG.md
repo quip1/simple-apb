@@ -5,7 +5,7 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-**Current phase: 1 — Server core** (milestones M1–M5 done: foundations, setup wizard, accounts/auth/authz, library, streaming, sync).
+**Current phase: 1 — Server core — all milestones (M1–M6) built; awaiting acceptance** (see `docs/PHASE1-ACCEPTANCE.md`).
 
 ### Added (Phase 1)
 - Crash-safe file writes (`fsutil`: temp → fsync → rename → fsync dir), bootstrap `config.json`, `secret.key` with HKDF-derived keys and AES-GCM encryption for secret settings.
@@ -18,6 +18,7 @@ All notable changes to this project are documented here. The format follows
 - M3 library: persisted job queue (retries, crash requeue, periodic jobs); ffprobe wrapper; book detection (m4b, mp3 folders, multi-disc, multiple m4b per folder); scanner with settle time, fsnotify + hourly rescan, quarantine of missing books; resumable tus uploads with quota check, safe unzip, sha256 verify, dedup and crash-safe import into the canonical layout; visibility rules (entries ∪ distributions, minus removed/hidden/filtered/taken down); admin master store browser, distributions, Trash (restore, purge one, empty with password + TOTP + count, 30-day auto-purge); library, book detail, author/narrator/series endpoints; `openapi.yaml` 0.3.0.
 - M4 streaming: range serving of original files (resumable, `?download=1` for bulk), on-demand HLS `low`/`medium` with frame-aligned segments and restart-on-seek, LRU transcode cache (hourly prune), signed 6-hour stream URLs for casting (visibility re-checked per request), resized cached covers with ETags, global egress shaper (80 Mbps default) with live minimums, class weights and per-user fair share; `openapi.yaml` 0.4.0; ADR-0017..0019.
 - M5 sync: progress with the offline-window conflict rule (409 with both positions, user resolution recorded, stale writes ignored, clock clamping), listening history events, bookmarks and collections with client ids, last-write-wins and tombstones, delta sync via the change log (full snapshot, cursors, 410 after the 90-day retention), change recording across library/upload/distribution/Trash/scan/group writes, `/ws` change hints; every contract operation now implemented; `openapi.yaml` 0.5.0; ADR-0020..0021.
+- M6 operations: lock-file unclean-shutdown detection with a startup check (DB integrity, upload recovery, 24 h checksum pass, admin push); nightly DB backups (VACUUM INTO / pg_dump, keep 14); weekly integrity scrub with quarantine; push via ntfy topics and UnifiedPush endpoints with SSRF protection; v1 events (upload done/failed, library added, sign-up request, backup/integrity failed, unclean shutdown); admin backup/integrity endpoints; Docker image with ffmpeg + pg_dump 17; compose with ntfy, optional Postgres, healthchecks; SIGKILL crash harness (nightly CI, 40 kills); `openapi.yaml` 0.6.0; ADR-0022..0025.
 
 ## Phase 0
 

@@ -1,23 +1,93 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# Phase 0 skeleton. Full version (healthchecks for ntfy, postgres profile,
-# networks for the reverse proxy) lands in Phase 1.
+#
+# Simple APB: server + ntfy (push), optional Postgres.
+#
+#   cp deploy/.env.example deploy/.env    # then edit it
+#   docker compose -f deploy/docker-compose.yml up -d
+#   docker compose -f deploy/docker-compose.yml logs simpleapb | grep setup_token
+#
+# Postgres instead of SQLite:  docker compose --profile postgres up -d
+# and choose "postgres" in the setup wizard with
+#   postgres://simpleapb:${POSTGRES_PASSWORD}@postgres:5432/simpleapb?sslmode=disable
+#
+# Put a reverse proxy with TLS (Nginx Proxy Manager, Caddy, Traefik) in front
+# of ports 8080 (server) and 8081 (ntfy). See docs/SELF-HOSTING.md.
+
+name: simpleapb
+
 services:
-  simpleapb-server:
-    image: ghcr.io/quip1/simple-apb-server:latest
+  simpleapb:
+    image: ghcr.io/quip1/simple-apb-server:${SIMPLEAPB_VERSION:-latest}
     restart: unless-stopped
+    stop_grace_period: 30s
     environment:
       SIMPLEAPB_LISTEN: ":8080"
+      # The reverse proxy's address, so client IPs in rate limits and the audit
+      # log come from X-Forwarded-For. Leave empty if nothing proxies.
+      SIMPLEAPB_TRUSTED_PROXIES: ${SIMPLEAPB_TRUSTED_PROXIES:-}
+      TZ: ${TZ:-UTC}
     volumes:
-      - ./config:/config
-      - /path/to/your/audiobooks:/library
-      - ./cache:/cache
-      - ./backups:/backups
+      - ${SIMPLEAPB_CONFIG:-./data/config}:/config
+      - ${SIMPLEAPB_LIBRARY:?set SIMPLEAPB_LIBRARY to your audiobook folder}:/library
+      - ${SIMPLEAPB_CACHE:-./data/cache}:/cache
+      - ${SIMPLEAPB_BACKUPS:-./data/backups}:/backups
     ports:
-      - "8080:8080"
+      - "${SIMPLEAPB_PORT:-8080}:8080"
+    networks: [simpleapb]
+    depends_on:
+      ntfy:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: ${SIMPLEAPB_MEMORY_LIMIT:-2g}
 
   ntfy:
-    image: binwiederhier/ntfy:latest
+    image: binwiederhier/ntfy:${NTFY_VERSION:-v2.11.0}
     command: serve
     restart: unless-stopped
+    environment:
+      NTFY_BASE_URL: ${NTFY_PUBLIC_URL:?set NTFY_PUBLIC_URL to how phones reach ntfy, e.g. https://push.example.com}
+      NTFY_CACHE_FILE: /var/lib/ntfy/cache.db
+      NTFY_BEHIND_PROXY: "true"
+      # UnifiedPush topics must be writable by the server and readable by phones.
+      NTFY_ENABLE_LOGIN: "false"
+      TZ: ${TZ:-UTC}
     volumes:
-      - ./ntfy:/var/lib/ntfy
+      - ${NTFY_DATA:-./data/ntfy}:/var/lib/ntfy
+    ports:
+      - "${NTFY_PORT:-8081}:80"
+    networks: [simpleapb]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --tries=1 http://localhost:80/v1/health -O - | grep -Eo '\"healthy\"\\s*:\\s*true' || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  postgres:
+    image: postgres:17-alpine
+    profiles: [postgres]
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: simpleapb
+      POSTGRES_DB: simpleapb
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - ${POSTGRES_DATA:-./data/postgres}:/var/lib/postgresql/data
+    networks: [simpleapb]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U simpleapb -d simpleapb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  simpleapb:
+    name: simpleapb

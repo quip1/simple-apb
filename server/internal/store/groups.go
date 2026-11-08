@@ -130,11 +130,11 @@ type SignupRequest struct {
 }
 
 // CreateSignupRequest records a request for a pending user.
-func CreateSignupRequest(ctx context.Context, q Querier, userID, username, email, message, ip string) error {
-	now := NowMS()
+func CreateSignupRequest(ctx context.Context, q Querier, userID, username, email, message, ip string) (string, error) {
+	id, now := NewID(), NowMS()
 	_, err := q.Exec(ctx, `INSERT INTO signup_requests (id, user_id, username, email, message, ip, status, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)`, NewID(), userID, username, nullStr(email), nullStr(message), nullStr(ip), now, now)
-	return err
+		VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)`, id, userID, username, nullStr(email), nullStr(message), nullStr(ip), now, now)
+	return id, err
 }
 
 // ListSignupRequests by status ("" = all), oldest first.

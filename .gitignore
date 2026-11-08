@@ -39,3 +39,6 @@ Thumbs.db
 
 # Runtime data when running the server locally
 /data/
+
+# docker compose data when run from deploy/
+deploy/data/

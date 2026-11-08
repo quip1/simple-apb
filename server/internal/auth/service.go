@@ -77,13 +77,15 @@ func (p *Principal) Can(a authz.Action) bool {
 
 // Service implements the account flows.
 type Service struct {
-	DB      *store.DB
-	Enc     store.Encrypter
-	Tokens  *Tokens
-	Limits  *Limits
-	Log     *slog.Logger
-	Now     func() time.Time
-	pending sync.Map // userID → pendingTOTP
+	DB     *store.DB
+	Enc    store.Encrypter
+	Tokens *Tokens
+	Limits *Limits
+	Log    *slog.Logger
+	Now    func() time.Time
+	// OnSignup runs inside the sign-up transaction (queues the admin push).
+	OnSignup func(ctx context.Context, q store.Querier, requestID string)
+	pending  sync.Map // userID → pendingTOTP
 }
 
 type pendingTOTP struct {
@@ -142,8 +144,12 @@ func (s *Service) Signup(ctx context.Context, in SignupInput) error {
 		if err != nil {
 			return err
 		}
-		if err := store.CreateSignupRequest(ctx, tx, id, in.Username, in.Email, in.Message, in.IP); err != nil {
+		reqID, err := store.CreateSignupRequest(ctx, tx, id, in.Username, in.Email, in.Message, in.IP)
+		if err != nil {
 			return err
+		}
+		if s.OnSignup != nil {
+			s.OnSignup(ctx, tx, reqID)
 		}
 		return store.Audit(ctx, tx, store.AuditEntry{ActorID: id, Action: "user.signup", ObjectType: "user", ObjectID: id, IP: in.IP})
 	})

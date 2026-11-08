@@ -10,15 +10,19 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/quip1/simple-apb/server/internal/api"
 	"github.com/quip1/simple-apb/server/internal/config"
+	"github.com/quip1/simple-apb/server/internal/fsutil"
 	"github.com/quip1/simple-apb/server/internal/media"
 	"github.com/quip1/simple-apb/server/internal/setup"
 	"github.com/quip1/simple-apb/server/internal/version"
@@ -45,6 +49,26 @@ func run(log *slog.Logger) error {
 	if err := os.MkdirAll(paths.Config, 0o750); err != nil {
 		return err
 	}
+	// Unclean-shutdown detection: the lock file exists while the server runs
+	// and is removed only after a clean shutdown.
+	lock := filepath.Join(paths.Config, "simpleapb.running")
+	_, statErr := os.Stat(lock)
+	unclean := statErr == nil
+	if unclean {
+		log.Warn("previous run did not shut down cleanly; running the startup check")
+	}
+	sweepTempFiles(paths.Config)
+	if err := fsutil.WriteFileAtomic(lock, []byte(fmt.Sprintf("pid=%d started=%s\n", os.Getpid(), time.Now().UTC().Format(time.RFC3339))), 0o640); err != nil {
+		return fmt.Errorf("write lock file: %w", err)
+	}
+	cleanExit := false
+	defer func() {
+		if cleanExit {
+			_ = os.Remove(lock)
+			_ = fsutil.SyncDir(paths.Config)
+		}
+	}()
+
 	secrets, err := config.LoadOrCreateSecrets(paths.Config)
 	if err != nil {
 		return err
@@ -80,6 +104,9 @@ func run(log *slog.Logger) error {
 		}
 		app.Start(ctx)
 		srv.SetApp(app)
+		if unclean {
+			app.RecoverAfterCrash(ctx)
+		}
 		log.Info("instance ready", "db", string(db.Dialect()))
 	default:
 		if db != nil {
@@ -93,6 +120,7 @@ func run(log *slog.Logger) error {
 			app.Jobs.Wait() // let running jobs reach a safe point (ctx is cancelled)
 			if err := app.DB.Close(); err != nil {
 				log.Error("closing database", "err", err)
+				cleanExit = false
 			}
 		}
 	}()
@@ -122,5 +150,16 @@ func run(log *slog.Logger) error {
 			return err
 		}
 	}
+	cleanExit = true // the deferred DB close may still reset this
 	return nil
+}
+
+// sweepTempFiles removes temp files left by atomic writes interrupted by a crash.
+func sweepTempFiles(dir string) {
+	entries, _ := os.ReadDir(dir)
+	for _, e := range entries {
+		if strings.HasPrefix(e.Name(), ".") && strings.Contains(e.Name(), ".tmp-") {
+			_ = os.Remove(filepath.Join(dir, e.Name()))
+		}
+	}
 }
