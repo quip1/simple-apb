@@ -82,7 +82,16 @@ jobs:
       - name: Generated Go code is committed and current
         run: git diff --exit-code -- internal/api/api.gen.go
       - run: go vet ./...
-      - run: go test -race -count=1 ./...
+      - name: go test
+        run: |
+          set -o pipefail
+          go test -race -count=1 ./... 2>&1 | tee "$RUNNER_TEMP/go-test.log"
+      - name: Show failing tests as an annotation
+        if: failure()
+        run: |
+          grep -B3 -A40 -E "^(--- FAIL|panic:|WARNING: DATA RACE)|_test[.]go:[0-9]+:" "$RUNNER_TEMP/go-test.log" | head -200 > "$RUNNER_TEMP/fail.txt" || true
+          msg=$(sed -e "s/%/%25/g" "$RUNNER_TEMP/fail.txt" | awk 1 ORS="%0A")
+          echo "::error title=go test failures::$msg"
       - run: go build -o bin/simpleapb ./cmd/simpleapb
 
   # Playwright journey (brief §15): sign-up → approval → upload → share → play → sync,
