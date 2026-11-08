@@ -7,6 +7,9 @@ All notable changes to this project are documented here. The format follows
 
 **Current phase: 0 — Foundations.**
 
+### Fixed
+- CI: Kotlin client build (JDK toolchain, `Any` serialization, duplicate generated imports) and golangci-lint findings.
+
 ### Added
 - Monorepo layout (`server/`, `web/`, `desktop/`, `android/`, `deploy/`, `docs/`, `i18n/`).
 - AGPL-3.0 license with the Google Play Services / Cast SDK linking exception (`LICENSE-EXCEPTION.md`).

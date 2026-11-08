@@ -19,6 +19,7 @@ server/internal/web/dist/*
 
 # Android / Gradle
 .gradle/
+.kotlin/
 **/build/
 local.properties
 *.iml

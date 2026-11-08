@@ -60,7 +60,11 @@ func run(log *slog.Logger) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Error("closing database", "err", err)
+		}
+	}()
 	if err := store.MigrateUp(ctx, db, dialect); err != nil {
 		return err
 	}

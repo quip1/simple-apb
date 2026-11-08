@@ -4,6 +4,7 @@
 // Pure JVM (no Android SDK needed) so it compiles anywhere, and core-data
 // depends on it. Generated sources are not committed.
 
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.openapitools.generator.gradle.plugin.tasks.GenerateTask
 
 plugins {
@@ -12,8 +13,17 @@ plugins {
     alias(libs.plugins.openapi.generator)
 }
 
+// Emit Java 17 bytecode (what Android modules consume) using whichever JDK
+// runs Gradle, instead of requiring a separate JDK 17 toolchain to be installed.
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
 kotlin {
-    jvmToolchain(17)
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+    }
 }
 
 val specFile = rootProject.layout.projectDirectory.file("../server/openapi.yaml")
@@ -37,11 +47,31 @@ val generateApi by tasks.registering(GenerateTask::class) {
             "sourceFolder" to "src/main/kotlin",
         ),
     )
+    // Free-form JSON (e.g. Error.details) would become Map<String, Any>, which
+    // kotlinx.serialization cannot handle. Use JsonElement instead.
+    typeMappings.set(mapOf("AnyType" to "JsonElement"))
+    importMappings.set(mapOf("JsonElement" to "kotlinx.serialization.json.JsonElement"))
     generateApiTests.set(false)
     generateModelTests.set(false)
     generateApiDocumentation.set(false)
     generateModelDocumentation.set(false)
     inputs.file(specFile)
+
+    // Generator bug: two apiKey security schemes (cookieAuth + streamSignature)
+    // make ApiClient.kt import ApiKeyAuth twice, which Kotlin rejects.
+    // Drop exact duplicate import lines from every generated file.
+    doLast {
+        generatedDir.get().asFile.walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .forEach { file ->
+                val seen = HashSet<String>()
+                val text = file.readText()
+                val fixed = text.lines()
+                    .filter { line -> !line.startsWith("import ") || seen.add(line.trim()) }
+                    .joinToString("\n")
+                if (fixed != text) file.writeText(fixed)
+            }
+    }
 }
 
 sourceSets {

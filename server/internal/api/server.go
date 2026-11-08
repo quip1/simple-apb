@@ -39,7 +39,9 @@ var _ StrictServerInterface = (*Server)(nil)
 func (s *Server) Router() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
+	// No RealIP middleware: trusting X-Forwarded-For from anyone allows IP
+	// spoofing. Client IPs (rate limits, audit log) come from a trusted-proxy
+	// setting in Phase 1. See docs/DECISIONS.md ADR-0010.
 	r.Use(middleware.Recoverer) // last line of defence; handlers must not panic
 	r.Use(serverVersionHeader)
 

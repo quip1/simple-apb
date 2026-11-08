@@ -121,7 +121,7 @@ func TestPostgresUpDownUp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	if err := MigrateDownAll(ctx, db, Postgres); err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +144,7 @@ func TestSchemaParity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer pg.Close()
+	defer func() { _ = pg.Close() }()
 	if err := MigrateUp(ctx, pg, Postgres); err != nil {
 		t.Fatal(err)
 	}
@@ -185,7 +185,7 @@ func TestSchemaParity(t *testing.T) {
 
 func collect(t *testing.T, rows *sql.Rows, into map[string][]string) {
 	t.Helper()
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var table, col string
 		if err := rows.Scan(&table, &col); err != nil {

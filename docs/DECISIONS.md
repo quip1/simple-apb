@@ -115,6 +115,11 @@ large output would only add noise. `openapi-typescript` produces types only — 
 runtime code to audit — which suits a small, fast web player. Dates are plain strings in the
 Kotlin client to avoid a date-library dependency in the generated layer; `core-data` converts.
 
+Kotlin build details: `core-api` emits Java 17 bytecode with whatever JDK runs Gradle (no separate
+JDK 17 toolchain needed); free-form JSON maps to `JsonElement` because kotlinx.serialization cannot
+handle `Any`; and a post-generation step drops duplicate `import` lines, working around a generator
+template bug triggered by our two `apiKey` security schemes.
+
 ## ADR-0008 — "Same offline window" for progress conflicts
 
 The brief returns 409 when two devices disagree by more than the threshold "within the same
@@ -133,6 +138,15 @@ using `?` placeholders and rebound to `$n` for Postgres, instead of `sqlc` with 
 Because ADR-0004 keeps both schemas column-identical with portable types, almost every query is
 the same text in both dialects; the few that aren't (upserts, `RETURNING`) are small branches.
 Two `sqlc` query sets would double every query edit.
+
+## ADR-0010 — No blanket trust of forwarded client IPs
+
+**Decision.** Do not use chi `middleware.RealIP`. In Phase 1, client IPs (rate limits, audit log,
+sessions) come from `X-Forwarded-For` only when the request arrives from a configured trusted proxy
+(e.g. the Nginx Proxy Manager container); otherwise the TCP peer address is used.
+
+**Why.** `RealIP` believes whatever `X-Forwarded-For`/`X-Real-IP` header a client sends, so anyone
+could dodge per-IP rate limits or forge audit-log IPs. It is deprecated upstream for this reason.
 
 ---
 
