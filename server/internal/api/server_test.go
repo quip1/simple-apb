@@ -176,7 +176,9 @@ func (h *harness) setupInstance() string {
 	r := h.do(nil, "POST", "/setup/totp", map[string]any{"username": "admin"}, tok)
 	expect(h.t, r, 200, "setup totp")
 	secret := str(r.body, "secret")
-	code, _ := totp.GenerateCode(secret, time.Now())
+	// Codes are single-use per 30 s step: the wizard uses the previous step,
+	// logins the current one, re-authentication the next (all within ±1 skew).
+	code := totpStep(secret, -1)
 	r = h.do(nil, "POST", "/setup/complete", map[string]any{
 		"admin":         map[string]any{"username": "admin", "password": adminPassword, "totp_secret": secret, "totp_code": code},
 		"database":      h.db,
@@ -204,9 +206,15 @@ func (h *harness) adminLogin(secret string) string {
 	if str(r.body, "status") != "totp_required" {
 		h.t.Fatalf("admin login must require TOTP: %s", r.raw)
 	}
-	code, _ := totp.GenerateCode(secret, time.Now())
-	r = h.do(nil, "POST", "/auth/totp/verify", map[string]any{"totp_challenge": str(r.body, "totp_challenge"), "code": code}, nil)
+	challenge := str(r.body, "totp_challenge")
+	code := totpStep(secret, 0)
+	r = h.do(nil, "POST", "/auth/totp/verify", map[string]any{"totp_challenge": challenge, "code": code}, nil)
 	expect(h.t, r, 200, "totp verify")
+	// The same code can't be used twice (DECISIONS Q5).
+	r2 := h.do(nil, "POST", "/auth/login", map[string]any{"username": "admin", "password": adminPassword, "device": device("android")}, nil)
+	if rr := h.do(nil, "POST", "/auth/totp/verify", map[string]any{"totp_challenge": str(r2.body, "totp_challenge"), "code": code}, nil); rr.status != 401 {
+		h.t.Fatalf("reused TOTP code accepted: %d", rr.status)
+	}
 	return str(r.body, "tokens", "access_token")
 }
 
@@ -379,7 +387,7 @@ func testWebCookiesAndCSRF(t *testing.T, h *harness) {
 	web := &http.Client{Jar: jar}
 
 	r := h.do(web, "POST", "/auth/login", map[string]any{"username": "admin", "password": adminPassword, "device": device("web")}, nil)
-	code, _ := totp.GenerateCode(secret, time.Now())
+	code := totpStep(secret, 0)
 	r = h.do(web, "POST", "/auth/totp/verify", map[string]any{"totp_challenge": str(r.body, "totp_challenge"), "code": code}, nil)
 	expect(t, r, 200, "web totp verify")
 	if str(r.body, "tokens", "refresh_token") != "" {
@@ -446,4 +454,8 @@ func TestUnknownPathIs404JSON(t *testing.T) {
 	}
 }
 
-func totpCode(secret string) (string, error) { return totp.GenerateCode(secret, time.Now()) }
+// totpStep returns the code for the current 30 s step plus offset.
+func totpStep(secret string, offset int) string {
+	c, _ := totp.GenerateCode(secret, time.Now().Add(time.Duration(offset)*30*time.Second))
+	return c
+}

@@ -4,6 +4,7 @@ package auth
 
 import (
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/base32"
 	"strings"
 	"time"
@@ -22,11 +23,31 @@ func NewTOTPSecret(issuerName, account string) (secret, uri string, err error) {
 }
 
 // ValidateTOTP checks a 6-digit code, allowing ±1 step of clock skew.
+// It does not prevent reuse; use MatchTOTPStep + store.ClaimTOTPStep for logins.
 func ValidateTOTP(secret, code string, now time.Time) bool {
-	ok, err := totp.ValidateCustom(strings.TrimSpace(code), secret, now, totp.ValidateOpts{
-		Period: 30, Skew: 1, Digits: otp.DigitsSix, Algorithm: otp.AlgorithmSHA1,
-	})
-	return err == nil && ok
+	_, ok := MatchTOTPStep(secret, code, now)
+	return ok
+}
+
+// MatchTOTPStep returns the 30-second time step a valid code belongs to
+// (checking the current step ±1 for clock skew). Callers store the step and
+// reject codes from a step that was already used (DECISIONS Q5).
+func MatchTOTPStep(secret, code string, now time.Time) (int64, bool) {
+	code = strings.TrimSpace(code)
+	if len(code) != 6 {
+		return 0, false
+	}
+	base := now.Unix() / 30
+	for _, d := range []int64{0, -1, 1} {
+		step := base + d
+		want, err := totp.GenerateCodeCustom(secret, time.Unix(step*30, 0), totp.ValidateOpts{
+			Period: 30, Digits: otp.DigitsSix, Algorithm: otp.AlgorithmSHA1,
+		})
+		if err == nil && subtle.ConstantTimeCompare([]byte(want), []byte(code)) == 1 {
+			return step, true
+		}
+	}
+	return 0, false
 }
 
 // NewRecoveryCodes returns n codes like "k7wq-3mzp-x2rd" and their hashes.

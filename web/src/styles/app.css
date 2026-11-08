@@ -1,0 +1,162 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later
+ *
+ * Design tokens. Two first-class themes (brief §11):
+ *   dark  — default, own accent (placeholder until decision #9)
+ *   eink  — pure black on white, hairlines only, no shadows/gradients/animation
+ * Components use only these tokens, so swapping the accent is one line.
+ */
+
+:root,
+[data-theme="dark"] {
+  --bg: #0f1115;
+  --surface: #171a20;
+  --surface-2: #1f232b;
+  --border: #2c313b;
+  --text: #ecebe8;
+  --text-muted: #a8acb5;
+  --accent: #8fb3ff; /* placeholder: chosen on real screens (decision #9) */
+  --accent-text: #0b1020;
+  --danger: #ff8a8a;
+  --danger-bg: #3a1c1f;
+  --ok: #7fd6a2;
+  --ok-bg: #173226;
+  --focus: #ffd479;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.25);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --motion: 160ms; /* brief: transitions ≤ 200 ms */
+  color-scheme: dark;
+}
+
+[data-theme="eink"] {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #ffffff;
+  --border: #000000;
+  --text: #000000;
+  --text-muted: #000000;
+  --accent: #000000;
+  --accent-text: #ffffff;
+  --danger: #000000;
+  --danger-bg: #ffffff;
+  --ok: #000000;
+  --ok-bg: #ffffff;
+  --focus: #000000;
+  --shadow: none;
+  --radius: 4px;
+  --radius-sm: 2px;
+  --motion: 0ms;
+  color-scheme: light;
+}
+
+/* E-ink: no animation of any kind (ripples, transitions, smooth scroll). */
+[data-theme="eink"] *,
+[data-theme="eink"] *::before,
+[data-theme="eink"] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion: 0ms;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font:
+    1rem/1.5 system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Noto Sans",
+    sans-serif;
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.25;
+  margin: 0 0 0.5em;
+}
+h1 {
+  font-size: 1.75rem;
+}
+h2 {
+  font-size: 1.25rem;
+}
+p {
+  margin: 0 0 1em;
+}
+
+a {
+  color: var(--accent);
+}
+[data-theme="eink"] a {
+  text-decoration: underline;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Visually hidden but available to screen readers. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.stack > * + * {
+  margin-top: 1rem;
+}
+
+.row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+code,
+.mono {
+  font-family: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, monospace;
+  font-size: 0.95em;
+}

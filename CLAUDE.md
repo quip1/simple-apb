@@ -17,6 +17,9 @@ log questions in `docs/DECISIONS.md` instead of building them.
   - TS: `cd web && npm run gen:api`
   - Kotlin: generated at build time by `android/core-api`
   - Docs: `cd web && npm run gen:docs` (writes `docs/API.md`)
+- **Web app:** `cd web && npm run dev` (proxies `/api` and `/ws` to a server on :8080);
+  `npm run check` (svelte-check, no warnings), `npm run format`; `npm run build:embed` copies the
+  build into the server so `go build` embeds it.
 - **Schema:** migrations live in `server/internal/store/migrations/{sqlite,postgres}`
   and must stay in lockstep (same file names, same tables/columns). The parity
   test enforces it when Postgres is available.

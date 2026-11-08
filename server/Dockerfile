@@ -1,12 +1,23 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Build context: repository root (docker build -f server/Dockerfile .)
-# The web SPA build stage is added in Phase 2.
 
+# 1. Web app (player + admin panel), embedded into the Go binary.
+FROM node:24-alpine AS web
+WORKDIR /src/web
+COPY web/package.json web/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY web/ ./
+COPY i18n/ /src/i18n/
+COPY docs/PRIVACY-TEMPLATE.md /src/docs/PRIVACY-TEMPLATE.md
+RUN npx vite build
+
+# 2. Server.
 FROM golang:1.27-alpine AS build
 WORKDIR /src/server
 COPY server/go.mod server/go.sum ./
 RUN go mod download
 COPY server/ ./
+COPY --from=web /src/web/dist ./internal/web/dist
 ARG VERSION=dev
 RUN CGO_ENABLED=0 go build -trimpath \
     -ldflags "-s -w -X github.com/quip1/simple-apb/server/internal/version.Version=${VERSION}" \

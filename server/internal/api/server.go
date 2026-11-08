@@ -17,6 +17,7 @@ import (
 	"github.com/quip1/simple-apb/server/internal/config"
 	"github.com/quip1/simple-apb/server/internal/setup"
 	"github.com/quip1/simple-apb/server/internal/version"
+	"github.com/quip1/simple-apb/server/internal/web"
 )
 
 // ErrNotImplemented is returned by operations that exist in the contract but
@@ -72,8 +73,13 @@ func (s *Server) Router() http.Handler {
 			writeError(w, http.StatusBadRequest, "bad_request", err.Error())
 		},
 	})
-	r.NotFound(func(w http.ResponseWriter, _ *http.Request) {
-		writeError(w, http.StatusNotFound, "not_found", "no such endpoint")
+	spa := web.Handler()
+	r.NotFound(func(w http.ResponseWriter, req *http.Request) {
+		if strings.HasPrefix(req.URL.Path, "/api/") {
+			writeError(w, http.StatusNotFound, "not_found", "no such endpoint")
+			return
+		}
+		spa.ServeHTTP(w, req)
 	})
 	r.MethodNotAllowed(func(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed")
@@ -101,7 +107,9 @@ func (s *Server) setupGate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if s.App() == nil {
 			p := r.URL.Path
-			if p != base+"/health" && p != base+"/instance" && !strings.HasPrefix(p, base+"/setup/") {
+			api := strings.HasPrefix(p, "/api/") || p == "/ws"
+			// The web app (including the /setup wizard page) is always served.
+			if api && p != base+"/health" && p != base+"/instance" && !strings.HasPrefix(p, base+"/setup/") {
 				writeError(w, http.StatusServiceUnavailable, "setup_required", "this instance has not been set up yet")
 				return
 			}

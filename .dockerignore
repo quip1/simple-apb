@@ -1,0 +1,14 @@
+# Keep the build context small and free of private or generated files.
+.git
+.local
+**/node_modules
+web/dist
+server/bin
+server/internal/web/dist/*
+!server/internal/web/dist/.gitkeep
+deploy/data
+android
+desktop
+**/*.test
+**/.env
+**/.env.*

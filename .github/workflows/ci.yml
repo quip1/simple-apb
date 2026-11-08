@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # OpenAPI spec: lint, TS client generation is up to date and compiles, API docs up to date.
+  # OpenAPI spec lint, generated TS client and API docs up to date, web app type-checks and builds.
   api-contract:
     runs-on: ubuntu-latest
     defaults:
@@ -33,7 +33,11 @@ jobs:
       - run: npm run gen:docs
       - name: Generated files are committed and current
         run: git diff --exit-code -- src/api/schema.gen.ts ../docs/API.md
-      - run: npm run typecheck
+      - name: Svelte + TypeScript checks (no warnings allowed)
+        run: npm run check
+      - run: npm run format:check
+      - name: Production build
+        run: npm run build
 
   server:
     runs-on: ubuntu-latest

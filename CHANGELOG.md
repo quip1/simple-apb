@@ -5,7 +5,15 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-**Current phase: 1 — Server core — all milestones (M1–M6) built; awaiting acceptance** (see `docs/PHASE1-ACCEPTANCE.md`).
+**Current phase: 2 — Admin panel + web player** (milestone 1 done: web foundation). Phase 1 accepted 2026-11-08.
+
+### Added (Phase 2)
+- Web app foundation: Svelte 5 + Vite + TypeScript, embedded in the server binary with SPA fallback, strict CSP and caching; cookie auth with CSRF and transparent refresh; ICU i18n from the shared catalogs; dark and e-ink themes with accessible components (48 px targets, visible focus, labelled errors).
+- Pages: setup wizard (all brief steps, 2FA QR enrollment, DB/library/SMTP tests, recovery codes), sign-in with 2FA or recovery code, account request, forced 2FA enrollment.
+- Single-use TOTP codes (ADR-0027); emptying the Trash checks the count before spending the code.
+- Docker image builds and embeds the web app; CI type-checks, format-checks and builds it.
+
+## Phase 1
 
 ### Added (Phase 1)
 - Crash-safe file writes (`fsutil`: temp → fsync → rename → fsync dir), bootstrap `config.json`, `secret.key` with HKDF-derived keys and AES-GCM encryption for secret settings.

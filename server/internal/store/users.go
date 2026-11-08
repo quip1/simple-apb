@@ -313,3 +313,17 @@ func mustAffect(res sql.Result, err error) error {
 	}
 	return nil
 }
+
+// ClaimTOTPStep records step as the user's last accepted TOTP step, only if
+// it is newer than the stored one. False means the code was already used
+// (or an older one), so the login must be refused. Atomic: two concurrent
+// requests with the same code can't both win.
+func ClaimTOTPStep(ctx context.Context, q Querier, userID string, step int64) (bool, error) {
+	res, err := q.Exec(ctx, `UPDATE users SET totp_last_step = ?, updated_at = ?
+		WHERE id = ? AND (totp_last_step IS NULL OR totp_last_step < ?)`, step, NowMS(), userID, step)
+	if err != nil {
+		return false, err
+	}
+	n, _ := res.RowsAffected()
+	return n == 1, nil
+}

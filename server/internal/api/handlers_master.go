@@ -150,16 +150,16 @@ func (s *Server) EmptyTrash(ctx context.Context, req EmptyTrashRequestObject) (E
 	if err != nil || !ok {
 		return nil, auth.ErrInvalidCredentials
 	}
-	secret, err := app.Auth.Enc.Decrypt(p.User.TOTPSecretEnc)
-	if err != nil || !auth.ValidateTOTP(secret, req.Body.TotpCode, time.Now()) {
-		return nil, auth.ErrInvalidTOTP
-	}
 	trashed, err := store.TrashedBefore(ctx, app.DB, time.Now().Add(time.Hour).UnixMilli())
 	if err != nil {
 		return nil, err
 	}
 	if req.Body.ConfirmCount != len(trashed) {
 		return nil, badRequest("confirm_count_mismatch", "type the number of books currently in the Trash to confirm")
+	}
+	// TOTP last: a mistyped count must not use up the code.
+	if ok, err := app.Auth.CheckTOTP(ctx, p.User, req.Body.TotpCode); err != nil || !ok {
+		return nil, auth.ErrInvalidTOTP
 	}
 	n, err := app.Lib.EmptyTrash(ctx, p.User.ID, clientIP(ctx))
 	if err != nil {

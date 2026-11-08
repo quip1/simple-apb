@@ -1,6 +1,6 @@
 # Architecture (as built)
 
-> Updated as each phase lands. Current state: **Phase 1 — server core, complete (M1–M6)**, awaiting acceptance.
+> Updated as each phase lands. Current state: **Phase 1 accepted; Phase 2 milestone 1** (web foundation).
 
 ## Overview
 
@@ -40,7 +40,8 @@
 | Operations | `internal/backup`, `internal/push`, `internal/library/scrub.go`, `internal/api/ops.go` | startup check, backups, scrubs, push (ADR-0022..0024) |
 | Crash harness | `cmd/simpleapb/crash_test.go` | SIGKILL durability test (ADR-0025) |
 | Deployment | `server/Dockerfile`, `deploy/docker-compose.yml` | image with ffmpeg + pg_dump 17; compose with ntfy, optional Postgres |
-| TS client | `web/src/api` | generated types + small typed wrapper |
+| Web app | `web/src`, embedded via `server/internal/web` | Svelte 5 SPA: setup wizard, sign-in, sign-up, 2FA; dark + e-ink themes; i18n (ADR-0026) |
+| TS client | `web/src/api` | generated types + cookie/CSRF/refresh-aware client |
 | Kotlin client | `android/core-api` | generated at build time |
 | CI | `.github/workflows/ci.yml` | spec lint + codegen freshness, Go tests on SQLite and Postgres, golangci-lint, Kotlin client build, Docker image build |
 

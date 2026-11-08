@@ -229,7 +229,7 @@ func testLibraryFlow(t *testing.T, h *harness) {
 	if r := h.do(nil, "GET", "/library", nil, bearer(alice)); len(r.body["items"].([]any)) != 0 {
 		t.Fatalf("trashed book still visible: %s", r.raw)
 	}
-	code := func() string { c, _ := totpCode(secret); return c }
+	code := func() string { return totpStep(secret, 1) } // login used the current step
 	expect(t, h.do(nil, "POST", "/admin/trash/empty", map[string]any{"confirm_count": 2, "password": adminPassword, "totp_code": code()}, bearer(adminTok)), 400, "wrong count")
 	expect(t, h.do(nil, "POST", "/admin/trash/empty", map[string]any{"confirm_count": 1, "password": "wrong-password-x", "totp_code": code()}, bearer(adminTok)), 401, "wrong password")
 	r = h.do(nil, "POST", "/admin/trash/empty", map[string]any{"confirm_count": 1, "password": adminPassword, "totp_code": code()}, bearer(adminTok))

@@ -169,7 +169,8 @@ func (s *Service) Complete(ctx context.Context, r Request) (*Result, error) {
 	if err := validate(&r); err != nil {
 		return nil, err
 	}
-	if !auth.ValidateTOTP(r.TOTPSecret, r.TOTPCode, s.now()) {
+	totpStep, totpOK := auth.MatchTOTPStep(r.TOTPSecret, r.TOTPCode, s.now())
+	if !totpOK {
 		return nil, invalid("invalid_totp", "the authenticator code is wrong or expired")
 	}
 	if chk := TestLibrary(r.LibraryPath); !chk.Exists || !chk.Writable {
@@ -230,6 +231,10 @@ func (s *Service) Complete(ctx context.Context, r Request) (*Result, error) {
 			return err
 		}
 		if err := store.ReplaceRecoveryCodes(ctx, tx, adminID, codeHashes); err != nil {
+			return err
+		}
+		// The code used in the wizard can't be replayed for the first login.
+		if _, err := store.ClaimTOTPStep(ctx, tx, adminID, totpStep); err != nil {
 			return err
 		}
 		pub, err := store.EnsurePublicGroup(ctx, tx)

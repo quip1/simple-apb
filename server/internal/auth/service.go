@@ -274,7 +274,11 @@ func (s *Service) VerifyTOTP(ctx context.Context, challenge, code, recovery, ip 
 	valid := false
 	switch {
 	case code != "":
-		valid = ValidateTOTP(secret, code, s.now())
+		if step, ok := MatchTOTPStep(secret, code, s.now()); ok {
+			if valid, err = store.ClaimTOTPStep(ctx, s.DB, u.ID, step); err != nil {
+				return nil, err
+			}
+		}
 	case recovery != "":
 		if valid, err = store.UseRecoveryCode(ctx, s.DB, u.ID, HashRecoveryCode(recovery)); err != nil {
 			return nil, err
@@ -455,7 +459,8 @@ func (s *Service) ConfirmTOTP(ctx context.Context, p *Principal, code, ip string
 	if !ok || s.now().After(pt.expires) {
 		return nil, ErrTOTPNotStarted
 	}
-	if !ValidateTOTP(pt.secret, code, s.now()) {
+	step, ok := MatchTOTPStep(pt.secret, code, s.now())
+	if !ok {
 		return nil, ErrInvalidTOTP
 	}
 	enc, err := s.Enc.Encrypt(pt.secret)
@@ -473,6 +478,9 @@ func (s *Service) ConfirmTOTP(ctx context.Context, p *Principal, code, ip string
 		if err := store.ReplaceRecoveryCodes(ctx, tx, p.User.ID, hashes); err != nil {
 			return err
 		}
+		if _, err := store.ClaimTOTPStep(ctx, tx, p.User.ID, step); err != nil {
+			return err
+		}
 		return store.Audit(ctx, tx, store.AuditEntry{ActorID: p.User.ID, Action: "user.totp_enabled", ObjectType: "user", ObjectID: p.User.ID, IP: ip})
 	})
 	if err != nil {
@@ -480,4 +488,21 @@ func (s *Service) ConfirmTOTP(ctx context.Context, p *Principal, code, ip string
 	}
 	s.pending.Delete(p.User.ID)
 	return codes, nil
+}
+
+// CheckTOTP re-verifies a signed-in user's TOTP code (for dangerous actions),
+// with the same reuse protection as login.
+func (s *Service) CheckTOTP(ctx context.Context, u *store.User, code string) (bool, error) {
+	if u.TOTPSecretEnc == "" {
+		return false, nil
+	}
+	secret, err := s.Enc.Decrypt(u.TOTPSecretEnc)
+	if err != nil {
+		return false, err
+	}
+	step, ok := MatchTOTPStep(secret, code, s.now())
+	if !ok {
+		return false, nil
+	}
+	return store.ClaimTOTPStep(ctx, s.DB, u.ID, step)
 }

@@ -439,6 +439,49 @@ proves the application's own ordering is right.
 
 ---
 
+## ADR-0026 — Web app stack and embedding
+
+**Decision (brief decision #8, answered: Svelte).** Svelte 5 (runes) + Vite + TypeScript strict.
+Kept deliberately small:
+- a ~60-line History-API router instead of a routing library;
+- `openapi-fetch` with types generated from `openapi.yaml`;
+- `intl-messageformat` for ICU strings from the shared `/i18n` catalogs (every string goes through
+  `t()`);
+- `qrcode` renders 2FA QR codes in the browser, so the secret never goes to a third-party service.
+
+The first build is ~49 KB gzipped of JavaScript.
+
+**Auth in the browser** uses the server's cookies (ADR-0013). The client reads the `sapb_csrf`
+cookie and echoes it on writes. On `401 invalid_token` it refreshes once (concurrent requests share
+one refresh) and retries; if that fails, the app shows the sign-in page.
+
+**Embedding.** `vite build` output is copied into `server/internal/web/dist` (`npm run build:embed`
+locally, a Node stage in the Dockerfile) and compiled into the binary with `go:embed`. Hashed
+assets are cached for a year; `index.html` is `no-cache`, so a new deploy takes effect on the next
+load. Every non-API path falls back to `index.html` (deep links); a missing asset is a real 404; API
+404s stay JSON. Setup mode now gates only `/api/*` and `/ws`, so the wizard page itself loads.
+
+**Security headers on the app:** a CSP with `script-src 'self'` (no inline scripts — the
+pre-paint theme snippet is an external file), `frame-ancestors 'none'`, `nosniff`,
+`Referrer-Policy: same-origin` and a restrictive `Permissions-Policy`.
+
+**Themes.** Colours exist only as CSS tokens on `[data-theme]`. The dark theme's accent is a
+placeholder until decision #9 is made on real screens. The e-ink theme is pure black on white with
+hairline borders and **no** animation, shadows or gradients (enforced globally with
+`!important`, so a component can't accidentally animate). `prefers-reduced-motion` zeroes motion in
+the dark theme too.
+
+## ADR-0027 — Single-use TOTP codes (Q5 answered: yes)
+
+Each account stores the last accepted 30-second TOTP step (`users.totp_last_step`, migration
+00002). A code is accepted only if an atomic `UPDATE … WHERE totp_last_step < step` claims its step,
+so a code seen over someone's shoulder — or two simultaneous requests with the same code — can't be
+used twice. This applies to login, enrollment, the setup wizard (so the wizard's code can't be
+replayed for the first login) and re-authentication for dangerous actions (emptying the Trash, which
+now checks the typed count *before* spending the code).
+
+---
+
 ## Open questions for Jacob
 
 | # | Question | Current choice (until answered) |
@@ -447,6 +490,9 @@ proves the application's own ordering is right.
 | Q2 | License identifier: `AGPL-3.0-or-later` or `AGPL-3.0-only`? | `AGPL-3.0-or-later` (GNU's recommendation) in SPDX headers |
 | Q3 | Commit the Gradle wrapper now, or when the Android app starts (Phase 3)? | CI installs Gradle 9.1 directly; wrapper added in Phase 3 |
 | Q4 | ~~Review the schema and API outline~~ **Approved** (Phase 0 accepted) | — |
-| Q5 | TOTP replay protection (reject a code already used in its 30 s window)? Adds a column per user. | Not yet; rate limits + lockout bound guessing |
-| Q7 | `low` HLS is AAC-LC 32 kbps instead of HE-AAC (HE-AAC needs non-free libfdk_aac; see ADR-0018). OK? | AAC-LC |
-| Q6 | Brief says the wizard is "served at `/setup`". Phase 1 ships the wizard **API**; the wizard **page** comes with the web SPA in Phase 2 (until then: curl, see `docs/SETUP-API.md`). OK? | As described |
+| Q8 | ~~Web framework (brief #8)~~ **Answered: Svelte** (ADR-0026) | — |
+| Q9 | Accent colour and icon (brief #9): **to be picked on real screens** once Home/Library/Player exist | Placeholder accent |
+| Q10 | Copyright/takedown contact in the footer (brief #3) | Yes, admin-editable (proposed default) |
+| Q5 | ~~TOTP replay protection~~ **Answered: yes** (ADR-0027) | — |
+| Q7 | ~~AAC-LC instead of HE-AAC~~ **Answered: AAC-LC is fine** (ADR-0018) | — |
+| Q6 | ~~Setup wizard page in Phase 2~~ **Answered: yes** — shipped in Phase 2 milestone 1 | — |

@@ -192,7 +192,8 @@ func TestCrashHarness(t *testing.T) {
 	setupHdr := map[string]string{"X-Setup-Token": tok[1]}
 	_, tb := call("POST", e.url("/setup/totp"), "", map[string]any{"username": "admin"}, setupHdr)
 	secret := tb["secret"].(string)
-	code, _ := totp.GenerateCode(secret, time.Now())
+	// Codes are single-use per 30 s step: wizard on the previous step, login on this one.
+	code, _ := totp.GenerateCode(secret, time.Now().Add(-30*time.Second))
 	st, _ := call("POST", e.url("/setup/complete"), "", map[string]any{
 		"admin":    map[string]any{"username": "admin", "password": "tangerine-orbit-quietly", "totp_secret": secret, "totp_code": code},
 		"database": map[string]any{"dialect": "sqlite"}, "library_path": filepath.Join(dir, "library"),
