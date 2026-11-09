@@ -10,6 +10,8 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.hilt.work.HiltWorkerFactory
+import androidx.work.Configuration
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -24,15 +26,36 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import org.simpleapb.app.downloads.DownloadNotifier
+import org.simpleapb.core.data.download.DownloadNotifications
 import org.simpleapb.core.data.net.AccountCalls
 import org.simpleapb.core.data.net.AppInfo
+import org.simpleapb.core.data.sync.LiveHints
+import org.simpleapb.core.data.sync.SyncEngine
 import org.simpleapb.core.ui.AppTheme
 
 @HiltAndroidApp
 class SimpleApbApp :
     Application(),
-    SingletonImageLoader.Factory {
+    SingletonImageLoader.Factory,
+    Configuration.Provider {
     @Inject lateinit var calls: AccountCalls
+
+    @Inject lateinit var workers: HiltWorkerFactory
+
+    @Inject lateinit var sync: SyncEngine
+
+    @Inject lateinit var live: LiveHints
+
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder().setWorkerFactory(workers).build()
+
+    override fun onCreate() {
+        super.onCreate()
+        // Sync on reconnect and every 15 minutes; live hints while the app is open (brief §7.5).
+        sync.schedule()
+        live.start()
+    }
 
     /** Covers are fetched signed in, as the account whose server they come from. */
     override fun newImageLoader(context: PlatformContext): ImageLoader = ImageLoader
@@ -75,6 +98,10 @@ object AppModule {
         versionName = BuildConfig.VERSION_NAME,
         deviceName = listOf(Build.MANUFACTURER, Build.MODEL).joinToString(" ").trim().ifEmpty { "Android" }
     )
+
+    @Provides
+    @Singleton
+    fun downloadNotifications(@ApplicationContext context: Context): DownloadNotifications = DownloadNotifier(context)
 
     @Provides
     @Singleton

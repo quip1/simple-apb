@@ -128,9 +128,13 @@ abstract class GenerateAndroidStrings : DefaultTask() {
         return "    <plurals name=\"$name\">\n$items    </plurals>\n"
     }
 
-    /** ICU → Android format string (percent signs escaped first). */
+    /**
+     * ICU → Android format string. Percent signs are escaped only when the
+     * text is formatted; a string without arguments is `formatted="false"`
+     * and shown as written.
+     */
     private fun format(msg: String, args: List<String>, countVar: String?): String {
-        var s = msg.replace("%", "%%")
+        var s = if (args.isEmpty() && countVar == null) msg else msg.replace("%", "%%")
         if (countVar != null) s = s.replace("#", "%" + (args.indexOf(countVar) + 1) + "\$d")
         return argRe.replace(s) { m ->
             val i = args.indexOf(m.groupValues[1])

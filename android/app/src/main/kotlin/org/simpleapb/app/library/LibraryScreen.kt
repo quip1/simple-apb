@@ -85,6 +85,7 @@ enum class PersonKind { AUTHOR, NARRATOR, SERIES }
 private fun viewLabel(v: LibraryView) = stringResource(
     when (v) {
         LibraryView.BOOKS -> UiR.string.library_view_books
+        LibraryView.DOWNLOADED -> UiR.string.app_library_view_downloaded
         LibraryView.SERIES -> UiR.string.library_view_series
         LibraryView.AUTHORS -> UiR.string.library_view_authors
         LibraryView.NARRATORS -> UiR.string.library_view_narrators
@@ -151,7 +152,7 @@ fun LibraryScreen(
     // E-ink: a new page starts at the top, without animation.
     LaunchedEffect(s.page, s.facetPage) { if (eink) grid.scrollToItem(0) }
 
-    val books = s.view == LibraryView.BOOKS
+    val books = s.view == LibraryView.BOOKS || s.view == LibraryView.DOWNLOADED
     LazyVerticalGrid(
         columns = if (books && !list) GridCells.Adaptive(100.dp) else GridCells.Fixed(1),
         state = grid,
@@ -211,12 +212,13 @@ fun LibraryScreen(
                     }
                 }
                 s.error?.let { Notice(errorText(it)) }
-                if (books) BooksHeader(s, vm, onRename = { renaming = true }, onDelete = { deleting = true })
+                if (s.offline) Notice(stringResource(UiR.string.app_offline_notice), error = false)
+                if (s.view == LibraryView.BOOKS) BooksHeader(s, vm, onRename = { renaming = true }, onDelete = { deleting = true })
             }
         }
 
         when (s.view) {
-            LibraryView.BOOKS -> {
+            LibraryView.BOOKS, LibraryView.DOWNLOADED -> {
                 if (s.loaded && s.books.isEmpty() && !s.loading) {
                     full("empty") {
                         Text(

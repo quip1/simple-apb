@@ -17,6 +17,8 @@ import org.simpleapb.core.data.account.AccountStore
 import org.simpleapb.core.data.account.KeystoreSecretBox
 import org.simpleapb.core.data.account.accountsDataStore
 import org.simpleapb.core.data.auth.AuthRepository
+import org.simpleapb.core.data.db.MirrorDao
+import org.simpleapb.core.data.db.MirrorDb
 import org.simpleapb.core.data.net.AccountCalls
 import org.simpleapb.core.data.net.ApiFactory
 import org.simpleapb.core.data.net.AppInfo
@@ -50,6 +52,13 @@ object DataModule {
     @Singleton
     @AppScope
     fun appScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    @Provides
+    @Singleton
+    fun mirrorDb(@ApplicationContext context: Context): MirrorDb = MirrorDb.open(context)
+
+    @Provides
+    fun mirrorDao(db: MirrorDb): MirrorDao = db.dao()
 
     @Provides
     @Singleton

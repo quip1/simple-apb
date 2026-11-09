@@ -20,7 +20,11 @@ data class LoadedBook(
     val startMs: Long,
     val speed: Float,
     /** Set when streaming the server's low-bitrate HLS version (one item for the whole book). */
-    val hlsProfile: String? = null
+    val hlsProfile: String? = null,
+    /** The download's folder when playing downloaded files. */
+    val localDir: String? = null,
+    /** For downloading the next book in the series. */
+    val seriesId: String? = null
 )
 
 /**

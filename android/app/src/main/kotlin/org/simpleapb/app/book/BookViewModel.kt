@@ -8,8 +8,12 @@ import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.simpleapb.api.model.BookDetail
@@ -30,8 +34,12 @@ import org.simpleapb.api.model.UserStatus
 import org.simpleapb.app.data.MeSession
 import org.simpleapb.core.data.auth.Outcome
 import org.simpleapb.core.data.auth.call
+import org.simpleapb.core.data.db.DownloadRow
+import org.simpleapb.core.data.download.Downloads
 import org.simpleapb.core.data.net.Api
 import org.simpleapb.core.data.net.ApiFailure
+import org.simpleapb.core.data.sync.LocalLibrary
+import org.simpleapb.core.data.sync.SyncEngine
 import org.simpleapb.core.player.PlaybackRepository
 import org.simpleapb.core.player.PlayerConnection
 import org.simpleapb.core.player.PlayerState
@@ -49,7 +57,9 @@ data class BookState(
     val reviews: ReviewPage? = null,
     val collections: List<Collection>? = null,
     val people: List<UserRef> = emptyList(),
-    val recommended: RecommendResult? = null
+    val recommended: RecommendResult? = null,
+    /** Shown from this device's copy: the server is out of reach. */
+    val offline: Boolean = false
 )
 
 /** The book page (brief §7.4 screen 4). */
@@ -60,8 +70,38 @@ constructor(
     private val session: MeSession,
     private val repo: PlaybackRepository,
     private val player: PlayerConnection,
-    private val playerState: PlayerState
+    private val playerState: PlayerState,
+    private val downloads: Downloads,
+    private val local: LocalLibrary,
+    engine: SyncEngine
 ) : ViewModel() {
+    init {
+        // Something changed on another device (or the sync caught up): show it.
+        viewModelScope.launch { engine.changes.collect { id?.let { load(it.toString()) } } }
+    }
+
+    private val bookId = MutableStateFlow<String?>(null)
+
+    /** This book's download, if any. */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val download: StateFlow<DownloadRow?> =
+        bookId
+            .flatMapLatest { b -> downloads.all.map { rows -> rows.firstOrNull { it.bookId == b } } }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    fun download() = viewModelScope.launch {
+        val b = _state.value.book ?: return@launch
+        val account = session.active() ?: return@launch
+        downloads.enqueue(account.id, b.id.toString(), b.title)
+    }
+
+    fun removeDownload() = viewModelScope.launch {
+        val b = _state.value.book ?: return@launch
+        val account = session.active() ?: return@launch
+        if (playerState.book.value?.id == b.id.toString() && playerState.book.value?.localDir != null) player.pause()
+        downloads.remove(account.id, b.id.toString())
+    }
+
     private val _state = MutableStateFlow(BookState())
     val state: StateFlow<BookState> = _state.asStateFlow()
     val me: StateFlow<Me?> = session.me
@@ -75,11 +115,30 @@ constructor(
     fun load(bookId: String) = viewModelScope.launch {
         val uuid = runCatching { UUID.fromString(bookId) }.getOrNull() ?: return@launch
         id = uuid
+        this@BookViewModel.bookId.value = bookId
+        val account = session.active() ?: return@launch
         val api = session.api() ?: return@launch
         when (val r = call { api.library.getBook(uuid) }) {
-            is Outcome.Ok -> _state.update { it.copy(book = r.value, error = null) }
+            is Outcome.Ok -> {
+                _state.update { it.copy(book = r.value, error = null, offline = false) }
+                local.saveDetail(account.id, r.value)
+            }
             is Outcome.Failed -> {
-                _state.update { it.copy(error = r.failure) }
+                // Offline: what this device saved of the book (downloads always have it).
+                val saved = if (r.failure == ApiFailure.Offline) local.detail(account.id, bookId) else null
+                if (saved != null) {
+                    val p = local.progress(account.id, bookId)
+                    _state.update {
+                        it.copy(
+                            book = saved.copy(progress = p ?: saved.progress),
+                            error = null,
+                            offline = true,
+                            bookmarks = local.bookmarks(account.id, bookId)
+                        )
+                    }
+                } else {
+                    _state.update { it.copy(error = r.failure) }
+                }
                 return@launch
             }
         }

@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,6 +30,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -48,6 +50,25 @@ import org.simpleapb.app.player.duration
 import org.simpleapb.core.data.net.ServerUrl
 import org.simpleapb.core.ui.LocalEink
 import org.simpleapb.core.ui.R as UiR
+
+/** The ids of the active account's finished downloads (badges on covers, brief §7.4). */
+val LocalDownloaded = compositionLocalOf { emptySet<String>() }
+
+/** A small "downloaded" mark for covers. */
+@Composable
+fun DownloadedBadge(modifier: Modifier = Modifier) {
+    Icon(
+        Icons.Filled.DownloadDone,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.onSurface,
+        modifier =
+        modifier
+            .background(MaterialTheme.colorScheme.surface, CircleShape)
+            .border(1.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+            .padding(3.dp)
+            .size(16.dp)
+    )
+}
 
 /** A cover address with a size the server has ready (128, 256, 512 or 1024 px). */
 fun coverUrl(serverUrl: String, coverUrl: String, hasCover: Boolean, size: Int = 256): String? {
@@ -73,6 +94,7 @@ private fun bookDescription(b: BookSummary): String {
     if (b.authors.isNotEmpty()) parts += stringResource(UiR.string.app_book_by, b.authors.joinToString(", ") { it.name })
     b.startedPct?.let { parts += stringResource(UiR.string.book_progress_label, it.toString()) }
     if (b.finished) parts += stringResource(UiR.string.book_finished)
+    if (b.id.toString() in LocalDownloaded.current) parts += stringResource(UiR.string.app_book_downloaded)
     return parts.joinToString(", ")
 }
 
@@ -132,6 +154,7 @@ fun BookCard(book: BookSummary, serverUrl: String, onClick: () -> Unit, modifier
     ) {
         Box {
             Cover(coverUrl(serverUrl, book.coverUrl, book.hasCover), Modifier.fillMaxWidth())
+            if (book.id.toString() in LocalDownloaded.current) DownloadedBadge(Modifier.align(Alignment.TopStart).padding(6.dp))
             val pct = book.startedPct
             if (pct != null) {
                 ProgressRing(pct, Modifier.align(Alignment.BottomEnd).padding(6.dp))
@@ -177,7 +200,10 @@ fun BookRow(book: BookSummary, serverUrl: String, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Cover(coverUrl(serverUrl, book.coverUrl, book.hasCover, 128), Modifier.size(64.dp))
+        Box {
+            Cover(coverUrl(serverUrl, book.coverUrl, book.hasCover, 128), Modifier.size(64.dp))
+            if (book.id.toString() in LocalDownloaded.current) DownloadedBadge(Modifier.align(Alignment.TopStart).padding(2.dp))
+        }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(book.title, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
             if (book.authors.isNotEmpty()) {

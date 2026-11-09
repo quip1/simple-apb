@@ -996,6 +996,103 @@ then jumps.
 - the e-ink theme, the e-ink time refresh, and low-data HLS playback;
 - turning 2FA on and off, and enrolment forced by an admin tag requiring 2FA.
 
+---
+
+## ADR-0042 — Android offline sync and downloads (Phase 3, milestone 4)
+
+**The mirror.** A Room database (`mirror.db`, schema exported to `core-data/schemas`) keeps, per
+signed-in account:
+- the library entries and book details, stored as the API's own JSON, so new server fields need
+  no migration;
+- progress, bookmarks and collections;
+- the outbox, conflicts found offline, the sync cursor, and downloads.
+
+When the server can't be reached:
+- Home and the Library show the mirror, with a notice. Shelves, sort and search run on the device;
+  a genre filter can't, because library entries carry no tags.
+- A book page shows the saved details. Downloads always have them.
+
+Signing out of an account deletes its mirror, outbox and downloads; queued writes are sent first
+when the server is reachable.
+
+**The outbox.**
+- Writes that fail with no connection are queued and sent in order: progress reports (from the
+  player and "mark finished") and bookmark adds and deletes.
+- Only the newest queued position per book is kept. The server keeps the latest by client time
+  anyway, and each write carries the `last_synced_at` it had when written, so the "same offline
+  window" check (§6.8) still works.
+- Deleting a bookmark that was never sent just drops it.
+- A server error leaves the item for the next attempt; after 8 failed attempts it is dropped, so
+  one bad item can't block the queue.
+- Collections, reviews and the other actions need a connection and say so.
+
+**The sync engine** sends the outbox, then pulls `GET /me/sync` page by page into the mirror and
+stores the cursor. A 410 (cursor too old) starts over with a snapshot, which replaces the mirror
+but keeps downloads. A library entry's tombstone means the book is no longer visible (removed,
+taken down or unshared), so its download is deleted too.
+
+The engine runs:
+- from WorkManager every 15 minutes, and once whenever a network is available after an offline
+  write;
+- in the app's process when the app opens, and on every live hint.
+
+**Live hints.** While the app is in the foreground, a WebSocket to the active account's `/ws`
+(signed in with the account's own HTTP client, so the token is refreshed as usual) triggers a sync
+on each `changed` hint. Open screens (Home, Library, the book page) reload when the sync changes
+something.
+- As on the web, hints within 1.5 s of this device's own writes are echoes and are dropped, and
+  bursts are coalesced.
+- On reconnect the app syncs, so nothing is missed.
+- When a network comes back, the socket reconnects at once instead of waiting out its backoff.
+
+**Conflicts found offline** (§7.5) are stored. The prompt appears straight away if that book is in
+the player, and otherwise the next time it is opened. Answering clears it.
+
+**Downloads.**
+- Each book downloads in a WorkManager job, shown as a data-sync foreground notification.
+- Files come from `GET /books/{id}/files/{fileId}?download=true` with range requests: a partial
+  `.part` file resumes where it stopped, and a plain 200 starts it over.
+- Each file must match the server's SHA-256, then is synced to disk and renamed into place. A
+  mismatch is retried once, then reported as damaged.
+- The book's details and cover are saved alongside, so a download plays, shows chapters and has
+  its cover with no connection.
+- A download plays its own files even when online. The quality setting doesn't apply to it.
+- Before starting, the job checks the storage limit (default 10 GB, decimal as Android displays
+  sizes, or no limit) and the free space.
+- Downloads wait for Wi-Fi by default; changing that setting reschedules waiting downloads.
+
+**Storage location.** The brief says "SD card via SAF". The app instead uses its own folder on the
+removable card (`getExternalFilesDirs`). That needs no permission and no folder picker, works with
+plain file paths for playback and checksums, and is removed with the app. The trade-off: the files
+aren't visible to other apps, which they shouldn't need to be. The location applies to new
+downloads.
+
+**Auto-download of the next in series** (decision #4, default 90 %, on by default): once a
+downloaded book passes 90 %, the next unfinished book of its series is queued, marked as
+automatic. It only applies to downloaded books, so people who stream don't fill their storage by
+surprise.
+
+**Notifications.** On Android 13 and later, the first "Download" asks for permission to show
+notifications. Downloading works either way; only the progress notification needs it.
+
+**Bugs found on the way.**
+- The Android string generator escaped `%` even in strings without arguments, so they showed "%%".
+  Such strings are now written as is.
+- The Download button first sat below the secondary actions, out of sight; it now sits under Play.
+
+**Checked on the emulator** (API 36) against the demo server:
+- Downloading an M4B book and a three-file MP3 book (files checked on the device).
+- Going offline (Wi-Fi, data and the server tunnel off): Home, the Library and the book page from
+  the mirror; playing the downloaded book; a bookmark added offline.
+- Back online: the queued position (with its offline time) and the bookmark reached the server.
+- A live hint updating an open book page within about 2.5 s; after a reconnect, within 6 s.
+- A conflict met while offline: the prompt appeared once the sync ran, and "Stay" was recorded.
+- Auto-download of book 2 of a series at 90 % of book 1; removing a download.
+- The notification permission prompt; a download with notifications declined.
+
+Resuming a partial file, a damaged file and the storage limit are covered by unit tests (the demo
+files are too small to interrupt mid-download).
+
 ## Open questions for Jacob
 
 | # | Question | Current choice (until answered) |

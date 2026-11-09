@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package org.simpleapb.app.book
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.icu.text.RelativeDateTimeFormatter
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,6 +23,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -38,11 +45,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.simpleapb.api.model.BookDetail
@@ -50,6 +59,7 @@ import org.simpleapb.api.model.Chapter
 import org.simpleapb.api.model.Listener
 import org.simpleapb.api.model.PersonRef
 import org.simpleapb.api.model.TagRef
+import org.simpleapb.app.downloads.downloadStateText
 import org.simpleapb.app.library.PersonKind
 import org.simpleapb.app.player.Cover
 import org.simpleapb.app.player.clock
@@ -65,6 +75,8 @@ import org.simpleapb.app.ui.errorText
 import org.simpleapb.app.ui.percent
 import org.simpleapb.app.ui.seriesLabel
 import org.simpleapb.core.data.account.Account
+import org.simpleapb.core.data.db.DownloadRow
+import org.simpleapb.core.data.download.DownloadState
 import org.simpleapb.core.data.net.millis
 import org.simpleapb.core.ui.LocalEink
 import org.simpleapb.core.ui.R as UiR
@@ -102,6 +114,7 @@ fun BookScreen(
     val me by vm.me.collectAsStateWithLifecycle()
     val current by vm.current.collectAsStateWithLifecycle()
     val ui by vm.playback.collectAsStateWithLifecycle()
+    val download by vm.download.collectAsStateWithLifecycle()
     var dialog by rememberSaveable { mutableStateOf(BookDialog.NONE) }
     LaunchedEffect(bookId) { vm.load(bookId) }
 
@@ -142,6 +155,7 @@ fun BookScreen(
             Text(stringResource(UiR.string.book_time_left, pct.toString(), duration(b.durationMs - positionMs)))
         }
 
+        if (s.offline) Notice(stringResource(UiR.string.app_offline_notice), error = false)
         if (b.needsReview == true && b.canEdit == true) Notice(stringResource(UiR.string.meta_needs_review_banner), error = false)
         s.notice?.let { Notice(noticeText(it), error = false) }
         s.error?.let { Notice(errorText(it)) }
@@ -176,7 +190,8 @@ fun BookScreen(
                     dialog = it
                 },
                 onArchive = { vm.archive(b.hidden != true) },
-                onEdit = onEdit
+                onEdit = onEdit,
+                download = { DownloadButton(download, onDownload = vm::download, onRemove = vm::removeDownload) }
             )
         }
 
@@ -241,6 +256,71 @@ fun BookScreen(
     }
 }
 
+/** Download, its progress, or remove it (brief §7.4 screen 4). */
+@Composable
+private fun DownloadButton(d: DownloadRow?, onDownload: () -> Unit, onRemove: () -> Unit) {
+    var confirm by rememberSaveable { mutableStateOf(false) }
+    // Android 13+: the download's progress notification needs permission; downloading works either way.
+    val context = LocalContext.current
+    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { onDownload() }
+    val start = {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ask.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            onDownload()
+        }
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        when (d?.state) {
+            null -> OutlinedButton(onClick = start, modifier = Modifier.fillMaxWidth().heightIn(min = TouchTarget)) {
+                Icon(Icons.Filled.Download, contentDescription = null)
+                Text(stringResource(UiR.string.app_book_download), modifier = Modifier.padding(start = 8.dp))
+            }
+            DownloadState.FAILED -> {
+                Text(downloadStateText(d, wifiOnly = false), style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(onClick = start, modifier = Modifier.fillMaxWidth().heightIn(min = TouchTarget)) {
+                    Text(stringResource(UiR.string.app_downloads_retry))
+                }
+            }
+            else -> {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (d.state ==
+                        DownloadState.DONE
+                    ) {
+                        Icon(Icons.Filled.DownloadDone, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+                    }
+                    Text(
+                        if (d.state == DownloadState.DONE) stringResource(UiR.string.app_book_downloaded) else downloadStateText(d, wifiOnly = false),
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = { confirm = true }, modifier = Modifier.heightIn(min = TouchTarget)) {
+                        Text(stringResource(if (d.state == DownloadState.DONE) UiR.string.app_downloads_remove else UiR.string.app_downloads_cancel))
+                    }
+                }
+                if (d.state == DownloadState.RUNNING && d.totalBytes > 0) {
+                    LinearProgressIndicator(progress = {
+                        d.doneBytes.toFloat() / d.totalBytes
+                    }, modifier = Modifier.fillMaxWidth(), drawStopIndicator = {})
+                }
+            }
+        }
+    }
+    if (confirm && d != null) {
+        ConfirmDialog(
+            title = stringResource(UiR.string.app_downloads_remove),
+            body = stringResource(UiR.string.app_downloads_remove_body, d.title),
+            confirm = stringResource(UiR.string.app_downloads_remove),
+            onConfirm = {
+                onRemove()
+                confirm = false
+            },
+            onDismiss = { confirm = false }
+        )
+    }
+}
+
 @Composable
 private fun noticeText(n: BookNotice) = stringResource(
     when (n) {
@@ -300,12 +380,14 @@ private fun Actions(
     onFinished: () -> Unit,
     onDialog: (BookDialog) -> Unit,
     onArchive: () -> Unit,
-    onEdit: () -> Unit
+    onEdit: () -> Unit,
+    download: @Composable () -> Unit
 ) {
     Button(onClick = onPlay, modifier = Modifier.fillMaxWidth().heightIn(min = TouchTarget)) {
         Icon(Icons.Filled.PlayArrow, contentDescription = null)
         Text(playLabel, modifier = Modifier.padding(start = 8.dp))
     }
+    download()
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         val m = Modifier.heightIn(min = TouchTarget)
         OutlinedButton(onClick = onFinished, enabled = !busy, modifier = m) {

@@ -49,6 +49,7 @@ import org.simpleapb.core.data.auth.Outcome
 import org.simpleapb.core.data.net.AccountCalls
 import org.simpleapb.core.data.net.ApiFailure
 import org.simpleapb.core.data.net.AppScope
+import org.simpleapb.core.data.sync.SyncEngine
 import org.simpleapb.core.ui.R as UiR
 
 /**
@@ -72,6 +73,8 @@ class PlaybackService :
 
     @Inject lateinit var calls: AccountCalls
 
+    @Inject lateinit var engine: SyncEngine
+
     @Inject @AppScope
     lateinit var appScope: CoroutineScope
 
@@ -94,6 +97,17 @@ class PlaybackService :
 
     override fun onCreate() {
         super.onCreate()
+        // A queued write met a conflict while this book is open: ask now.
+        scope.launch {
+            engine.conflicts.collect { c ->
+                val b = book() ?: return@collect
+                if (b.accountId == c.accountId &&
+                    b.id == c.bookId
+                ) {
+                    state.conflict.value = PendingConflict(b.id, c.conflictId, c.serverPositionMs, c.serverDevice)
+                }
+            }
+        }
         val http = OkHttpDataSource.Factory(calls)
         exo =
             ExoPlayer
@@ -106,7 +120,8 @@ class PlaybackService :
         exo.addListener(listener)
         player = BookPlayer(exo, this)
         presses = HeadsetPresses(scope) { g -> perform(settings.action(g)) }
-        val bitmaps = CacheBitmapLoader(DataSourceBitmapLoader.Builder(this).setDataSourceFactory(http).build())
+        // Covers come from the server or, for downloads, from the book's folder.
+        val bitmaps = CacheBitmapLoader(DataSourceBitmapLoader.Builder(this).setDataSourceFactory(DefaultDataSource.Factory(this, http)).build())
         val builder =
             MediaLibrarySession
                 .Builder(this, player, callback)
@@ -292,6 +307,7 @@ class PlaybackService :
             val now = SystemClock.elapsedRealtime()
             sleepTick(now)
             if (exo.isPlaying && now - lastReportAt >= REPORT_EVERY_MS) report()
+            checkAutoNext()
             if (seekAt > 0 && now - seekAt >= SEEK_SETTLE_MS) {
                 seekAt = 0
                 report(force = true)
@@ -303,6 +319,17 @@ class PlaybackService :
                 appScope.launch { repo.saveLocal(b.id, pos) }
             }
         }
+    }
+
+    private var autoNextFor: String? = null
+
+    /** Past 90 % of a downloaded book: download the next in its series (decision #4). */
+    private fun checkAutoNext() {
+        val b = book() ?: return
+        if (b.localDir == null || b.seriesId == null || autoNextFor == b.id) return
+        if (b.timeline.durationMs <= 0 || position() < b.timeline.durationMs * AUTO_NEXT_FRACTION) return
+        autoNextFor = b.id
+        appScope.launch { repo.autoNext(b) }
     }
 
     private fun report(force: Boolean = false, finished: Boolean? = null) {
@@ -380,8 +407,10 @@ class PlaybackService :
                 }
             }
         if (book()?.id != b.id) report(force = true)
-        state.conflict.value = null
         state.book.value = b
+        // A conflict found while this device was offline is asked about now (brief §7.5).
+        state.conflict.value = repo.storedConflict(b)
+        autoNextFor = null
         pausedAt = 0
         seekAt = 0
         lastSentMs = b.startMs
@@ -588,6 +617,7 @@ class PlaybackService :
         private const val SAVE_EVERY_MS = 5_000L
         private const val SEEK_SETTLE_MS = 1_500L
         private const val MIN_MOVE_MS = 1_000L
+        private const val AUTO_NEXT_FRACTION = 0.9
 
         /** Calls and alarms always pause. With PAUSE, navigation prompts pause too; with DUCK they lower the volume. */
         fun attributes(focus: FocusMode): AudioAttributes = AudioAttributes

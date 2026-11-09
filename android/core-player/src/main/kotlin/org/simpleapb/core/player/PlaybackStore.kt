@@ -23,8 +23,7 @@ data class LastBook(val accountId: String, val bookId: String)
 /**
  * Playback settings and small per-book records on this device: speed, the
  * last position (so nothing is lost when a progress report can't reach the
- * server), and when progress last synced. The Room mirror takes over the
- * per-book records with the offline milestone.
+ * server). When progress last synced lives in the Room mirror.
  */
 class PlaybackStore(private val store: DataStore<Preferences>) {
     private val json =
@@ -38,8 +37,6 @@ class PlaybackStore(private val store: DataStore<Preferences>) {
     private fun speedKey(bookId: String) = stringPreferencesKey("speed.$bookId")
 
     private fun positionKey(bookId: String) = stringPreferencesKey("pos.$bookId")
-
-    private fun syncedKey(bookId: String) = stringPreferencesKey("synced.$bookId")
 
     val settings: Flow<PlaybackSettings> =
         store.data.map { prefs ->
@@ -74,12 +71,6 @@ class PlaybackStore(private val store: DataStore<Preferences>) {
 
     suspend fun saveLocalPosition(bookId: String, positionMs: Long, atMs: Long) {
         store.edit { it[positionKey(bookId)] = "$positionMs,$atMs" }
-    }
-
-    suspend fun syncedAt(bookId: String): String? = store.data.first()[syncedKey(bookId)]
-
-    suspend fun markSynced(bookId: String, at: String) {
-        store.edit { it[syncedKey(bookId)] = at }
     }
 
     suspend fun lastBook(): LastBook? {

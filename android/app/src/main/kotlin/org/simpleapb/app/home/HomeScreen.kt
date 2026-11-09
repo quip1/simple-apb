@@ -37,6 +37,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.simpleapb.api.endpoints.LibraryApi.ShelfListLibrary
@@ -44,6 +45,8 @@ import org.simpleapb.api.endpoints.LibraryApi.SortListLibrary
 import org.simpleapb.api.model.BookSummary
 import org.simpleapb.api.model.Recommendation
 import org.simpleapb.app.data.MeSession
+import org.simpleapb.app.library.OfflineFilter
+import org.simpleapb.app.library.summary
 import org.simpleapb.app.ui.Notice
 import org.simpleapb.app.ui.ScreenHeader
 import org.simpleapb.app.ui.Shelf
@@ -52,8 +55,12 @@ import org.simpleapb.app.ui.errorText
 import org.simpleapb.core.data.account.Account
 import org.simpleapb.core.data.auth.Outcome
 import org.simpleapb.core.data.auth.call
+import org.simpleapb.core.data.download.DownloadState
+import org.simpleapb.core.data.download.Downloads
 import org.simpleapb.core.data.net.Api
 import org.simpleapb.core.data.net.ApiFailure
+import org.simpleapb.core.data.sync.LocalLibrary
+import org.simpleapb.core.data.sync.SyncEngine
 import org.simpleapb.core.ui.R as UiR
 
 data class HomeState(
@@ -62,18 +69,31 @@ data class HomeState(
     val continuing: List<BookSummary> = emptyList(),
     val recommended: List<Recommendation> = emptyList(),
     val nextUp: List<BookSummary> = emptyList(),
-    val recent: List<BookSummary> = emptyList()
+    val recent: List<BookSummary> = emptyList(),
+    /** Offline: books downloaded to this device. */
+    val downloaded: List<BookSummary> = emptyList(),
+    val offline: Boolean = false
 ) {
-    val empty get() = loaded && error == null && continuing.isEmpty() && recommended.isEmpty() && nextUp.isEmpty() && recent.isEmpty()
+    val empty get() =
+        loaded && error == null && continuing.isEmpty() && recommended.isEmpty() && nextUp.isEmpty() && recent.isEmpty() && downloaded.isEmpty()
 }
 
 /** Home (brief §7.4 screen 2): continue listening, recommended, next in series, recently added. */
 @HiltViewModel
 class HomeViewModel
 @Inject
-constructor(private val session: MeSession) : ViewModel() {
+constructor(
+    private val session: MeSession,
+    private val local: LocalLibrary,
+    private val downloads: Downloads,
+    engine: SyncEngine
+) : ViewModel() {
     private val _state = MutableStateFlow(HomeState())
     val state: StateFlow<HomeState> = _state.asStateFlow()
+
+    init {
+        viewModelScope.launch { engine.changes.collect { if (_state.value.loaded) load() } }
+    }
 
     fun load() = viewModelScope.launch {
         val api = session.api() ?: return@launch
@@ -87,6 +107,10 @@ constructor(private val session: MeSession) : ViewModel() {
                 listOf(c, n, f, rec).awaitAll()
             }
         val failure = r.filterIsInstance<Outcome.Failed>().firstOrNull()?.failure
+        if (failure == ApiFailure.Offline) {
+            offline()
+            return@launch
+        }
 
         @Suppress("UNCHECKED_CAST")
         fun <T> ok(i: Int): T? = (r[i] as? Outcome.Ok<*>)?.value as T?
@@ -103,6 +127,23 @@ constructor(private val session: MeSession) : ViewModel() {
                 recommended = recs,
                 nextUp = nextInSeries(api, finished),
                 recent = recent
+            )
+    }
+
+    /** Offline: what this device knows — books in progress, and the downloads. */
+    private suspend fun offline() {
+        val account = session.active() ?: return
+        val progress = local.allProgress(account.id)
+        val all = local.books(account.id).map { b -> progress[b.id.toString()]?.let { b.copy(progress = it) } ?: b }
+        val done = downloads.all.first().filter { it.accountId == account.id && it.state == DownloadState.DONE }.map { it.bookId }.toSet()
+        val downloaded =
+            done.mapNotNull { id -> all.firstOrNull { it.id.toString() == id } ?: local.detail(account.id, id)?.summary() }
+        _state.value =
+            HomeState(
+                loaded = true,
+                offline = true,
+                continuing = OfflineFilter.apply(all, ShelfListLibrary.IN_PROGRESS, SortListLibrary.RECENT_PLAYED, "", null).take(ROW),
+                downloaded = downloaded
             )
     }
 
@@ -152,6 +193,7 @@ fun HomeScreen(account: Account, onBook: (String) -> Unit, onLibrary: (String?) 
             }
         }
         s.error?.let { Notice(errorText(it)) }
+        if (s.offline) Notice(stringResource(UiR.string.app_offline_notice), error = false)
         when {
             !s.loaded -> Text(stringResource(UiR.string.common_loading))
             s.empty -> {
@@ -176,6 +218,7 @@ fun HomeScreen(account: Account, onBook: (String) -> Unit, onLibrary: (String?) 
                         }
                     }
                 }
+                if (s.downloaded.isNotEmpty()) Shelf(stringResource(UiR.string.app_library_view_downloaded), s.downloaded, account.serverUrl, open)
                 if (s.nextUp.isNotEmpty()) Shelf(stringResource(UiR.string.home_next_in_series), s.nextUp, account.serverUrl, open)
                 if (s.recent.isNotEmpty()) {
                     Shelf(stringResource(UiR.string.home_recently_added), s.recent, account.serverUrl, open, onSeeAll = { onLibrary(null) })

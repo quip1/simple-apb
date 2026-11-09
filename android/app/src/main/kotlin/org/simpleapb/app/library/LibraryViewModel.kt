@@ -13,12 +13,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.simpleapb.api.endpoints.LibraryApi.KindListLibraryFacets
 import org.simpleapb.api.endpoints.LibraryApi.ShelfListLibrary
 import org.simpleapb.api.endpoints.LibraryApi.SortListLibrary
+import org.simpleapb.api.model.BookDetail
 import org.simpleapb.api.model.BookSummary
 import org.simpleapb.api.model.Collection
 import org.simpleapb.api.model.CollectionCreate
@@ -29,9 +31,13 @@ import org.simpleapb.app.UiSettings
 import org.simpleapb.app.data.MeSession
 import org.simpleapb.core.data.auth.Outcome
 import org.simpleapb.core.data.auth.call
+import org.simpleapb.core.data.download.DownloadState
+import org.simpleapb.core.data.download.Downloads
 import org.simpleapb.core.data.net.ApiFailure
+import org.simpleapb.core.data.sync.LocalLibrary
+import org.simpleapb.core.data.sync.SyncEngine
 
-enum class LibraryView { BOOKS, SERIES, AUTHORS, NARRATORS, GENRES, COLLECTIONS }
+enum class LibraryView { BOOKS, DOWNLOADED, SERIES, AUTHORS, NARRATORS, GENRES, COLLECTIONS }
 
 data class LibraryState(
     val view: LibraryView = LibraryView.BOOKS,
@@ -51,7 +57,9 @@ data class LibraryState(
     val shared: List<SharedCollection> = emptyList(),
     val loading: Boolean = false,
     val loaded: Boolean = false,
-    val error: ApiFailure? = null
+    val error: ApiFailure? = null,
+    /** The server is out of reach: the list comes from this device's copy. */
+    val offline: Boolean = false
 ) {
     val ownCollection get() = collections.firstOrNull { it.id == collectionId }
     val sharedCollection get() = shared.firstOrNull { it.id == collectionId }
@@ -61,7 +69,17 @@ data class LibraryState(
 @HiltViewModel
 class LibraryViewModel
 @Inject
-constructor(private val session: MeSession, private val ui: UiSettings) : ViewModel() {
+constructor(
+    private val session: MeSession,
+    private val ui: UiSettings,
+    private val local: LocalLibrary,
+    private val downloads: Downloads,
+    engine: SyncEngine
+) : ViewModel() {
+    init {
+        viewModelScope.launch { engine.changes.collect { if (started) reload() } }
+    }
+
     private val _state = MutableStateFlow(LibraryState())
     val state: StateFlow<LibraryState> = _state.asStateFlow()
 
@@ -87,6 +105,7 @@ constructor(private val session: MeSession, private val ui: UiSettings) : ViewMo
     fun reload() {
         when (_state.value.view) {
             LibraryView.BOOKS -> fetchBooks(null, append = false, page = 1, cursors = listOf(null))
+            LibraryView.DOWNLOADED -> loadDownloaded()
             LibraryView.COLLECTIONS -> loadCollections()
             else -> loadFacets()
         }
@@ -168,11 +187,50 @@ constructor(private val session: MeSession, private val ui: UiSettings) : ViewMo
                                 cursors = cursors,
                                 loading = false,
                                 loaded = true,
-                                error = null
+                                error = null,
+                                offline = false
                             )
                         is Outcome.Failed -> it.copy(loading = false, loaded = true, error = r.failure)
                     }
                 }
+                if (r is Outcome.Failed && r.failure == ApiFailure.Offline && cursor == null) offlineBooks()
+            }
+    }
+
+    /** Offline: the mirror, filtered and sorted here (the first page only on e-ink). */
+    private suspend fun offlineBooks() {
+        val account = session.active() ?: return
+        val s = _state.value
+        val progress = local.allProgress(account.id)
+        val all = local.books(account.id).map { b -> progress[b.id.toString()]?.let { b.copy(progress = it) } ?: b }
+        val books = OfflineFilter.apply(all, s.shelf, s.sort, s.query, s.tag?.id?.toString())
+        _state.update {
+            it.copy(
+                books = if (eink) books.take(EINK_PAGE) else books,
+                nextCursor = null,
+                page = 1,
+                loading = false,
+                loaded = true,
+                error = null,
+                offline = true
+            )
+        }
+    }
+
+    /** Books downloaded to this device, newest download first. */
+    private fun loadDownloaded() {
+        job?.cancel()
+        job =
+            viewModelScope.launch {
+                val account = session.active() ?: return@launch
+                val rows = downloads.all.first().filter { it.accountId == account.id && it.state == DownloadState.DONE }
+                val progress = local.allProgress(account.id)
+                val books =
+                    rows.mapNotNull { r ->
+                        val b = local.book(account.id, r.bookId) ?: local.detail(account.id, r.bookId)?.summary() ?: return@mapNotNull null
+                        progress[r.bookId]?.let { b.copy(progress = it) } ?: b
+                    }
+                _state.update { it.copy(books = books, nextCursor = null, page = 1, loading = false, loaded = true, error = null, offline = false) }
             }
     }
 
@@ -269,5 +327,65 @@ constructor(private val session: MeSession, private val ui: UiSettings) : ViewMo
         const val EINK_PAGE = 12
         const val FACET_PAGE = 15
         const val SEARCH_DEBOUNCE_MS = 250L
+    }
+}
+
+/** A book's details as a library entry (for downloads the mirror has no entry for). */
+fun BookDetail.summary() = BookSummary(
+    id = id,
+    title = title,
+    authors = authors,
+    narrators = narrators,
+    durationMs = durationMs,
+    coverUrl = coverUrl,
+    hasCover = hasCover,
+    source = source,
+    updatedAt = updatedAt,
+    subtitle = subtitle,
+    series = series,
+    progress = progress,
+    addedAt = addedAt,
+    hidden = hidden,
+    removedAt = removedAt
+)
+
+/** The library's shelves, sort and search, done on this device for the offline list. */
+object OfflineFilter {
+    fun apply(all: List<BookSummary>, shelf: ShelfListLibrary, sort: SortListLibrary, query: String, tagId: String?): List<BookSummary> {
+        val q = query.trim().lowercase()
+        val shown =
+            all.filter { b ->
+                val p = b.progress
+                val onShelf =
+                    when (shelf) {
+                        ShelfListLibrary.ALL -> b.hidden != true && b.removedAt == null
+                        ShelfListLibrary.IN_PROGRESS -> p != null && p.finishedAt == null && p.positionMs > 0 && b.hidden != true
+                        ShelfListLibrary.NOT_STARTED -> (p == null || (p.positionMs == 0L && p.finishedAt == null)) && b.hidden != true
+                        ShelfListLibrary.FINISHED -> p?.finishedAt != null
+                        ShelfListLibrary.ARCHIVED -> b.hidden == true
+                        ShelfListLibrary.RECENTLY_REMOVED -> b.removedAt != null
+                    }
+                val matches =
+                    q.isEmpty() ||
+                        b.title.lowercase().contains(q) ||
+                        b.authors.any { it.name.lowercase().contains(q) } ||
+                        b.narrators.any { it.name.lowercase().contains(q) } ||
+                        b.series?.name?.lowercase()?.contains(q) == true
+                // Summaries carry no tags, so a genre filter can't apply offline: show nothing rather than everything.
+                onShelf && matches && tagId == null
+            }
+        return when (sort) {
+            SortListLibrary.TITLE -> shown.sortedBy { it.title.lowercase() }
+            SortListLibrary.AUTHOR -> shown.sortedBy { it.authors.firstOrNull()?.name?.lowercase() ?: "" }
+            SortListLibrary.SERIES -> shown.sortedWith(
+                compareBy({ it.series?.name?.lowercase() ?: "\uffff" }, {
+                    it.series?.index?.toDoubleOrNull()
+                        ?: 0.0
+                })
+            )
+            SortListLibrary.DURATION -> shown.sortedBy { it.durationMs }
+            SortListLibrary.RECENT_PLAYED -> shown.sortedByDescending { it.progress?.clientTs ?: "" }
+            SortListLibrary.RECENT_ADDED -> shown.sortedByDescending { it.addedAt ?: it.updatedAt }
+        }
     }
 }

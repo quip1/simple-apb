@@ -1,12 +1,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package org.simpleapb.app
 
+import java.util.UUID
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.simpleapb.api.endpoints.LibraryApi.ShelfListLibrary
+import org.simpleapb.api.endpoints.LibraryApi.SortListLibrary
+import org.simpleapb.api.model.BookSummary
+import org.simpleapb.api.model.LibrarySource
+import org.simpleapb.api.model.PersonRef
+import org.simpleapb.api.model.Progress
 import org.simpleapb.app.book.BookForm
 import org.simpleapb.app.data.SyncedPrefs
+import org.simpleapb.app.library.OfflineFilter
 import org.simpleapb.app.ui.coverUrl
 import org.simpleapb.app.ui.percent
 import org.simpleapb.core.player.PlaybackRepository
@@ -14,6 +23,62 @@ import org.simpleapb.core.player.PlaybackSettings
 import org.simpleapb.core.player.Quality
 
 class ScreensLogicTest {
+    private fun book(
+        title: String,
+        author: String,
+        pos: Long? = null,
+        finished: Boolean = false,
+        hidden: Boolean = false,
+        added: String = "2026-01-01T00:00:00Z"
+    ) = BookSummary(
+        id = UUID.nameUUIDFromBytes(title.toByteArray()),
+        title = title,
+        authors = listOf(PersonRef(UUID.randomUUID(), author)),
+        narrators = emptyList(),
+        durationMs = 1_000_000,
+        coverUrl = "",
+        hasCover = false,
+        source = LibrarySource.DISTRIBUTION,
+        updatedAt = added,
+        addedAt = added,
+        hidden = hidden,
+        progress =
+        pos?.let {
+            Progress(
+                UUID.nameUUIDFromBytes(title.toByteArray()),
+                it,
+                UUID(0, 0),
+                "2026-02-0${it % 9 + 1}T00:00:00Z",
+                "2026-02-01T00:00:00Z",
+                1f,
+                finishedAt = if (finished) "2026-02-02T00:00:00Z" else null
+            )
+        }
+    )
+
+    @Test
+    fun offlineLibraryFiltersLikeTheServer() {
+        val all =
+            listOf(
+                book("Dune", "Frank Herbert", pos = 5_000),
+                book("Emma", "Jane Austen", pos = 1_000_000, finished = true),
+                book("Ivanhoe", "Walter Scott"),
+                book("Old", "Someone", hidden = true)
+            )
+        assertEquals(listOf("Dune"), OfflineFilter.apply(all, ShelfListLibrary.IN_PROGRESS, SortListLibrary.TITLE, "", null).map { it.title })
+        assertEquals(listOf("Emma"), OfflineFilter.apply(all, ShelfListLibrary.FINISHED, SortListLibrary.TITLE, "", null).map { it.title })
+        assertEquals(listOf("Ivanhoe"), OfflineFilter.apply(all, ShelfListLibrary.NOT_STARTED, SortListLibrary.TITLE, "", null).map { it.title })
+        assertEquals(listOf("Old"), OfflineFilter.apply(all, ShelfListLibrary.ARCHIVED, SortListLibrary.TITLE, "", null).map { it.title })
+        assertEquals(listOf("Emma"), OfflineFilter.apply(all, ShelfListLibrary.ALL, SortListLibrary.TITLE, "austen", null).map { it.title })
+        assertEquals(
+            listOf("Dune", "Emma", "Ivanhoe"),
+            OfflineFilter.apply(all, ShelfListLibrary.ALL, SortListLibrary.TITLE, "", null).map {
+                it.title
+            }
+        )
+        assertTrue(OfflineFilter.apply(all, ShelfListLibrary.ALL, SortListLibrary.TITLE, "", "some-genre").isEmpty())
+    }
+
     @Test
     fun syncedPrefsRoundTrip() {
         val s = PlaybackSettings(skipBackS = 15, skipForwardS = 45, einkTickS = 20, leftHanded = true, defaultSpeed = 1.25f)

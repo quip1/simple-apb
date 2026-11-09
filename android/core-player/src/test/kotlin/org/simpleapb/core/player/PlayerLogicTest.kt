@@ -190,7 +190,6 @@ class PlayerLogicTest {
         assertEquals(LocalPosition(1234, 99), store.localPosition("b1"))
         store.setLastBook("acc", "b1")
         assertEquals(LastBook("acc", "b1"), store.lastBook())
-        assertNull(store.syncedAt("b1"))
         dir.deleteRecursively()
     }
 }

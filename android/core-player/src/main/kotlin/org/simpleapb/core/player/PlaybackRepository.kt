@@ -8,6 +8,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
 import java.io.IOException
 import java.time.Instant
 import java.util.UUID
@@ -26,10 +27,14 @@ import org.simpleapb.core.data.account.Account
 import org.simpleapb.core.data.account.AccountStore
 import org.simpleapb.core.data.auth.Outcome
 import org.simpleapb.core.data.auth.call
+import org.simpleapb.core.data.download.DownloadWorker
+import org.simpleapb.core.data.download.Downloads
 import org.simpleapb.core.data.net.ApiFactory
 import org.simpleapb.core.data.net.ApiFailure
 import org.simpleapb.core.data.net.ServerUrl
 import org.simpleapb.core.data.net.millis
+import org.simpleapb.core.data.sync.LocalLibrary
+import org.simpleapb.core.data.sync.SyncEngine
 
 sealed interface ReportResult {
     data object Ok : ReportResult
@@ -39,7 +44,11 @@ sealed interface ReportResult {
     data class Failed(val failure: ApiFailure) : ReportResult
 }
 
-/** Loading books for playback, reporting progress and bookmarks. */
+/**
+ * Loading books for playback (from downloads when there are any, which also
+ * works offline), reporting progress and bookmarks. Writes that can't reach
+ * the server go to the outbox and are sent by the sync engine.
+ */
 @Singleton
 class PlaybackRepository
 @Inject
@@ -47,7 +56,10 @@ constructor(
     @ApplicationContext private val context: Context,
     private val apis: ApiFactory,
     private val accounts: AccountStore,
-    private val store: PlaybackStore
+    private val store: PlaybackStore,
+    private val local: LocalLibrary,
+    private val downloads: Downloads,
+    private val engine: SyncEngine
 ) {
     // Progress writes for one device go out one at a time, in order.
     private val writes = Mutex()
@@ -58,34 +70,46 @@ constructor(
 
     suspend fun load(account: Account, bookId: String): Outcome<LoadedBook> {
         val id = runCatching { UUID.fromString(bookId) }.getOrNull() ?: return Outcome.Failed(ApiFailure("not_found", "", 404))
-        val api = apis.forAccount(account)
-        return when (val r = call { api.library.getBook(id) }) {
-            is Outcome.Failed -> r
-            is Outcome.Ok -> {
-                val d = r.value
-                val settings = store.settings()
-                val profile = hlsProfile(settings.quality, metered())
-                val timeline = if (profile != null) hlsTimeline(d) else timeline(d)
-                val start = chooseStart(d.progress, store.localPosition(bookId), timeline.durationMs)
-                val speed = store.speed(bookId) ?: d.progress?.speed ?: settings.defaultSpeed
-                Outcome.Ok(
-                    LoadedBook(
-                        id = bookId,
-                        accountId = account.id,
-                        serverUrl = account.serverUrl,
-                        title = d.title,
-                        authors = d.authors.joinToString(", ") { it.name },
-                        narrators = d.narrators.joinToString(", ") { it.name },
-                        coverUrl = if (d.hasCover) ServerUrl.resolve(account.serverUrl, d.coverUrl) else null,
-                        timeline = timeline,
-                        startMs = start,
-                        speed = Speed.clamp(speed),
-                        hlsProfile = profile
-                    )
-                )
-            }
-        }
+        val dir = downloads.completeDir(account.id, bookId)
+        val online = call { apis.forAccount(account).library.getBook(id) }
+        if (online is Outcome.Ok) local.saveDetail(account.id, online.value)
+        // A download plays its own files (offline too); otherwise the server's details are needed.
+        val d =
+            when {
+                dir != null -> local.detail(account.id, bookId) ?: (online as? Outcome.Ok)?.value
+                else -> (online as? Outcome.Ok)?.value
+            } ?: return online as? Outcome.Failed ?: Outcome.Failed(ApiFailure.Offline)
+        val progress = (online as? Outcome.Ok)?.value?.progress ?: local.progress(account.id, bookId)
+        val settings = store.settings()
+        val profile = if (dir != null) null else hlsProfile(settings.quality, metered())
+        val timeline = if (profile != null) hlsTimeline(d) else timeline(d)
+        val start = chooseStart(progress, store.localPosition(bookId), timeline.durationMs)
+        val speed = store.speed(bookId) ?: progress?.speed ?: settings.defaultSpeed
+        val localCover = dir?.let { File(it, DownloadWorker.COVER) }?.takeIf { it.isFile }
+        return Outcome.Ok(
+            LoadedBook(
+                id = bookId,
+                accountId = account.id,
+                serverUrl = account.serverUrl,
+                title = d.title,
+                authors = d.authors.joinToString(", ") { it.name },
+                narrators = d.narrators.joinToString(", ") { it.name },
+                coverUrl = localCover?.toUri()?.toString() ?: if (d.hasCover) ServerUrl.resolve(account.serverUrl, d.coverUrl) else null,
+                timeline = timeline,
+                startMs = start,
+                speed = Speed.clamp(speed),
+                hlsProfile = profile,
+                localDir = dir?.path,
+                seriesId = d.series?.id?.toString()
+            )
+        )
     }
+
+    /** A position conflict found while this device was offline, to ask about now. */
+    suspend fun storedConflict(b: LoadedBook): PendingConflict? =
+        local.conflict(b.accountId, b.id)?.let { PendingConflict(b.id, it.conflictId, it.serverPositionMs, it.serverDevice) }
+
+    suspend fun clearStoredConflict(b: LoadedBook) = local.clearConflict(b.accountId, b.id)
 
     private fun metered(): Boolean = context.getSystemService(ConnectivityManager::class.java)?.isActiveNetworkMetered ?: true
 
@@ -96,10 +120,10 @@ constructor(
      */
     fun mediaItems(b: LoadedBook): List<MediaItem> = b.timeline.files.mapIndexed { i, f ->
         val uri =
-            if (b.hlsProfile != null) {
-                ServerUrl.api(b.serverUrl) + "stream/${b.id}/hls/${b.hlsProfile}/index.m3u8"
-            } else {
-                ServerUrl.api(b.serverUrl) + "books/${b.id}/files/${f.id}"
+            when {
+                b.localDir != null -> File(b.localDir, "${f.id}.${DownloadWorker.extension(f.mimeType)}").toUri().toString()
+                b.hlsProfile != null -> ServerUrl.api(b.serverUrl) + "stream/${b.id}/hls/${b.hlsProfile}/index.m3u8"
+                else -> ServerUrl.api(b.serverUrl) + "books/${b.id}/files/${f.id}"
             }
         MediaItem
             .Builder()
@@ -131,8 +155,7 @@ constructor(
     /**
      * Reports the position (brief §6.8). A 409 means another device holds a
      * far-away position written in the same offline window: the user decides.
-     * Offline reports are dropped here; the local position is kept, and the
-     * outbox replaces this with the offline milestone.
+     * A report that can't reach the server goes to the outbox (brief §6.8).
      */
     suspend fun report(b: LoadedBook, positionMs: Long, speed: Float, finished: Boolean?, resolution: String?): ReportResult = writes.withLock {
         val account = account(b.accountId) ?: return ReportResult.Failed(ApiFailure("signed_out", "", 401))
@@ -144,14 +167,17 @@ constructor(
                 clientTs = Instant.now().toString(),
                 speed = Speed.clamp(speed),
                 finished = finished,
-                lastSyncedAt = store.syncedAt(b.id),
+                lastSyncedAt = local.syncedAt(account.id, b.id),
                 resolution = resolution
             )
         try {
+            engine.wrote()
             val res = apis.forAccount(account).progress.putProgress(UUID.fromString(b.id), body)
             when {
                 res.isSuccessful -> {
-                    store.markSynced(b.id, Instant.now().toString())
+                    local.markSynced(account.id, b.id)
+                    res.body()?.let { local.saveProgress(account.id, listOf(it.progress)) }
+                    if (resolution != null) local.clearConflict(account.id, b.id)
                     ReportResult.Ok
                 }
                 res.code() == 409 -> {
@@ -166,6 +192,8 @@ constructor(
                 else -> ReportResult.Failed(ApiFailure.from(res))
             }
         } catch (_: IOException) {
+            local.queueProgress(account.id, b.id, body)
+            engine.requestSync()
             ReportResult.Failed(ApiFailure.Offline)
         }
     }
@@ -179,7 +207,7 @@ constructor(
         val pos = if (finished) durationMs.coerceAtLeast(0) else 0L
         store.saveLocalPosition(bookId, pos, System.currentTimeMillis())
         val device = UUID.fromString(accounts.deviceId())
-        val synced = store.syncedAt(bookId)
+        val synced = local.syncedAt(account.id, bookId)
 
         fun body(resolution: String?) = ProgressUpdate(
             positionMs = pos,
@@ -192,6 +220,7 @@ constructor(
         )
         try {
             val api = apis.forAccount(account).progress
+            engine.wrote()
             var res = api.putProgress(id, body(null))
             if (res.code() == 409) {
                 val raw = runCatching { res.errorBody()?.string() }.getOrNull().orEmpty()
@@ -199,19 +228,44 @@ constructor(
                 if (c != null) res = api.putProgress(id, body(c.conflictId))
             }
             if (res.isSuccessful) {
-                store.markSynced(bookId, Instant.now().toString())
+                local.markSynced(account.id, bookId)
+                res.body()?.let { local.saveProgress(account.id, listOf(it.progress)) }
+                local.clearConflict(account.id, bookId)
                 Outcome.Ok(Unit)
             } else {
                 Outcome.Failed(ApiFailure.from(res))
             }
         } catch (_: IOException) {
-            Outcome.Failed(ApiFailure.Offline)
+            // Offline: the choice waits in the outbox like any other position.
+            local.queueProgress(account.id, bookId, body(null))
+            engine.requestSync()
+            Outcome.Ok(Unit)
         }
     }
 
+    /** Downloads the next unfinished book of [b]'s series, if downloads are on for it. */
+    suspend fun autoNext(b: LoadedBook) {
+        val series = b.seriesId?.let { runCatching { UUID.fromString(it) }.getOrNull() } ?: return
+        if (!downloads.settings().autoNext) return
+        val account = account(b.accountId) ?: return
+        val page = (call { apis.forAccount(account).library.getSeries(series) } as? Outcome.Ok)?.value ?: return
+        val i = page.books.indexOfFirst { it.id.toString() == b.id }
+        if (i < 0) return
+        val next = page.books.drop(i + 1).firstOrNull { it.progress?.finishedAt == null } ?: return
+        if (downloads.get(account.id, next.id.toString()) != null) return
+        downloads.enqueue(account.id, next.id.toString(), next.title, auto = true)
+    }
+
+    /** The book's bookmarks; the mirror's copy when the server is out of reach. */
     suspend fun bookmarks(b: LoadedBook): Outcome<List<Bookmark>> {
         val account = account(b.accountId) ?: return Outcome.Failed(ApiFailure("signed_out", "", 401))
-        return call { apis.forAccount(account).progress.listBookmarks(UUID.fromString(b.id)) }
+        return when (val r = call { apis.forAccount(account).progress.listBookmarks(UUID.fromString(b.id)) }) {
+            is Outcome.Ok -> {
+                local.saveBookmarks(account.id, r.value)
+                r
+            }
+            is Outcome.Failed -> if (r.failure == ApiFailure.Offline) Outcome.Ok(local.bookmarks(account.id, b.id)) else r
+        }
     }
 
     suspend fun addBookmark(b: LoadedBook, positionMs: Long, note: String?): Outcome<Bookmark> {
@@ -224,12 +278,37 @@ constructor(
                 note = note?.trim()?.ifEmpty { null },
                 clientTs = Instant.now().toString()
             )
-        return call { apis.forAccount(account).progress.createBookmark(body) }
+        engine.wrote()
+        return when (val r = call { apis.forAccount(account).progress.createBookmark(body) }) {
+            is Outcome.Ok -> {
+                local.saveBookmarks(account.id, listOf(r.value))
+                r
+            }
+            is Outcome.Failed -> {
+                if (r.failure != ApiFailure.Offline) return r
+                // Offline: kept here and sent later with the same id.
+                local.queueBookmark(account.id, body)
+                engine.requestSync()
+                Outcome.Ok(Bookmark(body.id!!, body.bookId, body.positionMs, body.clientTs!!, body.note))
+            }
+        }
     }
 
     suspend fun deleteBookmark(b: LoadedBook, id: UUID): Outcome<Unit> {
         val account = account(b.accountId) ?: return Outcome.Failed(ApiFailure("signed_out", "", 401))
-        return call { apis.forAccount(account).progress.deleteBookmark(id) }
+        engine.wrote()
+        return when (val r = call { apis.forAccount(account).progress.deleteBookmark(id) }) {
+            is Outcome.Ok -> {
+                local.dao.deleteBookmark(account.id, id.toString())
+                r
+            }
+            is Outcome.Failed -> {
+                if (r.failure != ApiFailure.Offline) return r
+                local.queueBookmarkDelete(account.id, id.toString())
+                engine.requestSync()
+                Outcome.Ok(Unit)
+            }
+        }
     }
 
     companion object {

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.HorizontalDivider
@@ -22,9 +23,11 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -50,6 +53,7 @@ import androidx.navigation.toRoute
 import kotlinx.serialization.Serializable
 import org.simpleapb.app.book.BookScreen
 import org.simpleapb.app.book.EditBookScreen
+import org.simpleapb.app.downloads.DownloadsScreen
 import org.simpleapb.app.home.HomeScreen
 import org.simpleapb.app.library.LibraryScreen
 import org.simpleapb.app.library.PersonKind
@@ -66,6 +70,7 @@ import org.simpleapb.app.settings.SecurityScreen
 import org.simpleapb.app.settings.SettingsScreen
 import org.simpleapb.app.stats.StatsScreen
 import org.simpleapb.core.data.account.Account
+import org.simpleapb.core.data.download.DownloadState
 import org.simpleapb.core.player.PlayerEvent
 import org.simpleapb.core.ui.LocalEink
 import org.simpleapb.core.ui.R as UiR
@@ -73,6 +78,8 @@ import org.simpleapb.core.ui.R as UiR
 @Serializable private object HomeRoute
 
 @Serializable private data class LibraryRoute(val shelf: String? = null, val tag: String? = null, val tagName: String? = null)
+
+@Serializable private object DownloadsRoute
 
 @Serializable private object StatsRoute
 
@@ -95,12 +102,14 @@ import org.simpleapb.core.ui.R as UiR
 private enum class Tab(val route: Any, val icon: ImageVector, val label: Int) {
     HOME(HomeRoute, Icons.Filled.Home, UiR.string.nav_home),
     LIBRARY(LibraryRoute(), Icons.AutoMirrored.Filled.LibraryBooks, UiR.string.nav_library),
+    DOWNLOADS(DownloadsRoute, Icons.Filled.Download, UiR.string.app_nav_downloads),
     STATS(StatsRoute, Icons.Filled.BarChart, UiR.string.nav_stats),
     SETTINGS(SettingsRoute, Icons.Filled.Settings, UiR.string.nav_settings);
 
     fun matches(d: NavDestination?): Boolean = when (this) {
         HOME -> d?.hasRoute<HomeRoute>() == true
         LIBRARY -> d?.hasRoute<LibraryRoute>() == true
+        DOWNLOADS -> d?.hasRoute<DownloadsRoute>() == true
         STATS -> d?.hasRoute<StatsRoute>() == true
         SETTINGS -> d?.hasRoute<SettingsRoute>() == true
     }
@@ -154,58 +163,66 @@ fun MainApp(app: AppViewModel, account: Account, accounts: List<Account>, snackb
     val showPlayer = { nav.navigate(PlayerRoute) { launchSingleTop = true } }
     val back: () -> Unit = { nav.popBackStack() }
 
-    Column(Modifier.fillMaxSize()) {
-        Box(Modifier.weight(1f).fillMaxWidth()) {
-            NavHost(
-                navController = nav,
-                startDestination = HomeRoute,
-                // E-ink: no animation at all (brief §11).
-                enterTransition = { if (eink) EnterTransition.None else fadeIn() },
-                exitTransition = { if (eink) ExitTransition.None else fadeOut() }
-            ) {
-                composable<HomeRoute> {
-                    HomeScreen(account, onBook = openBook, onLibrary = { shelf -> nav.navigate(LibraryRoute(shelf = shelf)) })
-                }
-                composable<LibraryRoute> { e ->
-                    val r = e.toRoute<LibraryRoute>()
-                    LibraryScreen(account, r.shelf, r.tag, r.tagName, onBook = openBook, onPerson = openPerson)
-                }
-                composable<StatsRoute> { StatsScreen(account, onBook = openBook, onAuthor = { openPerson(PersonKind.AUTHOR, it) }) }
-                composable<SettingsRoute> {
-                    SettingsScreen(
-                        account,
-                        onPlayback = { nav.navigate(PlaybackSettingsRoute) },
-                        onSecurity = { nav.navigate(SecurityRoute) },
-                        onAccounts = { nav.navigate(AccountsRoute) },
-                        onSignOut = { app.signOut(account) }
-                    )
-                }
-                composable<BookRoute> { e ->
-                    val id = e.toRoute<BookRoute>().id
-                    BookScreen(
-                        account,
-                        id,
-                        onBack = back,
-                        onPlayer = showPlayer,
-                        onPerson = openPerson,
-                        onGenre = { t -> nav.navigate(LibraryRoute(tag = t.id.toString(), tagName = t.name)) },
-                        onEdit = { nav.navigate(EditBookRoute(id)) }
-                    )
-                }
-                composable<EditBookRoute> { e -> EditBookScreen(e.toRoute<EditBookRoute>().id, onDone = back) }
-                composable<PersonRoute> { e ->
-                    val r = e.toRoute<PersonRoute>()
-                    PersonScreen(account, r.kind, r.id, onBack = back, onBook = openBook)
-                }
-                composable<PlayerRoute> { PlayerScreen(player, onClose = back) }
-                composable<PlaybackSettingsRoute> { PlaybackSettingsScreen(onBack = back) }
-                composable<SecurityRoute> { SecurityScreen(onBack = back) }
-                composable<AccountsRoute> { AccountsScreen(app, account, accounts, onBack = back) }
-            }
+    val downloads by app.downloads.collectAsStateWithLifecycle()
+    val downloaded =
+        remember(downloads, account.id) {
+            downloads.filter { it.accountId == account.id && it.state == DownloadState.DONE }.map { it.bookId }.toSet()
         }
-        if (!onPlayer) {
-            MiniPlayer(player, onOpen = showPlayer)
-            TabBar(lit) { t -> nav.goToTab(t) }
+    CompositionLocalProvider(LocalDownloaded provides downloaded) {
+        Column(Modifier.fillMaxSize()) {
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                NavHost(
+                    navController = nav,
+                    startDestination = HomeRoute,
+                    // E-ink: no animation at all (brief §11).
+                    enterTransition = { if (eink) EnterTransition.None else fadeIn() },
+                    exitTransition = { if (eink) ExitTransition.None else fadeOut() }
+                ) {
+                    composable<HomeRoute> {
+                        HomeScreen(account, onBook = openBook, onLibrary = { shelf -> nav.navigate(LibraryRoute(shelf = shelf)) })
+                    }
+                    composable<LibraryRoute> { e ->
+                        val r = e.toRoute<LibraryRoute>()
+                        LibraryScreen(account, r.shelf, r.tag, r.tagName, onBook = openBook, onPerson = openPerson)
+                    }
+                    composable<DownloadsRoute> { DownloadsScreen(account, onBook = openBook) }
+                    composable<StatsRoute> { StatsScreen(account, onBook = openBook, onAuthor = { openPerson(PersonKind.AUTHOR, it) }) }
+                    composable<SettingsRoute> {
+                        SettingsScreen(
+                            account,
+                            onPlayback = { nav.navigate(PlaybackSettingsRoute) },
+                            onSecurity = { nav.navigate(SecurityRoute) },
+                            onAccounts = { nav.navigate(AccountsRoute) },
+                            onSignOut = { app.signOut(account) }
+                        )
+                    }
+                    composable<BookRoute> { e ->
+                        val id = e.toRoute<BookRoute>().id
+                        BookScreen(
+                            account,
+                            id,
+                            onBack = back,
+                            onPlayer = showPlayer,
+                            onPerson = openPerson,
+                            onGenre = { t -> nav.navigate(LibraryRoute(tag = t.id.toString(), tagName = t.name)) },
+                            onEdit = { nav.navigate(EditBookRoute(id)) }
+                        )
+                    }
+                    composable<EditBookRoute> { e -> EditBookScreen(e.toRoute<EditBookRoute>().id, onDone = back) }
+                    composable<PersonRoute> { e ->
+                        val r = e.toRoute<PersonRoute>()
+                        PersonScreen(account, r.kind, r.id, onBack = back, onBook = openBook)
+                    }
+                    composable<PlayerRoute> { PlayerScreen(player, onClose = back) }
+                    composable<PlaybackSettingsRoute> { PlaybackSettingsScreen(onBack = back) }
+                    composable<SecurityRoute> { SecurityScreen(onBack = back) }
+                    composable<AccountsRoute> { AccountsScreen(app, account, accounts, onBack = back) }
+                }
+            }
+            if (!onPlayer) {
+                MiniPlayer(player, onOpen = showPlayer)
+                TabBar(lit) { t -> nav.goToTab(t) }
+            }
         }
     }
     ConflictDialog(player)

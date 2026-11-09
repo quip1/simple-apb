@@ -18,8 +18,11 @@ import org.simpleapb.core.data.account.Account
 import org.simpleapb.core.data.account.AccountStore
 import org.simpleapb.core.data.account.AccountsState
 import org.simpleapb.core.data.auth.AuthRepository
+import org.simpleapb.core.data.db.DownloadRow
+import org.simpleapb.core.data.download.Downloads
 import org.simpleapb.core.data.net.ApiFactory
 import org.simpleapb.core.data.net.SessionEvent
+import org.simpleapb.core.data.sync.SyncEngine
 import org.simpleapb.core.ui.AppTheme
 
 /** App-wide state: accounts, the active one, the theme, and sign-out notices. */
@@ -31,8 +34,13 @@ constructor(
     private val auth: AuthRepository,
     private val apis: ApiFactory,
     private val ui: UiSettings,
-    session: MeSession
+    session: MeSession,
+    private val sync: SyncEngine,
+    downloadsRepo: Downloads
 ) : ViewModel() {
+    /** Every download on the device (badges, the Downloaded view). */
+    val downloads: StateFlow<List<DownloadRow>> = downloadsRepo.all.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     /** The active account's details (also starts syncing the shared preferences). */
     val me: StateFlow<Me?> = session.me
 
@@ -54,6 +62,7 @@ constructor(
                     val acc = store.current().accounts.firstOrNull { it.id == e.accountId }
                     apis.forget(e.accountId)
                     store.remove(e.accountId)
+                    sync.forget(e.accountId)
                     _signedOut.value = acc?.serverName
                 }
             }
@@ -109,5 +118,10 @@ constructor(
 
     fun switchTo(account: Account) = viewModelScope.launch { store.setActive(account.id) }
 
-    fun signOut(account: Account) = viewModelScope.launch { auth.signOut(account) }
+    /** Signs out and forgets the account's mirror, queued writes and downloads on this device. */
+    fun signOut(account: Account) = viewModelScope.launch {
+        sync.sync(account) // send queued progress first, if the server is reachable
+        auth.signOut(account)
+        sync.forget(account.id)
+    }
 }
