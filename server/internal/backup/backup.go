@@ -100,8 +100,15 @@ func (s *Service) postgres(ctx context.Context, tmp string) error {
 	if bin == "" {
 		bin = "pg_dump"
 	}
-	dsn, env := splitPassword(s.DB.DSN())
-	cmd := exec.CommandContext(ctx, bin, "--format=custom", "--no-owner", "--file="+tmp, "--dbname="+dsn)
+	raw := s.DB.DSN()
+	dsn, env := splitPassword(raw)
+	args := []string{"--format=custom", "--no-owner", "--file=" + tmp, "--dbname=" + dsn}
+	// An instance kept in its own schema (search_path) backs up that schema only,
+	// not whatever else shares the database.
+	for _, sc := range dumpSchemas(raw) {
+		args = append(args, "--schema="+sc)
+	}
+	cmd := exec.CommandContext(ctx, bin, args...)
 	cmd.Env = append(os.Environ(), env...)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -112,6 +119,24 @@ func (s *Service) postgres(ctx context.Context, tmp string) error {
 		return fmt.Errorf("pg_dump: %v: %s", err, strings.TrimSpace(stderr.String()))
 	}
 	return nil
+}
+
+// dumpSchemas lists the schemas named in the DSN's search_path ("$user" and
+// the system catalog left out). Empty means the whole database.
+func dumpSchemas(dsn string) []string {
+	u, err := url.Parse(dsn)
+	if err != nil {
+		return nil
+	}
+	var out []string
+	for _, part := range strings.Split(u.Query().Get("search_path"), ",") {
+		sc := strings.Trim(strings.TrimSpace(part), `"`)
+		if sc == "" || sc == "$user" || sc == "pg_catalog" {
+			continue
+		}
+		out = append(out, sc)
+	}
+	return out
 }
 
 // libpqParams are URI query parameters pg_dump (libpq) understands. Anything

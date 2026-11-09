@@ -34,6 +34,7 @@ All notable changes to this project are documented here. The format follows
 - Android strings: ICU `{x, number}` arguments are converted (the speed label showed raw ICU text).
 - Android: an e-ink screen no longer flashes the dark theme while the app starts.
 - Android strings without arguments showed a literal "%%" where the text has a percent sign.
+- Postgres backups of an instance kept in its own schema (`search_path` in the DSN) dump that schema only. This also fixes a flaky backup test, which dumped other tests' throwaway schemas while they were being dropped.
 
 ### Added (Phase 2)
 - Web app foundation: Svelte 5 + Vite + TypeScript, embedded in the server binary with SPA fallback, strict CSP and caching; cookie auth with CSRF and transparent refresh; ICU i18n from the shared catalogs; dark and e-ink themes with accessible components (48 px targets, visible focus, labelled errors).

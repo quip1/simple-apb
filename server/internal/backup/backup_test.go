@@ -81,6 +81,16 @@ func TestPostgresBackup(t *testing.T) {
 	}
 }
 
+func TestDumpSchemas(t *testing.T) {
+	if got := dumpSchemas("postgres://u@db/x?sslmode=disable"); len(got) != 0 {
+		t.Fatalf("no search_path: %v", got)
+	}
+	got := dumpSchemas(`postgres://u@db/x?search_path=%22$user%22,apb,%20public`)
+	if len(got) != 2 || got[0] != "apb" || got[1] != "public" {
+		t.Fatalf("search_path: %v", got)
+	}
+}
+
 func TestSplitPassword(t *testing.T) {
 	dsn, env := splitPassword("postgres://u:s3cret@db:5432/x?sslmode=disable")
 	if dsn != "postgres://u@db:5432/x?sslmode=disable" || len(env) != 1 || env[0] != "PGPASSWORD=s3cret" {
