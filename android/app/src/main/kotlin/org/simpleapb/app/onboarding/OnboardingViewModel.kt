@@ -28,8 +28,6 @@ data class OnboardingState(
     /** Set after the password step when a 2FA code is needed. */
     val challenge: String? = null,
     val useRecovery: Boolean = false,
-    /** The account must set up 2FA first (in the web app). */
-    val mustEnroll: Boolean = false,
     val signupSent: Boolean = false
 )
 
@@ -52,7 +50,7 @@ constructor(private val auth: AuthRepository) : ViewModel() {
             when (val r = auth.probe(s.address)) {
                 is Outcome.Failed -> _state.update { it.copy(busy = false, error = r.failure) }
                 is Outcome.Ok -> {
-                    _state.update { it.copy(busy = false, server = r.value, challenge = null, signupSent = false, mustEnroll = false) }
+                    _state.update { it.copy(busy = false, server = r.value, challenge = null, signupSent = false) }
                     if (canProceed(r.value, accepted = false)) onReady()
                 }
             }
@@ -93,11 +91,9 @@ constructor(private val auth: AuthRepository) : ViewModel() {
                 is SignInResult.Failed -> _state.update { it.copy(busy = false, error = r.failure) }
                 is SignInResult.NeedsCode -> _state.update { it.copy(busy = false, challenge = r.challenge) }
                 is SignInResult.SignedIn -> {
-                    // An account that must enrol 2FA can only do that (in the web app for now).
-                    val mustEnroll = r.me.totpRequired && !r.me.totpEnabled
-                    if (mustEnroll) auth.signOut(r.account)
-                    _state.update { it.copy(busy = false, mustEnroll = mustEnroll) }
-                    if (!mustEnroll) onSignedIn()
+                    // An account that must enrol 2FA does that first, in the app (EnrollRequiredScreen).
+                    _state.update { it.copy(busy = false) }
+                    onSignedIn()
                 }
             }
         }

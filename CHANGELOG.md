@@ -5,7 +5,7 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-**Current phase: 3 — Android phone app** (milestones 1–2 done: foundation, onboarding and sign-in; playback. Plan in ADR-0039). Phase 2 is feature-complete and awaits Jacob's sign-off; Phase 1 accepted 2026-11-08.
+**Current phase: 3 — Android phone app** (milestones 1–3 done: foundation, onboarding and sign-in; playback; screens and account settings. Plan in ADR-0039). Phase 2 is feature-complete and awaits Jacob's sign-off; Phase 1 accepted 2026-11-08.
 
 ### Added (Phase 3)
 - Android app foundation (milestone 1, ADR-0039): Gradle wrapper and current AndroidX/Compose/Media3/Room/Hilt versions, modules `core-ui`, `core-data` and `app` with `play`, `github` and `fdroid` flavors; the Fern dark and e-ink themes; strings generated from the shared `i18n` catalog; the Open book adaptive launcher icon.
@@ -15,11 +15,17 @@ All notable changes to this project are documented here. The format follows
 - Playback (milestone 2, ADR-0040): new `core-player` module with one Media3 service for the app, notification, lock screen, headset and Bluetooth. Multi-file books play on one timeline, streamed with the account's sign-in. Notification and lock-screen buttons are configurable (up to 5; default back 30, play/pause, forward 30). Also: speed per book (0.5–3.5×), configurable skips, auto-rewind on resume, sleep timer (presets, custom, end of chapter) with fade-out and shake to extend, pause or lower the volume for navigation prompts, single/double/triple/long headset presses, and resuming the last book from a headset button.
 - Player screen (cover, chapter and book progress, skip, chapter skip, speed, sleep timer, chapters, bookmarks with notes), mini player, the "Continue where you left off?" conflict prompt, a Playback settings screen, and covers loaded signed in. Home rows play the book.
 - Progress reports every 15 s, on pause, after seeks and at the end; the position is also kept on the device so an unreachable server never loses it.
+- Screens (milestone 3, ADR-0041): bottom tabs for Home, Library, Stats and Settings. Home has continue listening, recommended (with dismiss), next in series and recently added. Library has the All, Series, Authors, Narrators, Genres and Collections views, shelves, sort, instant search and grid or list, plus collections. Also author, narrator and series pages.
+- Book page: details, chapters (play from any), bookmarks, ratings and reviews, who's listening, mark finished, add to collection, archive, remove or restore, recommend, report, and edit details for editors.
+- Stats page: year in review, daily and weekly charts with table views, time per book, top authors, books finished.
+- Settings: profile, theme, e-ink time refresh, left-handed player, streaming quality (low-data HLS), sync conflict threshold, privacy, admin email alerts. Security: password, turning 2FA on and off in the app, recovery codes, signed-in devices. Accounts: the servers and accounts on the device.
+- Skip lengths, the speed for new books, the e-ink refresh and the left-handed layout now sync with the account, as on the web. Accounts that must use 2FA set it up in the app instead of being sent to the web.
 
 ### Fixed (Phase 3)
 - The server answers unknown library shelf, sort and facet values with 400 `invalid_filter` (unknown shelves were a 500, unknown sorts were ignored).
 - The generated Kotlin client sends enum query values as on the wire (`all`, not `ALL`).
 - Android strings: ICU `{x, number}` arguments are converted (the speed label showed raw ICU text).
+- Android: an e-ink screen no longer flashes the dark theme while the app starts.
 
 ### Added (Phase 2)
 - Web app foundation: Svelte 5 + Vite + TypeScript, embedded in the server binary with SPA fallback, strict CSP and caching; cookie auth with CSRF and transparent refresh; ICU i18n from the shared catalogs; dark and e-ink themes with accessible components (48 px targets, visible focus, labelled errors).

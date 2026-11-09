@@ -6,6 +6,7 @@ import android.content.Context
 import android.os.Build
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -53,6 +54,15 @@ class UiSettings(private val store: DataStore<Preferences>) {
 
     suspend fun setTheme(theme: AppTheme) {
         store.edit { it[themeKey] = theme.name }
+    }
+
+    private val listKey = booleanPreferencesKey("library_list")
+
+    /** The library shows a list instead of a grid of covers. */
+    val libraryList: Flow<Boolean> = store.data.map { it[listKey] ?: false }
+
+    suspend fun setLibraryList(list: Boolean) {
+        store.edit { it[listKey] = list }
     }
 }
 

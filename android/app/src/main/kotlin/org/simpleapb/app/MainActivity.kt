@@ -28,7 +28,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         handle(intent)
         setContent {
-            val theme by app.theme.collectAsStateWithLifecycle()
+            val loaded by app.theme.collectAsStateWithLifecycle()
+            val theme = loaded ?: return@setContent
             // Light system-bar icons on the dark theme, dark ones on e-ink white.
             LaunchedEffect(theme) {
                 val style =

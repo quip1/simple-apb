@@ -18,7 +18,9 @@ data class LoadedBook(
     val coverUrl: String?,
     val timeline: BookTimeline,
     val startMs: Long,
-    val speed: Float
+    val speed: Float,
+    /** Set when streaming the server's low-bitrate HLS version (one item for the whole book). */
+    val hlsProfile: String? = null
 )
 
 /**

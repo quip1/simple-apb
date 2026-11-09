@@ -13,6 +13,12 @@ enum class HeadsetAction { NONE, PLAY_PAUSE, BACK, FORWARD, PREVIOUS_CHAPTER, NE
 /** What happens when another app briefly needs the audio (navigation prompts). Calls always pause. */
 enum class FocusMode { PAUSE, DUCK }
 
+/**
+ * Streaming quality (brief §6.9). AUTO plays the original files, and the
+ * medium data saver on a metered (mobile) connection.
+ */
+enum class Quality { AUTO, ORIGINAL, MEDIUM, LOW }
+
 /** Per-device playback settings. */
 @Serializable
 data class PlaybackSettings(
@@ -28,7 +34,13 @@ data class PlaybackSettings(
     val focus: FocusMode = FocusMode.PAUSE,
     val shakeToExtend: Boolean = true,
     val shakeExtendMin: Int = 5,
-    val lastSleepMin: Int = 30
+    val lastSleepMin: Int = 30,
+    /** E-ink: how often the time display refreshes (brief §11). */
+    val einkTickS: Int = 15,
+    /** Mirror the player controls (brief §11). */
+    val leftHanded: Boolean = false,
+    /** Per device: a phone on mobile data, a tablet on Wi-Fi… */
+    val quality: Quality = Quality.AUTO
 ) {
     /** The same settings with every value inside its allowed range. */
     fun sanitized(): PlaybackSettings = copy(
@@ -38,7 +50,8 @@ data class PlaybackSettings(
         defaultSpeed = Speed.clamp(defaultSpeed),
         buttons = normalizeButtons(buttons),
         shakeExtendMin = shakeExtendMin.coerceIn(1, 30),
-        lastSleepMin = lastSleepMin.coerceIn(1, 600)
+        lastSleepMin = lastSleepMin.coerceIn(1, 600),
+        einkTickS = einkTickS.coerceIn(EINK_TICK_RANGE)
     )
 
     fun action(g: Gesture): HeadsetAction = when (g) {
@@ -51,6 +64,7 @@ data class PlaybackSettings(
     companion object {
         val SKIP_RANGE = 5..120
         val REWIND_RANGE = 0..30
+        val EINK_TICK_RANGE = 10..30
         const val MAX_BUTTONS = 5
         val DEFAULT_BUTTONS = listOf(ControlButton.BACK, ControlButton.PLAY_PAUSE, ControlButton.FORWARD)
 

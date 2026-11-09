@@ -37,13 +37,15 @@ import org.simpleapb.core.ui.R as UiR
 fun MiniPlayer(vm: PlayerViewModel, onOpen: () -> Unit) {
     val book by vm.book.collectAsStateWithLifecycle()
     val ui by vm.ui.collectAsStateWithLifecycle()
+    val settings by vm.settings.collectAsStateWithLifecycle()
     val b = book ?: return
+    val pos = shownPosition(ui, settings.einkTickS)
     val eink = LocalEink.current
     Surface(tonalElevation = if (eink) 0.dp else 3.dp, modifier = Modifier.fillMaxWidth()) {
         Column {
             if (eink) HorizontalDivider(thickness = 2.dp)
             LinearProgressIndicator(
-                progress = { (ui.positionMs.toFloat() / b.timeline.durationMs.coerceAtLeast(1)).coerceIn(0f, 1f) },
+                progress = { (pos.toFloat() / b.timeline.durationMs.coerceAtLeast(1)).coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth()
             )
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
@@ -59,7 +61,7 @@ fun MiniPlayer(vm: PlayerViewModel, onOpen: () -> Unit) {
                     Cover(b.coverUrl, Modifier.size(44.dp))
                     Column(Modifier.padding(start = 12.dp).weight(1f)) {
                         Text(b.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        val chapter = b.timeline.chapterAt(ui.positionMs)?.title ?: b.authors
+                        val chapter = b.timeline.chapterAt(pos)?.title ?: b.authors
                         Text(chapter, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }

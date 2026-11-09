@@ -903,6 +903,99 @@ arguments. The Gradle daemon needed 4 GB once the media libraries joined the bui
 
 Shake and the fade can't be checked on the emulator; they are unit-tested.
 
+---
+
+## ADR-0041 — Android screens and account settings (Phase 3, milestone 3)
+
+**Layout.** Four bottom tabs: Home, Library, Stats and Settings. The mini player sits above them,
+and the full player opens from it (brief §11: Home, Library and Now playing, plus Stats and
+Settings). Downloads joins the tabs with the offline milestone. A page opened from a tab keeps that
+tab lit. The selected tab is bold, and also underlined on e-ink, so selection never relies on
+colour alone.
+
+**Screens.** They follow the web app, page for page and with the same API calls:
+- **Home:** continue listening (with a progress ring), recommended to you (with dismiss), next in
+  series, recently added.
+- **Library:** the All, Series, Authors, Narrators, Genres and Collections views; shelves and sort;
+  instant search; grid or list (remembered per device); collections can be created, renamed and
+  deleted, and collections shared with you are listed.
+- **Author, narrator and series pages.**
+- **Book page:**
+  - details, chapters (tap to play from there), bookmarks and progress;
+  - ratings and reviews (write, edit, delete, report) and who's listening;
+  - actions: play, mark finished, add to collection, archive, remove or restore, recommend,
+    report, and edit details for editors.
+- **Stats:** the year in review, daily and weekly charts (each with a table view), time per book,
+  top authors, books finished.
+- **Settings and Security:** described below.
+- **Accounts:** the servers and accounts on the device.
+
+Lists refresh when a screen opens and from a refresh button. Live `/ws` hints come with the sync
+engine (milestone 4).
+
+**E-ink.** No animation and no greys:
+- Shelves are a fixed grid of six instead of a sideways scroll.
+- The library, facet, series and chapter lists move by page, with Previous and Next buttons.
+- Covers and progress rings get black hairlines.
+- The player's time display moves only every 10–30 s (a new synced preference). Seeks and pauses
+  still show at once.
+- Before the saved theme is read, the app draws nothing, so an e-ink screen never flashes the dark
+  theme first.
+
+**Preferences follow the account.** Skip lengths, the speed for new books, the e-ink refresh
+interval and the left-handed layout sync through `prefs` on `/me`, with the same keys as the web
+(ADR-0030). Last write wins, and keys from other clients are kept:
+- The app adopts the account's values when it signs in, switches account, or opens Settings.
+- A local change is sent 0.8 s after the last edit.
+
+Everything else stays per device:
+- the theme and streaming quality;
+- auto-rewind, the notification buttons, the headset mapping, focus behaviour and shake.
+
+**Left-handed layout.** It reverses the order of the player's control rows. An early version
+flipped the layout direction instead, which also flipped text: the speed read "×1".
+
+**Streaming quality.** The choices are Automatic, Original, Data saver and Low data. Automatic
+streams the original files, and the 64 kbps data saver on a metered connection. Data saver and
+low data stream the server's HLS version of the whole book as a single item. Positions are already
+book-global, so chapters and progress don't change. The choice applies the next time a book
+starts.
+
+**Two-factor sign-in in the app.**
+- A phone can't scan a QR code shown on its own screen. So enrolment offers an "Open in
+  authenticator app" link (`otpauth://`), the key to copy, then a code, then the recovery codes,
+  shown once.
+- An account that must use 2FA now signs in and sets it up in the app. Before, the app sent it to
+  the web; ADR-0039 promised this change.
+- Security also covers changing the password, new recovery codes, turning 2FA off, and signed-in
+  devices with sign-out.
+
+**Marking finished** from the book page is an explicit choice. If another device's position
+conflicts, the app settles it in favour of the choice. If the book is in the player, the player
+moves to the end or to the start, so its next report agrees. Playing from a chapter or bookmark
+passes the start position with the request, so the book never starts at the saved position and
+then jumps.
+
+**Left for later:**
+- Downloads, "Downloaded" and "On this device" come with milestones 4 and 6; push with milestone
+  6; crash reports, data export and account deletion in Phase 6.
+- Sharing your uploads and collections, "Find a match online" when editing details, and hiding
+  reviews (admins) stay in the web app.
+- There is no in-app language choice: the app follows the phone's language, and English is the
+  only translation in v1.
+- "Open EPUB if attached" (brief §7.4) has no API yet: `BookDetail.has_epub` exists but there is
+  no endpoint to fetch the file. Logged as Q11.
+
+**Checked on the emulator** (API 36) against the demo server:
+- Home, library search, the Series view, a series page and the book page;
+- posting a review, creating a collection with the book in it, recommending to another user;
+- playing from a chapter, and marking finished and not finished (checked on the server);
+- the Stats page;
+- preference sync both ways (a left-handed change reached the server; a skip length set elsewhere
+  reached the player), and the left-handed player;
+- the e-ink theme, the e-ink time refresh, and low-data HLS playback;
+- turning 2FA on and off, and enrolment forced by an admin tag requiring 2FA.
+
 ## Open questions for Jacob
 
 | # | Question | Current choice (until answered) |
@@ -914,6 +1007,7 @@ Shake and the fade can't be checked on the emulator; they are unit-tested.
 | Q8 | ~~Web framework (brief #8)~~ **Answered: Svelte** (ADR-0026) | — |
 | Q9 | ~~Accent colour and icon (brief #9)~~ **Answered: Fern accent, Open book icon** (ADR-0038) | — |
 | Q10 | Copyright/takedown contact in the footer (brief #3) | Yes, admin-editable (proposed default) |
+| Q11 | Brief §7.4 "open EPUB if attached": the API has `has_epub` but no endpoint to fetch the EPUB. Add `GET /books/{id}/epub` (and a way to attach one) in Phase 5 with the book tools? | Yes, Phase 5 (proposed) |
 | Q5 | ~~TOTP replay protection~~ **Answered: yes** (ADR-0027) | — |
 | Q7 | ~~AAC-LC instead of HE-AAC~~ **Answered: AAC-LC is fine** (ADR-0018) | — |
 | Q6 | ~~Setup wizard page in Phase 2~~ **Answered: yes** — shipped in Phase 2 milestone 1 | — |

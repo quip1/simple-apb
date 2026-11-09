@@ -368,11 +368,12 @@ class PlaybackService :
 
     // ── loading a book ──
 
-    private suspend fun resolve(bookId: String, accountId: String?): MediaSession.MediaItemsWithStartPosition {
+    private suspend fun resolve(bookId: String, accountId: String?, startMs: Long? = null): MediaSession.MediaItemsWithStartPosition {
         val account = accountId?.let { repo.account(it) } ?: repo.activeAccount() ?: throw LoadFailed(ApiFailure("signed_out", "", 401))
         val b =
             when (val r = repo.load(account, bookId)) {
-                is Outcome.Ok -> r.value
+                // A chapter or bookmark picked on the book's page starts there.
+                is Outcome.Ok -> if (startMs != null) r.value.copy(startMs = startMs.coerceIn(0, r.value.timeline.durationMs)) else r.value
                 is Outcome.Failed -> {
                     state.events.tryEmit(PlayerEvent.LoadFailed(r.failure))
                     throw LoadFailed(r.failure)
@@ -453,9 +454,11 @@ class PlaybackService :
                 startIndex: Int,
                 startPositionMs: Long
             ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
-                val id = mediaItems.singleOrNull()?.mediaId?.takeIf { it.startsWith(Commands.BOOK_PREFIX) }
+                val item = mediaItems.singleOrNull()
+                val id = item?.mediaId?.takeIf { it.startsWith(Commands.BOOK_PREFIX) }
                 if (id == null) return super.onSetMediaItems(mediaSession, controller, mediaItems, startIndex, startPositionMs)
-                return scope.future { resolve(id.removePrefix(Commands.BOOK_PREFIX), null) }
+                val start = item.requestMetadata.extras?.getLong(Commands.EXTRA_POSITION, -1L)?.takeIf { it >= 0 }
+                return scope.future { resolve(id.removePrefix(Commands.BOOK_PREFIX), null, start) }
             }
 
             override fun onPlaybackResumption(

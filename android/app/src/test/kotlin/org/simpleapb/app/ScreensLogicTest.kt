@@ -1,0 +1,84 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+package org.simpleapb.app
+
+import kotlinx.serialization.json.JsonPrimitive
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
+import org.simpleapb.app.book.BookForm
+import org.simpleapb.app.data.SyncedPrefs
+import org.simpleapb.app.ui.coverUrl
+import org.simpleapb.app.ui.percent
+import org.simpleapb.core.player.PlaybackRepository
+import org.simpleapb.core.player.PlaybackSettings
+import org.simpleapb.core.player.Quality
+
+class ScreensLogicTest {
+    @Test
+    fun syncedPrefsRoundTrip() {
+        val s = PlaybackSettings(skipBackS = 15, skipForwardS = 45, einkTickS = 20, leftHanded = true, defaultSpeed = 1.25f)
+        val wire = SyncedPrefs.extract(s)
+        assertEquals(JsonPrimitive(15), wire["skip_back_s"])
+        assertEquals(JsonPrimitive(true), wire["left_handed"])
+        val back = SyncedPrefs.apply(PlaybackSettings(), wire)
+        assertEquals(s.skipBackS, back.skipBackS)
+        assertEquals(s.skipForwardS, back.skipForwardS)
+        assertEquals(s.einkTickS, back.einkTickS)
+        assertEquals(s.leftHanded, back.leftHanded)
+        assertEquals(s.defaultSpeed, back.defaultSpeed)
+    }
+
+    @Test
+    fun syncedPrefsIgnoreBadValuesAndKeepTheRest() {
+        val base = PlaybackSettings(skipBackS = 10, autoRewindS = 7)
+        val r =
+            SyncedPrefs.apply(
+                base,
+                mapOf(
+                    "skip_back_s" to JsonPrimitive("ten"),
+                    "skip_forward_s" to JsonPrimitive(500),
+                    "eink_tick_s" to JsonPrimitive(1),
+                    "email_alerts" to JsonPrimitive(true)
+                )
+            )
+        assertEquals(10, r.skipBackS) // a string is not a number
+        assertEquals(120, r.skipForwardS) // clamped
+        assertEquals(10, r.einkTickS) // clamped
+        assertEquals(7, r.autoRewindS) // device-only settings untouched
+    }
+
+    @Test
+    fun qualityPicksTheHlsProfile() {
+        assertNull(PlaybackRepository.hlsProfile(Quality.AUTO, metered = false))
+        assertEquals("medium", PlaybackRepository.hlsProfile(Quality.AUTO, metered = true))
+        assertNull(PlaybackRepository.hlsProfile(Quality.ORIGINAL, metered = true))
+        assertEquals("low", PlaybackRepository.hlsProfile(Quality.LOW, metered = false))
+    }
+
+    @Test
+    fun bookFormSendsOnlyChangedFields() {
+        val from = BookForm(title = "Dune", authors = "Frank Herbert", year = "1965", description = "Spice.")
+        val p = from.copy(title = "Dune ", authors = "Frank Herbert\n\n", year = "1966").patch(from)
+        assertNull(p.title) // only whitespace changed
+        assertNull(p.authors) // same people
+        assertEquals(1966, p.publishedYear)
+        assertNull(p.description)
+        assertNull(p.series)
+        val q = from.copy(series = "Dune", seriesIndex = "1").patch(from)
+        assertEquals("Dune", q.series?.name)
+        assertEquals("1", q.series?.index)
+    }
+
+    @Test
+    fun coverAddressesAskForASize() {
+        assertEquals("https://b.example/api/v1/books/x/cover?v=3&size=256", coverUrl("https://b.example", "/api/v1/books/x/cover?v=3", true))
+        assertNull(coverUrl("https://b.example", "/api/v1/books/x/cover", false))
+    }
+
+    @Test
+    fun percentRoundsDown() {
+        assertEquals(0, percent(10, 0))
+        assertEquals(99, percent(999, 1000))
+        assertEquals(100, percent(2000, 1000))
+    }
+}

@@ -11,7 +11,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import org.simpleapb.api.model.Me
 import org.simpleapb.app.UiSettings
+import org.simpleapb.app.data.MeSession
 import org.simpleapb.core.data.account.Account
 import org.simpleapb.core.data.account.AccountStore
 import org.simpleapb.core.data.account.AccountsState
@@ -28,12 +30,17 @@ constructor(
     private val store: AccountStore,
     private val auth: AuthRepository,
     private val apis: ApiFactory,
-    private val ui: UiSettings
+    private val ui: UiSettings,
+    session: MeSession
 ) : ViewModel() {
+    /** The active account's details (also starts syncing the shared preferences). */
+    val me: StateFlow<Me?> = session.me
+
     /** null until loaded from disk. */
     val accounts: StateFlow<AccountsState?> = store.state.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    val theme: StateFlow<AppTheme> = ui.theme.stateIn(viewModelScope, SharingStarted.Eagerly, AppTheme.DARK)
+    /** null until read from disk, so an e-ink screen never flashes the dark theme first. */
+    val theme: StateFlow<AppTheme?> = ui.theme.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val _signedOut = MutableStateFlow<String?>(null)
 

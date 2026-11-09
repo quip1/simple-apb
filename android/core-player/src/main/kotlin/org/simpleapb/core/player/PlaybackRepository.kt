@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package org.simpleapb.core.player
 
+import android.content.Context
+import android.net.ConnectivityManager
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.MimeTypes
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
 import java.time.Instant
 import java.util.UUID
@@ -39,7 +43,12 @@ sealed interface ReportResult {
 @Singleton
 class PlaybackRepository
 @Inject
-constructor(private val apis: ApiFactory, private val accounts: AccountStore, private val store: PlaybackStore) {
+constructor(
+    @ApplicationContext private val context: Context,
+    private val apis: ApiFactory,
+    private val accounts: AccountStore,
+    private val store: PlaybackStore
+) {
     // Progress writes for one device go out one at a time, in order.
     private val writes = Mutex()
 
@@ -54,9 +63,11 @@ constructor(private val apis: ApiFactory, private val accounts: AccountStore, pr
             is Outcome.Failed -> r
             is Outcome.Ok -> {
                 val d = r.value
-                val timeline = timeline(d)
+                val settings = store.settings()
+                val profile = hlsProfile(settings.quality, metered())
+                val timeline = if (profile != null) hlsTimeline(d) else timeline(d)
                 val start = chooseStart(d.progress, store.localPosition(bookId), timeline.durationMs)
-                val speed = store.speed(bookId) ?: d.progress?.speed ?: store.settings().defaultSpeed
+                val speed = store.speed(bookId) ?: d.progress?.speed ?: settings.defaultSpeed
                 Outcome.Ok(
                     LoadedBook(
                         id = bookId,
@@ -68,20 +79,33 @@ constructor(private val apis: ApiFactory, private val accounts: AccountStore, pr
                         coverUrl = if (d.hasCover) ServerUrl.resolve(account.serverUrl, d.coverUrl) else null,
                         timeline = timeline,
                         startMs = start,
-                        speed = Speed.clamp(speed)
+                        speed = Speed.clamp(speed),
+                        hlsProfile = profile
                     )
                 )
             }
         }
     }
 
-    /** One playlist item per file; the session shows the book's title, author and cover for each. */
+    private fun metered(): Boolean = context.getSystemService(ConnectivityManager::class.java)?.isActiveNetworkMetered ?: true
+
+    /**
+     * One playlist item per file; the session shows the book's title, author
+     * and cover for each. The low-bitrate version is one HLS stream for the
+     * whole book.
+     */
     fun mediaItems(b: LoadedBook): List<MediaItem> = b.timeline.files.mapIndexed { i, f ->
+        val uri =
+            if (b.hlsProfile != null) {
+                ServerUrl.api(b.serverUrl) + "stream/${b.id}/hls/${b.hlsProfile}/index.m3u8"
+            } else {
+                ServerUrl.api(b.serverUrl) + "books/${b.id}/files/${f.id}"
+            }
         MediaItem
             .Builder()
             .setMediaId("${b.id}/$i")
-            .setUri(ServerUrl.api(b.serverUrl) + "books/${b.id}/files/${f.id}")
-            .setMimeType(f.mimeType)
+            .setUri(uri)
+            .setMimeType(if (b.hlsProfile != null) MimeTypes.APPLICATION_M3U8 else f.mimeType)
             .setMediaMetadata(
                 MediaMetadata
                     .Builder()
@@ -146,6 +170,45 @@ constructor(private val apis: ApiFactory, private val accounts: AccountStore, pr
         }
     }
 
+    /**
+     * Marks a book finished, or not finished, from its page. That is an
+     * explicit choice, so it settles a device conflict in its own favour.
+     */
+    suspend fun setFinished(account: Account, bookId: String, durationMs: Long, speed: Float, finished: Boolean): Outcome<Unit> = writes.withLock {
+        val id = runCatching { UUID.fromString(bookId) }.getOrNull() ?: return Outcome.Failed(ApiFailure("not_found", "", 404))
+        val pos = if (finished) durationMs.coerceAtLeast(0) else 0L
+        store.saveLocalPosition(bookId, pos, System.currentTimeMillis())
+        val device = UUID.fromString(accounts.deviceId())
+        val synced = store.syncedAt(bookId)
+
+        fun body(resolution: String?) = ProgressUpdate(
+            positionMs = pos,
+            deviceId = device,
+            clientTs = Instant.now().toString(),
+            speed = Speed.clamp(speed),
+            finished = finished,
+            lastSyncedAt = synced,
+            resolution = resolution
+        )
+        try {
+            val api = apis.forAccount(account).progress
+            var res = api.putProgress(id, body(null))
+            if (res.code() == 409) {
+                val raw = runCatching { res.errorBody()?.string() }.getOrNull().orEmpty()
+                val c = runCatching { Serializer.kotlinxSerializationJson.decodeFromString(ProgressConflict.serializer(), raw) }.getOrNull()
+                if (c != null) res = api.putProgress(id, body(c.conflictId))
+            }
+            if (res.isSuccessful) {
+                store.markSynced(bookId, Instant.now().toString())
+                Outcome.Ok(Unit)
+            } else {
+                Outcome.Failed(ApiFailure.from(res))
+            }
+        } catch (_: IOException) {
+            Outcome.Failed(ApiFailure.Offline)
+        }
+    }
+
     suspend fun bookmarks(b: LoadedBook): Outcome<List<Bookmark>> {
         val account = account(b.accountId) ?: return Outcome.Failed(ApiFailure("signed_out", "", 401))
         return call { apis.forAccount(account).progress.listBookmarks(UUID.fromString(b.id)) }
@@ -170,6 +233,20 @@ constructor(private val apis: ApiFactory, private val accounts: AccountStore, pr
     }
 
     companion object {
+        /** The HLS profile to stream, or null for the original files. */
+        fun hlsProfile(quality: Quality, metered: Boolean): String? = when (quality) {
+            Quality.ORIGINAL -> null
+            Quality.MEDIUM -> "medium"
+            Quality.LOW -> "low"
+            Quality.AUTO -> if (metered) "medium" else null
+        }
+
+        /** The whole book as one stream, with its chapters. */
+        fun hlsTimeline(d: BookDetail) = BookTimeline(
+            listOf(TimelineFile("hls", 0, d.durationMs, MimeTypes.APPLICATION_M3U8)),
+            d.chapters.map { TimelineChapter(it.index, it.title, it.startMs, it.endMs) }
+        )
+
         fun timeline(d: BookDetail) = BookTimeline(
             d.files.map { TimelineFile(it.id.toString(), it.offsetMs, it.durationMs, it.mimeType) },
             d.chapters.map { TimelineChapter(it.index, it.title, it.startMs, it.endMs) }

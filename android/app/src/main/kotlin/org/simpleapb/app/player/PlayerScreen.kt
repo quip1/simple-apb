@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package org.simpleapb.app.player
 
+import android.os.SystemClock
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -86,12 +88,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import kotlin.math.abs
 import kotlin.math.roundToInt
 import org.simpleapb.app.settings.quietTicks
 import org.simpleapb.app.ui.Notice
 import org.simpleapb.app.ui.TouchTarget
 import org.simpleapb.app.ui.errorText
 import org.simpleapb.core.player.LoadedBook
+import org.simpleapb.core.player.PlaybackUi
 import org.simpleapb.core.player.SleepChoice
 import org.simpleapb.core.player.SleepTimer
 import org.simpleapb.core.player.Speed
@@ -136,7 +140,9 @@ fun PlayerScreen(vm: PlayerViewModel, onClose: () -> Unit) {
         Text(b.title, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
         if (b.authors.isNotEmpty()) Text(b.authors, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
 
-        val chapter = b.timeline.chapterAt(ui.positionMs)
+        // E-ink: the time display moves every few seconds, not every second (brief §11).
+        val pos = shownPosition(ui, settings.einkTickS)
+        val chapter = b.timeline.chapterAt(pos)
         if (chapter != null) {
             Text(chapter.title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
             Text(
@@ -148,50 +154,67 @@ fun PlayerScreen(vm: PlayerViewModel, onClose: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall
             )
         }
-        ChapterSlider(b, ui.positionMs, vm::seekTo)
-        BookProgress(b, ui.positionMs)
+        ChapterSlider(b, pos, vm::seekTo)
+        BookProgress(b, pos)
 
         if (ui.failed) Notice(stringResource(UiR.string.player_error_playback))
 
-        // Transport: previous chapter · back · play/pause · forward · next chapter.
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            ControlIcon(Icons.Filled.SkipPrevious, stringResource(UiR.string.player_previous_chapter), vm::previousChapter)
-            ControlIcon(replayIcon(settings.skipBackS), stringResource(UiR.string.player_skip_back, settings.skipBackS.toString()), vm::skipBack)
-            FilledIconButton(onClick = vm::togglePlay, modifier = Modifier.size(72.dp)) {
-                if (ui.buffering && ui.playing) {
-                    CircularProgressIndicator(
-                        Modifier.size(32.dp),
-                        color = MaterialTheme.colorScheme.onPrimary
+        // Transport: previous chapter · back · play/pause · forward · next chapter,
+        // mirrored for the left-handed layout (brief §11).
+        MirrorRow(
+            settings.leftHanded,
+            listOf(
+                { ControlIcon(Icons.Filled.SkipPrevious, stringResource(UiR.string.player_previous_chapter), vm::previousChapter) },
+                {
+                    ControlIcon(
+                        replayIcon(settings.skipBackS),
+                        stringResource(UiR.string.player_skip_back, settings.skipBackS.toString()),
+                        vm::skipBack
                     )
-                }
-                Icon(
-                    if (ui.playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                    contentDescription = stringResource(if (ui.playing) UiR.string.player_pause else UiR.string.player_play),
-                    modifier = Modifier.size(40.dp)
-                )
-            }
-            ControlIcon(
-                forwardIcon(settings.skipForwardS),
-                stringResource(UiR.string.player_skip_forward, settings.skipForwardS.toString()),
-                vm::skipForward
+                },
+                {
+                    FilledIconButton(onClick = vm::togglePlay, modifier = Modifier.size(72.dp)) {
+                        if (ui.buffering && ui.playing) {
+                            CircularProgressIndicator(Modifier.size(32.dp), color = MaterialTheme.colorScheme.onPrimary)
+                        }
+                        Icon(
+                            if (ui.playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                            contentDescription = stringResource(if (ui.playing) UiR.string.player_pause else UiR.string.player_play),
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+                },
+                {
+                    ControlIcon(
+                        forwardIcon(settings.skipForwardS),
+                        stringResource(UiR.string.player_skip_forward, settings.skipForwardS.toString()),
+                        vm::skipForward
+                    )
+                },
+                { ControlIcon(Icons.Filled.SkipNext, stringResource(UiR.string.player_next_chapter), vm::nextChapter) }
             )
-            ControlIcon(Icons.Filled.SkipNext, stringResource(UiR.string.player_next_chapter), vm::nextChapter)
-        }
+        )
 
         // Speed · sleep · chapters · bookmarks.
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            LabeledAction(Icons.Filled.Speed, speedText(ui.speed), stringResource(UiR.string.player_speed)) { sheet = Sheet.SPEED }
-            LabeledAction(Icons.Filled.Bedtime, sleepLabel(sleep, ui.sleepLeftMs), stringResource(UiR.string.player_sleep)) { sheet = Sheet.SLEEP }
-            LabeledAction(Icons.AutoMirrored.Filled.List, stringResource(UiR.string.app_player_chapters), null) { sheet = Sheet.CHAPTERS }
-            LabeledAction(Icons.Filled.Bookmarks, stringResource(UiR.string.bookmarks_title), null) {
-                vm.loadBookmarks()
-                sheet = Sheet.BOOKMARKS
-            }
-        }
+        MirrorRow(
+            settings.leftHanded,
+            listOf(
+                { LabeledAction(Icons.Filled.Speed, speedText(ui.speed), stringResource(UiR.string.player_speed)) { sheet = Sheet.SPEED } },
+                {
+                    LabeledAction(Icons.Filled.Bedtime, sleepLabel(sleep, ui.sleepLeftMs), stringResource(UiR.string.player_sleep)) {
+                        sheet =
+                            Sheet.SLEEP
+                    }
+                },
+                { LabeledAction(Icons.AutoMirrored.Filled.List, stringResource(UiR.string.app_player_chapters), null) { sheet = Sheet.CHAPTERS } },
+                {
+                    LabeledAction(Icons.Filled.Bookmarks, stringResource(UiR.string.bookmarks_title), null) {
+                        vm.loadBookmarks()
+                        sheet = Sheet.BOOKMARKS
+                    }
+                }
+            )
+        )
     }
 
     val close = { sheet = Sheet.NONE }
@@ -204,13 +227,47 @@ fun PlayerScreen(vm: PlayerViewModel, onClose: () -> Unit) {
     }
 }
 
+/** A row of controls, in reverse order for the left-handed layout (text and icons stay as they are). */
+@Composable
+private fun MirrorRow(mirrored: Boolean, items: List<@Composable () -> Unit>) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+        (if (mirrored) items.asReversed() else items).forEach { it() }
+    }
+}
+
+/**
+ * The position to draw. On e-ink it only moves every [tickS] seconds while
+ * playing (less ghosting); seeks and pauses show at once.
+ */
+@Composable
+fun shownPosition(ui: PlaybackUi, tickS: Int): Long {
+    val holder = remember { ShownPosition() }
+    if (!LocalEink.current) return ui.positionMs
+    val now = SystemClock.elapsedRealtime()
+    val expected = holder.shown + ((now - holder.at) * ui.speed).toLong()
+    val jumped = abs(ui.positionMs - expected) > JUMP_MS
+    if (!ui.playing || jumped || now - holder.at >= tickS * 1_000L) {
+        holder.shown = ui.positionMs
+        holder.at = now
+    }
+    return holder.shown
+}
+
+private class ShownPosition {
+    var shown = 0L
+    var at = 0L
+}
+
+private const val JUMP_MS = 3_000L
+
 @Composable
 fun Cover(url: String?, modifier: Modifier = Modifier) {
     Box(
         modifier
             .aspectRatio(1f)
             .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant),
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .then(if (LocalEink.current) Modifier.border(1.dp, MaterialTheme.colorScheme.onSurface, RoundedCornerShape(12.dp)) else Modifier),
         contentAlignment = Alignment.Center
     ) {
         Icon(Icons.Filled.Headphones, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(48.dp))

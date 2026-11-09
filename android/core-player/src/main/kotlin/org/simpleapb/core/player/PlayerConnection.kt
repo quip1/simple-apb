@@ -133,6 +133,23 @@ constructor(@ApplicationContext private val context: Context, private val state:
         c.play()
     }
 
+    /** Plays a book from a book-global position (a chapter or bookmark on the book's page). */
+    fun playFrom(bookId: String, positionMs: Long) = with { c ->
+        if (state.book.value?.id == bookId && c.mediaItemCount > 0) {
+            seekTo(positionMs)
+            if (c.playbackState == Player.STATE_IDLE) c.prepare()
+            c.play()
+            return@with
+        }
+        _ui.value = PlaybackUi(buffering = true, positionMs = positionMs)
+        val request = MediaItem.RequestMetadata.Builder().setExtras(Bundle().apply { putLong(Commands.EXTRA_POSITION, positionMs) }).build()
+        c.setMediaItem(MediaItem.Builder().setMediaId(Commands.bookMediaId(bookId)).setRequestMetadata(request).build())
+        c.prepare()
+        c.play()
+    }
+
+    fun pause() = with { it.pause() }
+
     fun togglePlay() = with { c ->
         val ended = c.playbackState == Player.STATE_ENDED
         if (c.playWhenReady && !ended) {

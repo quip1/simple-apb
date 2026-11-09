@@ -135,7 +135,6 @@ fun SignInScreen(vm: OnboardingViewModel, onSignedIn: () -> Unit, onRequestAccou
                 modifier = Modifier.fillMaxWidth()
             )
             s.error?.let { Notice(errorText(it)) }
-            if (s.mustEnroll) Notice(stringResource(UiR.string.app_signin_must_enroll))
             BusyButton(
                 stringResource(UiR.string.auth_sign_in),
                 busy = s.busy,
@@ -171,7 +170,6 @@ fun SignInScreen(vm: OnboardingViewModel, onSignedIn: () -> Unit, onRequestAccou
                 modifier = Modifier.fillMaxWidth()
             )
             s.error?.let { Notice(errorText(it)) }
-            if (s.mustEnroll) Notice(stringResource(UiR.string.app_signin_must_enroll))
             BusyButton(
                 stringResource(UiR.string.auth_verify),
                 busy = s.busy,

@@ -32,6 +32,7 @@ dependencies {
     implementation(project(":core-ui"))
     api(libs.media3.session)
     implementation(libs.media3.exoplayer)
+    implementation(libs.media3.exoplayer.hls)
     implementation(libs.media3.datasource.okhttp)
     implementation(libs.kotlinx.coroutines.guava)
     implementation(libs.androidx.core.ktx)
