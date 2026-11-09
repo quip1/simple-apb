@@ -37,6 +37,7 @@ android {
  *   they first appear in the English message, for every locale.
  * - A message with one {x, plural, …} becomes <plurals>; "#" is the count.
  *   Exact-value branches (=0) have no Android equivalent and are dropped.
+ * - {x, number} becomes a plain argument: the app formats numbers itself.
  * - Messages Android can't express (two plurals, select) are skipped.
  */
 abstract class GenerateAndroidStrings : DefaultTask() {
@@ -61,12 +62,12 @@ abstract class GenerateAndroidStrings : DefaultTask() {
         val base = files.firstOrNull { it.nameWithoutExtension == "en" } ?: error("i18n/en.json is missing")
 
         @Suppress("UNCHECKED_CAST")
-        val english = JsonSlurper().parse(base) as Map<String, String>
+        val english = (JsonSlurper().parse(base) as Map<String, String>).mapValues { simplify(it.value) }
         // Argument order per key, fixed by the English message.
         val order = english.mapValues { (_, msg) -> argNames(msg) }
         for (file in files) {
             @Suppress("UNCHECKED_CAST")
-            val messages = JsonSlurper().parse(file) as Map<String, String>
+            val messages = (JsonSlurper().parse(file) as Map<String, String>).mapValues { simplify(it.value) }
             val locale = file.nameWithoutExtension
             val dir = if (locale == "en") "values" else "values-" + locale.replace("-", "-r")
             val xml =
@@ -82,6 +83,10 @@ abstract class GenerateAndroidStrings : DefaultTask() {
             File(out, dir).apply { mkdirs() }.resolve("strings.xml").writeText(xml.toString())
         }
     }
+
+    private val numberRe = Regex("""\{(\w+),\s*number(?:,[^{}]*)?\}""")
+
+    private fun simplify(msg: String) = numberRe.replace(msg) { "{" + it.groupValues[1] + "}" }
 
     private val pluralRe = Regex("""\{(\w+),\s*plural,\s*((?:[^{}]*\{[^{}]*\})+)\s*\}""")
     private val branchRe = Regex("""(=?\w+)\s*\{([^{}]*)\}""")

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package org.simpleapb.app.home
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,7 +10,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
@@ -25,7 +29,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
@@ -52,7 +56,7 @@ import org.simpleapb.core.ui.R as UiR
 
 data class HomeState(val books: List<BookSummary> = emptyList(), val error: ApiFailure? = null, val loaded: Boolean = false)
 
-/** Milestone 1 home: proves the signed-in API path; the real Home comes in milestone 3. */
+/** Interim home: recently added books (tap to play), settings and accounts. The real Home comes in milestone 3. */
 @HiltViewModel
 class HomeViewModel
 @Inject
@@ -70,7 +74,7 @@ constructor(private val apis: ApiFactory) : ViewModel() {
 }
 
 @Composable
-fun HomeScreen(app: AppViewModel, account: Account, accounts: List<Account>) {
+fun HomeScreen(app: AppViewModel, account: Account, accounts: List<Account>, onPlay: (String) -> Unit, onPlaybackSettings: () -> Unit) {
     val vm: HomeViewModel = hiltViewModel()
     val s by vm.state.collectAsStateWithLifecycle()
     val theme by app.theme.collectAsStateWithLifecycle()
@@ -92,9 +96,25 @@ fun HomeScreen(app: AppViewModel, account: Account, accounts: List<Account>) {
         if (s.loaded && s.books.isEmpty() && s.error == null) Text(stringResource(UiR.string.home_empty_body))
         Column {
             s.books.forEach { b ->
-                Text(b.title, modifier = Modifier.fillMaxWidth().heightIn(min = TouchTarget).padding(vertical = 12.dp))
+                val label = stringResource(UiR.string.app_home_play, b.title)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = TouchTarget)
+                        .clickable(role = Role.Button, onClickLabel = label) { onPlay(b.id.toString()) }
+                        .padding(vertical = 12.dp)
+                ) {
+                    Text(b.title, modifier = Modifier.weight(1f))
+                    Icon(Icons.Filled.PlayArrow, contentDescription = null)
+                }
                 HorizontalDivider()
             }
+        }
+
+        OutlinedButton(onClick = onPlaybackSettings, modifier = Modifier.fillMaxWidth().heightIn(min = TouchTarget)) {
+            Text(stringResource(UiR.string.app_settings_playback_title))
         }
 
         Text(

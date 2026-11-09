@@ -26,6 +26,16 @@ object ServerUrl {
     /** The API base for a server ("…/api/v1/"), as Retrofit wants it. */
     fun api(base: String): String = "$base/api/v1/"
 
+    /**
+     * A URL the server returned as an absolute path ("/api/v1/books/…/cover")
+     * resolved against the server address, keeping a sub-path.
+     */
+    fun resolve(base: String, path: String): String = when {
+        path.startsWith("http://") || path.startsWith("https://") -> path
+        path.startsWith("/") -> base + path
+        else -> "$base/$path"
+    }
+
     /** True for plain http (the UI warns: passwords would travel unencrypted). */
     fun isInsecure(base: String): Boolean = base.startsWith("http://")
 

@@ -19,8 +19,9 @@ dependencyResolutionManagement {
 rootProject.name = "simple-apb"
 
 // core-api is pure JVM (generated client); the rest need the Android SDK.
-// core-player, wear and cast join as their milestones start.
+// wear and cast join as their milestones start.
 include(":core-api")
 include(":core-ui")
 include(":core-data")
+include(":core-player")
 include(":app")

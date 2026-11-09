@@ -85,6 +85,19 @@ constructor(
         _signedOut.value = null
     }
 
+    private val _openPlayer = MutableStateFlow(false)
+
+    /** The playback notification was tapped: show the player. */
+    val openPlayer: StateFlow<Boolean> = _openPlayer.asStateFlow()
+
+    fun requestPlayer() {
+        _openPlayer.value = true
+    }
+
+    fun playerOpened() {
+        _openPlayer.value = false
+    }
+
     fun setTheme(theme: AppTheme) = viewModelScope.launch { ui.setTheme(theme) }
 
     fun switchTo(account: Account) = viewModelScope.launch { store.setActive(account.id) }

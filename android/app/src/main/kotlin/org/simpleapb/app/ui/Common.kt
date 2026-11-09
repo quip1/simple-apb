@@ -2,6 +2,7 @@
 package org.simpleapb.app.ui
 
 import android.annotation.SuppressLint
+import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -23,7 +24,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -95,16 +95,21 @@ fun Notice(text: String, error: Boolean = true) {
 }
 
 /** The translated text for an API failure (error.<code>, with fallbacks). */
-@SuppressLint("DiscouragedApi")
 @Composable
 fun errorText(failure: ApiFailure): String {
+    LocalResources.current // re-read when the configuration changes
+    return errorMessage(LocalContext.current, failure)
+}
+
+/** [errorText] outside composition (snackbars from events). */
+@SuppressLint("DiscouragedApi")
+fun errorMessage(context: Context, failure: ApiFailure): String {
     val code =
         when {
             failure.code == "offline" -> "offline"
             failure.code == "bad_response" || failure.code == "http_404" -> "not_simpleapb"
             else -> failure.code
         }
-    val res = LocalResources.current
-    val id = res.getIdentifier("error_$code", "string", LocalContext.current.packageName)
-    return if (id != 0) stringResource(id) else stringResource(UiR.string.error_generic)
+    val id = context.resources.getIdentifier("error_$code", "string", context.packageName)
+    return context.getString(if (id != 0) id else UiR.string.error_generic)
 }

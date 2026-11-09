@@ -9,20 +9,36 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import coil3.ImageLoader
+import coil3.PlatformContext
+import coil3.SingletonImageLoader
+import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.HiltAndroidApp
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import org.simpleapb.core.data.net.AccountCalls
 import org.simpleapb.core.data.net.AppInfo
 import org.simpleapb.core.ui.AppTheme
 
 @HiltAndroidApp
-class SimpleApbApp : Application()
+class SimpleApbApp :
+    Application(),
+    SingletonImageLoader.Factory {
+    @Inject lateinit var calls: AccountCalls
+
+    /** Covers are fetched signed in, as the account whose server they come from. */
+    override fun newImageLoader(context: PlatformContext): ImageLoader = ImageLoader
+        .Builder(context)
+        .components { add(OkHttpNetworkFetcherFactory(callFactory = { calls })) }
+        .build()
+}
 
 private val Context.uiStore: DataStore<Preferences> by preferencesDataStore(name = "ui")
 

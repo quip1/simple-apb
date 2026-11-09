@@ -792,7 +792,7 @@ unprotected. Accounts that must set up 2FA are told to do it in the web app for 
 
 **Phase 3 plan.** Milestones, each started after Jacob's go-ahead:
 1. **Foundation:** this milestone.
-2. **Playback:** the Media3 `MediaLibraryService`; streaming with signed URLs over the book timeline;
+2. **Playback:** the Media3 `MediaLibraryService`; signed-in streaming over the book timeline (ADR-0040);
    the notification and lock screen with configurable buttons; speed, skips, auto-rewind, sleep timer
    with fade and shake, audio focus, headset gestures; the player screen and mini player.
 3. **Screens:** Home, Library (views, search, grid/list), book detail with reviews and actions,
@@ -809,6 +809,99 @@ unprotected. Accounts that must set up 2FA are told to do it in the web app for 
    F-Droid build checks, and release signing for the three flavors.
 
 ---
+
+## ADR-0040 — Android playback (Phase 3, milestone 2)
+
+**One service, one session.** `core-player` holds a single Media3 `MediaLibraryService`. The
+notification, lock screen, headset and Bluetooth buttons, and the app itself all control playback
+through its `MediaSession`; Android Auto and Wear will attach to the same session later. The app
+talks to it through a `MediaController` (`PlayerConnection`). Book-level state the session can't
+carry (the loaded book's timeline, the sleep timer, a pending sync conflict) lives in a singleton
+the service and the screens share. Both run in the app's process.
+
+**A book is a playlist on one timeline.** Each audio file is one playlist item, so ExoPlayer plays
+multi-file books without gaps. `BookTimeline` maps between the book-global position (what the user
+sees and what progress reports carry) and (file, offset), and answers chapter questions. The
+notification's seek bar covers the current file. For single-file books, the usual case, that is
+the whole book.
+
+**Streaming is signed in.** Files and covers are fetched with the account's own OkHttp client: the
+access token is added and refreshed exactly as for API calls. One call factory signs in each
+request as the account whose server address the URL starts with (longest match, so sub-path
+servers work and look-alike hosts don't match). A book keeps streaming from its own server after
+the user switches the active account. Signed stream URLs stay reserved for casting.
+
+**Audiobook controls, not music controls.**
+- "Next" and "previous" from Bluetooth, the car or the watch skip forward and back by the
+  configured amount, never to the next file.
+- The notification shows play/pause plus the user's buttons, in their order (up to five in all):
+  - The button just before play/pause in the list takes the "back" slot, and the one just after
+    it takes the "forward" slot. The rest go to the overflow.
+  - The system draws play/pause itself, so it can't be removed.
+  - The notification's own controller loses the "previous/next track" commands, so only the
+    chosen buttons appear.
+- Auto-rewind happens on resume: the full amount after a pause of a minute or more, half after a
+  shorter one.
+- A finished book starts again from the beginning on play.
+
+**Headset gestures.** Media button key events are counted as single, double and triple presses
+(a 450 ms window, so a double press never also fires a single one) or a long press. Many phones
+keep a long press of the headset button for the voice assistant and pass the app only the
+key-up. That stray key-up is ignored, so long press works only where the device passes it on
+(brief: "where the device supports it"). Media next/previous and fast-forward/rewind keys skip.
+
+**Sleep timer.** The timer is either a duration or "end of chapter". The volume fades linearly
+over the last 10 s, then playback pauses. While a timer runs, and only then, the accelerometer
+watches for a shake: two jolts above 2.3 g within 0.8 s add the configured minutes (default 5) to
+the time left.
+
+**Audio focus.** Calls always pause. Other interruptions such as navigation prompts follow the
+setting:
+- "Pause" plays the book as speech content, and ExoPlayer pauses for duckable interruptions.
+- "Lower the volume" plays it as music content, and ExoPlayer ducks instead.
+
+Unplugging headphones pauses.
+
+**Progress.** The service reports the same way the web player does:
+- When: every 15 s while playing, on pause, 1.5 s after a seek settles, at the end of the book
+  (as finished), and when the app is swiped away.
+- With: `last_synced_at` (the time of the last successful report for that book).
+- A 409 shows the "Continue where you left off?" prompt. The "this device" side uses the live
+  position, since playback continues while the user decides. No new reports are sent until the
+  user answers.
+- The position is also saved on the device every 5 s. On load, the newer of the server's record
+  and the local one wins, so an unreachable server never loses the user's place.
+- Failed reports are not queued yet: the outbox comes with the offline milestone.
+
+Speed is saved per book (local first, then the server's, then the default for new books).
+
+**Resumption.** The last book is remembered. A headset "play" after the app was closed resumes
+it at its saved position (Media3 playback resumption with the media-button receiver).
+
+**Settings are per device for now.** The playback settings are:
+- skip lengths, auto-rewind and the speed for new books
+- notification buttons and headset mapping
+- focus behaviour and shake to extend
+
+They live in the app's DataStore. Syncing the shared ones with the account preferences, as the web
+does, comes with the account screens in milestone 3.
+
+**Bugs found on the way.** The Android string generator didn't convert ICU `{x, number}`
+arguments, so the "1.5×" speed label showed the raw ICU text; it now turns them into plain
+arguments. The Gradle daemon needed 4 GB once the media libraries joined the build.
+
+**Checked on the emulator** (API 36) against the demo server:
+- streaming a multi-chapter book and the cover
+- the notification with default and custom buttons
+- skip and chapter jumps across chapter boundaries
+- speed, a 1-minute sleep timer stopping playback, and bookmarks with notes
+- the conflict prompt with "Jump"
+- auto-rewind
+- headset single, double and triple presses
+- resuming from a headset button with the app closed
+- progress and "finished" reaching the server
+
+Shake and the fade can't be checked on the emulator; they are unit-tested.
 
 ## Open questions for Jacob
 

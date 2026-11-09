@@ -16,13 +16,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import kotlinx.serialization.Serializable
-import org.simpleapb.app.home.HomeScreen
 import org.simpleapb.app.onboarding.OnboardingViewModel
 import org.simpleapb.app.onboarding.RequestAccountScreen
 import org.simpleapb.app.onboarding.ServerScreen
@@ -71,7 +70,7 @@ fun AppRoot(app: AppViewModel) {
                         onSignedIn = app::signedIn
                     )
                 tour -> TourScreen(active.serverName, onDone = app::tourDone)
-                else -> HomeScreen(app, active, state.accounts)
+                else -> MainApp(app, active, state.accounts, snackbar)
             }
         }
     }

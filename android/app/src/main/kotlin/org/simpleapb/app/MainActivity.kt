@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package org.simpleapb.app
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -14,6 +15,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.AndroidEntryPoint
 import org.simpleapb.app.ui.AppRoot
 import org.simpleapb.app.ui.AppViewModel
+import org.simpleapb.core.player.PlaybackService
 import org.simpleapb.core.ui.AppTheme
 import org.simpleapb.core.ui.SimpleApbTheme
 
@@ -24,6 +26,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        handle(intent)
         setContent {
             val theme by app.theme.collectAsStateWithLifecycle()
             // Light system-bar icons on the dark theme, dark ones on e-ink white.
@@ -39,6 +42,18 @@ class MainActivity : ComponentActivity() {
             SimpleApbTheme(theme) {
                 AppRoot(app)
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handle(intent)
+    }
+
+    private fun handle(intent: Intent?) {
+        if (intent?.getBooleanExtra(PlaybackService.EXTRA_OPEN_PLAYER, false) == true) {
+            intent.removeExtra(PlaybackService.EXTRA_OPEN_PLAYER)
+            app.requestPlayer()
         }
     }
 }

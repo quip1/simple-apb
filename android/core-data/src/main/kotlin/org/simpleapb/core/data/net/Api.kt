@@ -83,19 +83,28 @@ class ApiFactory(private val base: OkHttpClient, private val store: AccountStore
 
     /** A signed-in client for an account (cached per account). */
     fun forAccount(account: Account): Api = cache.getOrPut(account.id) {
-        val http =
-            base
-                .newBuilder()
-                .addInterceptor(agent)
-                .addInterceptor(BearerInterceptor(account.id))
-                .authenticator(Refresher(account))
-                .build()
-        Api(ApiClient(ServerUrl.api(account.serverUrl), http.newBuilder()))
+        Api(ApiClient(ServerUrl.api(account.serverUrl), http(account).newBuilder()))
+    }
+
+    private val clients = ConcurrentHashMap<String, OkHttpClient>()
+
+    /**
+     * The signed-in HTTP client for an account: for audio files and covers,
+     * which the server also serves on the access token (brief §6.9).
+     */
+    fun http(account: Account): OkHttpClient = clients.getOrPut(account.id) {
+        base
+            .newBuilder()
+            .addInterceptor(agent)
+            .addInterceptor(BearerInterceptor(account.id))
+            .authenticator(Refresher(account))
+            .build()
     }
 
     /** Drops cached clients and tokens (sign-out, account removed). */
     fun forget(accountId: String) {
         cache.remove(accountId)
+        clients.remove(accountId)
         tokenCache.remove(accountId)
     }
 
