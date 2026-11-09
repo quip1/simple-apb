@@ -1,6 +1,6 @@
 # Architecture (as built)
 
-> Updated as each phase lands. Current state: **Phase 1 accepted; Phase 2 milestones 1–7** (web foundation, player screens, account and stats, admin panel, moderation and social, metadata pipeline, email, uploads and end-to-end tests).
+> Updated as each phase lands. Current state: **Phase 1 accepted; Phase 2 feature-complete; Phase 3 milestone 1** (web foundation, player screens, account and stats, admin panel, moderation and social, metadata pipeline, email, uploads and end-to-end tests).
 
 ## Overview
 
@@ -49,7 +49,8 @@
 | End-to-end tests | `web/e2e`, `web/playwright.config.ts`, CI job `e2e` | Playwright journey against the real server binary (ADR-0037) |
 | Web player | `web/src/lib/player.svelte.ts`, `live.svelte.ts` | one `<audio>` on the book timeline (multi-file or HLS via hls.js), signed stream links, progress sync + conflict prompt, Media Session, `/ws` hints (ADR-0029) |
 | TS client | `web/src/api` | generated types + cookie/CSRF/refresh-aware client |
-| Kotlin client | `android/core-api` | generated at build time |
+| Kotlin client | `android/core-api` | generated at build time; query enums send wire values |
+| Android app | `android/app`, `core-ui`, `core-data` | Compose app (flavors play/github/fdroid): onboarding, sign-in with 2FA, accounts with Keystore-sealed tokens and refresh, Fern/e-ink themes, strings generated from `i18n` (ADR-0039) |
 | CI | `.github/workflows/ci.yml` | spec lint + codegen freshness, Go tests on SQLite and Postgres, golangci-lint, Kotlin client build, Docker image build |
 
 ## Request path

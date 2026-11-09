@@ -59,6 +59,8 @@ func (s *Server) responseError(w http.ResponseWriter, r *http.Request, err error
 		writeError(w, http.StatusConflict, errSetupDone.code, errSetupDone.msg)
 	case errors.Is(err, store.ErrNotFound):
 		writeError(w, http.StatusNotFound, "not_found", "not found")
+	case errors.Is(err, store.ErrInvalidFilter):
+		writeError(w, http.StatusBadRequest, "invalid_filter", err.Error())
 	case errors.Is(err, store.ErrConflict):
 		writeError(w, http.StatusConflict, "conflict", "conflicts with current state")
 	case errors.Is(err, ErrNotImplemented):

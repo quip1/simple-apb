@@ -18,7 +18,9 @@ dependencyResolutionManagement {
 
 rootProject.name = "simple-apb"
 
-// Phase 0: only the pure-JVM generated API client is a real module.
-// app, wear, core-player, core-data, core-ui and cast join in Phase 3/5
-// (they need the Android SDK; see scripts/build-android.*).
+// core-api is pure JVM (generated client); the rest need the Android SDK.
+// core-player, wear and cast join as their milestones start.
 include(":core-api")
+include(":core-ui")
+include(":core-data")
+include(":app")

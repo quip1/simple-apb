@@ -36,4 +36,11 @@ class SerializationTest {
         assertEquals(15_000_000L, c.server.positionMs)
         assertEquals(1.25f, c.incoming.speed)
     }
+
+    // Retrofit sends query parameters with toString(): it must be the wire value.
+    @Test
+    fun queryEnumsSendWireValues() {
+        assertEquals("all", org.simpleapb.api.endpoints.LibraryApi.ShelfListLibrary.ALL.toString())
+        assertEquals("recent_added", org.simpleapb.api.endpoints.LibraryApi.SortListLibrary.RECENT_ADDED.toString())
+    }
 }

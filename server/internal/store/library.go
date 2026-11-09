@@ -232,7 +232,7 @@ func ListLibrary(ctx context.Context, q Querier, userID string, f LibraryFilter)
 	case "finished":
 		where = append(where, "v.removed_at IS NULL AND p.finished_at IS NOT NULL")
 	default:
-		return nil, fmt.Errorf("unknown shelf %q", f.Shelf)
+		return nil, fmt.Errorf("%w: unknown shelf %q", ErrInvalidFilter, f.Shelf)
 	}
 	if f.SeriesID != "" {
 		where, args = append(where, "b.series_id = ?"), append(args, f.SeriesID)
@@ -269,6 +269,9 @@ func ListLibrary(ctx context.Context, q Querier, userID string, f LibraryFilter)
 		order = "CASE WHEN s.name IS NULL THEN 1 ELSE 0 END, lower(s.name), b.series_index, b.sort_title, b.id"
 	case "author":
 		order = `CASE WHEN fa.name IS NULL THEN 1 ELSE 0 END, lower(fa.name), b.sort_title, b.id`
+	case "", "recent_added":
+	default:
+		return nil, fmt.Errorf("%w: unknown sort %q", ErrInvalidFilter, f.Sort)
 	}
 	limit := f.Limit
 	if limit <= 0 || (limit > 200 && f.Shelf != "any") {
@@ -362,7 +365,7 @@ func LibraryFacets(ctx context.Context, q Querier, userID, kind string) ([]*Face
 		join = `JOIN book_tag_assignments j ON j.book_id = b.id JOIN book_tags x ON x.id = j.book_tag_id`
 		cols, group = `x.id, x.name, x.kind`, `x.id, x.name, x.kind`
 	default:
-		return nil, fmt.Errorf("unknown facet %q", kind)
+		return nil, fmt.Errorf("%w: unknown facet %q", ErrInvalidFilter, kind)
 	}
 	query := visibleCTE + ` SELECT ` + cols + `, COUNT(DISTINCT b.id)
 		FROM vis v JOIN books b ON b.id = v.book_id ` + join + `

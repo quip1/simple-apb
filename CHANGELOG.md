@@ -5,7 +5,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-**Current phase: 2 — Admin panel + web player** (milestones 1–7 done: web foundation, player screens, account and stats, admin panel, moderation and social, metadata pipeline, email, uploads and end-to-end tests). Phase 1 accepted 2026-11-08.
+**Current phase: 3 — Android phone app** (milestone 1 done: foundation, onboarding and sign-in; plan in ADR-0039). Phase 2 is feature-complete and awaits Jacob's sign-off; Phase 1 accepted 2026-11-08.
+
+### Added (Phase 3)
+- Android app foundation (milestone 1, ADR-0039): Gradle wrapper and current AndroidX/Compose/Media3/Room/Hilt versions, modules `core-ui`, `core-data` and `app` with `play`, `github` and `fdroid` flavors; the Fern dark and e-ink themes; strings generated from the shared `i18n` catalog; the Open book adaptive launcher icon.
+- Onboarding: connect to a server (address checks, version guard, warning before plain http), sign in with 2FA or a recovery code, request an account, "Forgot your password?" when the server offers email reset, and a 3-screen tour.
+- Several servers and accounts with one active; tokens sealed with an Android Keystore key, refreshed once on expiry, and a sign-out notice when the server refuses the refresh; no backups of account data.
+- CI builds every flavor, runs ktlint, Android lint (warnings fail) and the unit tests, and checks a minified release build.
+
+### Fixed (Phase 3)
+- The server answers unknown library shelf, sort and facet values with 400 `invalid_filter` (unknown shelves were a 500, unknown sorts were ignored).
+- The generated Kotlin client sends enum query values as on the wire (`all`, not `ALL`).
 
 ### Added (Phase 2)
 - Web app foundation: Svelte 5 + Vite + TypeScript, embedded in the server binary with SPA fallback, strict CSP and caching; cookie auth with CSRF and transparent refresh; ICU i18n from the shared catalogs; dark and e-ink themes with accessible components (48 px targets, visible focus, labelled errors).

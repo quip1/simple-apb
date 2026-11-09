@@ -736,6 +736,78 @@ version (black on white) and Android adaptive layers (`branding/`), with the for
 stay inside the 66 dp safe zone and a monochrome layer for themed icons. The web favicon uses it
 now; the Android app adopts it in Phase 3.
 
+## ADR-0039 — The Android app's foundation (Phase 3, milestone 1)
+
+**Toolchain.** The build uses the Android Gradle Plugin 9.5 (with its built-in Kotlin support)
+and Kotlin 2.4. compileSdk and targetSdk are 37, and minSdk is 26 (brief §7.1). Libraries are
+current stable versions: Compose BOM 2026.09, Media3 1.11, Room 2.8, Hilt 2.60 with KSP. A Gradle
+wrapper (9.9.0, checksum-pinned) is now committed, which answers Q3. CI builds with JDK 21.
+
+**Modules.** The modules are `core-api` (the generated client, pure JVM), `core-ui` (theme and
+strings), `core-data` (accounts, sessions, API access, and later the Room mirror and sync) and
+`app`. `core-player`, `wear` and `cast` join when their milestones start, so the build never
+carries empty modules. The flavors are `play`, `github` and `fdroid`. In milestone 1 they differ
+only in the Cast and update-check build flags; the F-Droid flavor never adds Google libraries, and
+the build omits the dependency-info blob that would make it non-reproducible.
+
+**One string catalog.** Android strings are generated at build time from the shared
+`i18n/*.json`, the same catalog the web app and server use:
+- `auth.sign_in` becomes `R.string.auth_sign_in`.
+- `{name}` placeholders become `%1$s`, numbered in the order they first appear in the English
+  message, so every translation keeps the same argument order.
+- A message with a single plural becomes `<plurals>`. Exact-value branches (`=0`) have no
+  Android equivalent and are dropped.
+- Messages Android can't express (two plurals, `select`) are skipped.
+
+Android-only strings use the `app.` prefix in the same file.
+
+**Accounts and tokens.** Several servers and accounts can be signed in at once, with one active
+(brief §7.4). Account details live in DataStore. The token pair is sealed with AES-256-GCM under
+an Android Keystore key before it is written, and backups and device transfer are switched off,
+so tokens never leave the phone. Requests carry the access token. On a 401 the client rotates the
+pair once with the refresh token and retries; parallel requests wait for that one refresh rather
+than each refreshing. A refused refresh (401/403) signs that account out with a notice. A network
+failure during the refresh keeps the account, matching the web client. Sign-in sends the
+installation's device id, model name and app version, so the device shows up in Sessions on the
+web.
+
+**Connecting.** The server address is whatever the user types: there is no default. `https://` is
+added when no scheme is given, a pasted `/api/v1` is ignored and sub-paths work. The app reads
+`/instance` before signing in and enforces the version guard (brief §6.21). Plain-http servers
+(home networks without TLS) are allowed, but only after a warning that the password would travel
+unprotected. Accounts that must set up 2FA are told to do it in the web app for now; enrolling
+2FA in the app comes with the account screens.
+
+**Bugs found on the way.**
+- The generated Kotlin client sent enum query parameters by name ("ALL"); a build step now gives
+  those enums a `toString()` that returns the wire value ("all").
+- The server answered an unknown shelf with a 500 and ignored unknown sorts. Both, and unknown
+  facet kinds, are now a 400 `invalid_filter`.
+
+**Testing.**
+- Unit tests run on Robolectric pinned to SDK 35, because Robolectric doesn't support SDK 37 yet.
+- The Android 37 emulator image crashes on the development PC: SurfaceFlinger aborts in
+  `GoldfishMapper::readFromHost` with every graphics mode. The app was checked on an Android 16
+  (API 36) emulator instead.
+
+**Phase 3 plan.** Milestones, each started after Jacob's go-ahead:
+1. **Foundation:** this milestone.
+2. **Playback:** the Media3 `MediaLibraryService`; streaming with signed URLs over the book timeline;
+   the notification and lock screen with configurable buttons; speed, skips, auto-rewind, sleep timer
+   with fade and shake, audio focus, headset gestures; the player screen and mini player.
+3. **Screens:** Home, Library (views, search, grid/list), book detail with reviews and actions,
+   author/series pages, Stats, Settings and account screens.
+4. **Offline:** the Room mirror and outbox, the WorkManager sync engine with `/ws` hints and the
+   conflict prompt; downloads (resumable range requests, checksum, cap, SD card, Wi-Fi only,
+   auto-download of the next in series).
+5. **Car and widget:** the audio effect chain (boost with limiter, voice EQ, mono, balance), car
+   mode, the Android Auto browse tree and voice search, the Glance widget.
+6. **More:** local folders and the merged library with upload, UnifiedPush with the periodic
+   fallback, the multi-server switcher polish, e-ink and accessibility passes (TalkBack, 200 %
+   font).
+7. **Hardening:** instrumented and Compose UI tests including e-ink and large-font, a DHU checklist,
+   F-Droid build checks, and release signing for the three flavors.
+
 ---
 
 ## Open questions for Jacob
@@ -744,7 +816,7 @@ now; the Android app adopts it in Phase 3.
 |---|---|---|
 | Q1 | ~~GitHub owner~~ **Answered:** `quip1` — `github.com/quip1/simple-apb`, image `ghcr.io/quip1/simple-apb-server` | — |
 | Q2 | License identifier: `AGPL-3.0-or-later` or `AGPL-3.0-only`? | `AGPL-3.0-or-later` (GNU's recommendation) in SPDX headers |
-| Q3 | Commit the Gradle wrapper now, or when the Android app starts (Phase 3)? | CI installs Gradle 9.1 directly; wrapper added in Phase 3 |
+| Q3 | ~~Gradle wrapper~~ **Done:** committed with the Android app (Gradle 9.9.0, checksum-pinned; ADR-0039) | — |
 | Q4 | ~~Review the schema and API outline~~ **Approved** (Phase 0 accepted) | — |
 | Q8 | ~~Web framework (brief #8)~~ **Answered: Svelte** (ADR-0026) | — |
 | Q9 | ~~Accent colour and icon (brief #9)~~ **Answered: Fern accent, Open book icon** (ADR-0038) | — |

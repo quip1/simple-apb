@@ -259,3 +259,14 @@ func testLibraryFlow(t *testing.T, h *harness) {
 		t.Fatal("purged book still in DB")
 	}
 }
+
+func TestLibraryFilterValidation(t *testing.T) { forEachDialect(t, testLibraryFilterValidation) }
+
+// Unknown filter values are the client's mistake (400), not a server error.
+func testLibraryFilterValidation(t *testing.T, h *harness) {
+	A := bearer(h.adminLogin(h.setupInstance()))
+	expect(t, h.do(nil, "GET", "/library?shelf=ALL", nil, A), 400, "unknown shelf")
+	expect(t, h.do(nil, "GET", "/library?sort=bogus", nil, A), 400, "unknown sort")
+	expect(t, h.do(nil, "GET", "/library/facets?kind=bogus", nil, A), 400, "unknown facet")
+	expect(t, h.do(nil, "GET", "/library?shelf=all&sort=recent_added", nil, A), 200, "valid")
+}

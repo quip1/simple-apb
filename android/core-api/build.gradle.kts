@@ -60,15 +60,26 @@ val generateApi by tasks.registering(GenerateTask::class) {
     // Generator bug: two apiKey security schemes (cookieAuth + streamSignature)
     // make ApiClient.kt import ApiKeyAuth twice, which Kotlin rejects.
     // Drop exact duplicate import lines from every generated file.
+    //
+    // Generator gap: enums of query parameters (e.g. LibraryApi.ShelfListLibrary)
+    // have no toString(), so Retrofit sends "ALL" instead of "all". Give every
+    // such enum a toString() that returns its wire value.
     doLast {
+        val queryEnum = Regex("""(enum class \w+\(val value: kotlin\.String\) \{\n(?:\s+@SerialName\(value = "[^"]*"\) \w+\("[^"]*"\),?\n)+)(\s+)\}""")
         generatedDir.get().asFile.walkTopDown()
             .filter { it.isFile && it.extension == "kt" }
             .forEach { file ->
                 val seen = HashSet<String>()
                 val text = file.readText()
-                val fixed = text.lines()
+                var fixed = text.lines()
                     .filter { line -> !line.startsWith("import ") || seen.add(line.trim()) }
                     .joinToString("\n")
+                if (file.parentFile.name == "endpoints") {
+                    fixed = queryEnum.replace(fixed) { m ->
+                        val body = m.groupValues[1].trimEnd().removeSuffix(",")
+                        "$body;\n\n        override fun toString(): String = value\n${m.groupValues[2]}}"
+                    }
+                }
                 if (fixed != text) file.writeText(fixed)
             }
     }

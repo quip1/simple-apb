@@ -149,6 +149,9 @@ var ErrNotFound = errors.New("not found")
 // ErrConflict is returned on unique-constraint violations.
 var ErrConflict = errors.New("conflict")
 
+// ErrInvalidFilter is a query parameter with an unknown value (a 400 for clients).
+var ErrInvalidFilter = errors.New("invalid filter")
+
 // IsUniqueViolation reports whether err is a unique-constraint failure on either dialect.
 func IsUniqueViolation(err error) bool {
 	if err == nil {
