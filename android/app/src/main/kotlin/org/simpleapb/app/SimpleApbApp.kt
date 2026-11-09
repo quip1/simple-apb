@@ -27,6 +27,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.simpleapb.app.downloads.DownloadNotifier
+import org.simpleapb.app.widget.WidgetUpdater
 import org.simpleapb.core.data.download.DownloadNotifications
 import org.simpleapb.core.data.net.AccountCalls
 import org.simpleapb.core.data.net.AppInfo
@@ -47,6 +48,8 @@ class SimpleApbApp :
 
     @Inject lateinit var live: LiveHints
 
+    @Inject lateinit var widgets: WidgetUpdater
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workers).build()
 
@@ -55,6 +58,7 @@ class SimpleApbApp :
         // Sync on reconnect and every 15 minutes; live hints while the app is open (brief §7.5).
         sync.schedule()
         live.start()
+        widgets.start(this)
     }
 
     /** Covers are fetched signed in, as the account whose server they come from. */

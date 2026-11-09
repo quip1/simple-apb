@@ -16,6 +16,7 @@ import androidx.core.content.IntentCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
@@ -23,15 +24,21 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSourceBitmapLoader
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.CacheBitmapLoader
 import androidx.media3.session.CommandButton
+import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
+import androidx.media3.session.MediaLibraryService.LibraryParams
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
+import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.AndroidEntryPoint
@@ -75,6 +82,8 @@ class PlaybackService :
 
     @Inject lateinit var engine: SyncEngine
 
+    @Inject lateinit var browse: BrowseTree
+
     @Inject @AppScope
     lateinit var appScope: CoroutineScope
 
@@ -93,6 +102,7 @@ class PlaybackService :
     private var pausedAt = 0L
 
     private val shake = ShakeDetector()
+    private val effects = EffectsProcessor()
     private var sensorOn = false
 
     override fun onCreate() {
@@ -109,9 +119,20 @@ class PlaybackService :
             }
         }
         val http = OkHttpDataSource.Factory(calls)
+        // The audio effects run inside the player's sink, before the speed change.
+        val renderers =
+            object : DefaultRenderersFactory(this) {
+                override fun buildAudioSink(context: Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean): AudioSink =
+                    DefaultAudioSink
+                        .Builder(context)
+                        .setAudioProcessors(arrayOf(effects))
+                        .setEnableFloatOutput(false)
+                        .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+                        .build()
+            }
         exo =
             ExoPlayer
-                .Builder(this)
+                .Builder(this, renderers)
                 .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(this, http)))
                 .setAudioAttributes(attributes(FocusMode.PAUSE), true)
                 .setHandleAudioBecomingNoisy(true)
@@ -134,6 +155,7 @@ class PlaybackService :
             store.settings.collect { s ->
                 val focusChanged = s.focus != settings.focus
                 settings = s
+                effects.config = s.effects
                 if (focusChanged) exo.setAudioAttributes(attributes(s.focus), true)
                 refreshButtons()
                 updateSensor()
@@ -307,6 +329,7 @@ class PlaybackService :
             val now = SystemClock.elapsedRealtime()
             sleepTick(now)
             if (exo.isPlaying && now - lastReportAt >= REPORT_EVERY_MS) report()
+            if (now - lastPublishAt >= PUBLISH_EVERY_MS) publish()
             checkAutoNext()
             if (seekAt > 0 && now - seekAt >= SEEK_SETTLE_MS) {
                 seekAt = 0
@@ -319,6 +342,14 @@ class PlaybackService :
                 appScope.launch { repo.saveLocal(b.id, pos) }
             }
         }
+    }
+
+    private var lastPublishAt = 0L
+
+    /** The widget's view of playback (brief §7.6). */
+    private fun publish() {
+        lastPublishAt = SystemClock.elapsedRealtime()
+        state.now.value = NowPlaying(exo.isPlaying || (exo.playWhenReady && exo.playbackState == Player.STATE_BUFFERING), position())
     }
 
     private var autoNextFor: String? = null
@@ -364,6 +395,8 @@ class PlaybackService :
 
     private val listener =
         object : Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) = publish()
+
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                 if (!playWhenReady) {
                     pausedAt = SystemClock.elapsedRealtime()
@@ -372,6 +405,7 @@ class PlaybackService :
             }
 
             override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_READY) publish()
                 if (playbackState == Player.STATE_ENDED) {
                     report(finished = true)
                     if (state.sleep.value is SleepTimer.EndOfChapter) state.sleep.value = null
@@ -380,6 +414,7 @@ class PlaybackService :
 
             override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
                 if (reason == Player.DISCONTINUITY_REASON_SEEK) seekAt = SystemClock.elapsedRealtime()
+                publish()
             }
 
             override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
@@ -431,11 +466,13 @@ class PlaybackService :
                         .buildUpon()
                         .apply { Commands.ALL.forEach { add(it) } }
                         .build()
+                val car = session.isAutoCompanionController(controller) || session.isAutomotiveController(controller)
                 val result =
                     MediaSession.ConnectionResult
                         .AcceptedResultBuilder(session, controller)
                         .setAvailableSessionCommands(commands)
-                        .setMediaButtonPreferences(buttons())
+                        // In the car: skips and chapter skips, whatever the notification shows (brief §7.3).
+                        .setMediaButtonPreferences(if (car) carButtons() else buttons())
                 if (session.isMediaNotificationController(controller)) {
                     // The notification shows only the buttons the user chose, not "previous/next track".
                     result.setAvailablePlayerCommands(
@@ -484,10 +521,81 @@ class PlaybackService :
                 startPositionMs: Long
             ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
                 val item = mediaItems.singleOrNull()
+                // "Play <title>" by voice: the best match from the library's search.
+                val query = item?.requestMetadata?.searchQuery
+                if (item != null && item.mediaId.isEmpty() && query != null) {
+                    return scope.future {
+                        val hit = browse.search(query).firstOrNull() ?: throw LoadFailed(ApiFailure("not_found", "", 404))
+                        resolve(hit.mediaId.removePrefix(Commands.BOOK_PREFIX), null)
+                    }
+                }
                 val id = item?.mediaId?.takeIf { it.startsWith(Commands.BOOK_PREFIX) }
                 if (id == null) return super.onSetMediaItems(mediaSession, controller, mediaItems, startIndex, startPositionMs)
                 val start = item.requestMetadata.extras?.getLong(Commands.EXTRA_POSITION, -1L)?.takeIf { it >= 0 }
                 return scope.future { resolve(id.removePrefix(Commands.BOOK_PREFIX), null, start) }
+            }
+
+            override fun onGetLibraryRoot(
+                session: MediaLibrarySession,
+                browser: MediaSession.ControllerInfo,
+                params: LibraryParams?
+            ): ListenableFuture<LibraryResult<MediaItem>> = Futures.immediateFuture(LibraryResult.ofItem(browse.root(), params))
+
+            override fun onGetChildren(
+                session: MediaLibrarySession,
+                browser: MediaSession.ControllerInfo,
+                parentId: String,
+                page: Int,
+                pageSize: Int,
+                params: LibraryParams?
+            ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> = scope.future {
+                val all = browse.children(parentId)
+                val items = if (pageSize in 1 until Int.MAX_VALUE) all.drop(page * pageSize).take(pageSize) else all
+                grantCovers(browser, items)
+                LibraryResult.ofItemList(items, params)
+            }
+
+            override fun onGetItem(
+                session: MediaLibrarySession,
+                browser: MediaSession.ControllerInfo,
+                mediaId: String
+            ): ListenableFuture<LibraryResult<MediaItem>> = scope.future {
+                val b = book()
+                if (b != null && mediaId == Commands.bookMediaId(b.id)) {
+                    LibraryResult.ofItem(
+                        MediaItem.Builder().setMediaId(
+                            mediaId
+                        ).setMediaMetadata(MediaMetadata.Builder().setTitle(b.title).setIsPlayable(true).setIsBrowsable(false).build()).build(),
+                        null
+                    )
+                } else {
+                    LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
+                }
+            }
+
+            override fun onSearch(
+                session: MediaLibrarySession,
+                browser: MediaSession.ControllerInfo,
+                query: String,
+                params: LibraryParams?
+            ): ListenableFuture<LibraryResult<Void>> = scope.future {
+                val n = browse.search(query).size
+                session.notifySearchResultChanged(browser, query, n, params)
+                LibraryResult.ofVoid()
+            }
+
+            override fun onGetSearchResult(
+                session: MediaLibrarySession,
+                browser: MediaSession.ControllerInfo,
+                query: String,
+                page: Int,
+                pageSize: Int,
+                params: LibraryParams?
+            ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> = scope.future {
+                val all = browse.search(query)
+                val items = if (pageSize in 1 until Int.MAX_VALUE) all.drop(page * pageSize).take(pageSize) else all
+                grantCovers(browser, items)
+                LibraryResult.ofItemList(items, params)
             }
 
             override fun onPlaybackResumption(
@@ -534,6 +642,19 @@ class PlaybackService :
      * system in the middle; the button just before it takes the "back" slot
      * and the one after it the "forward" slot, the rest go to the overflow.
      */
+    /** Lets the car host read the covers it is shown (the provider isn't exported). */
+    private fun grantCovers(browser: MediaSession.ControllerInfo, items: List<MediaItem>) {
+        BrowseTree.artwork(items).forEach { runCatching { grantUriPermission(browser.packageName, it, Intent.FLAG_GRANT_READ_URI_PERMISSION) } }
+    }
+
+    /** Android Auto: back and forward by the skip lengths, and chapter skips. */
+    private fun carButtons(): List<CommandButton> = listOf(
+        button(ControlButton.PREVIOUS_CHAPTER).setSlots(CommandButton.SLOT_BACK_SECONDARY, CommandButton.SLOT_OVERFLOW).build(),
+        button(ControlButton.BACK).setSlots(CommandButton.SLOT_BACK, CommandButton.SLOT_OVERFLOW).build(),
+        button(ControlButton.FORWARD).setSlots(CommandButton.SLOT_FORWARD, CommandButton.SLOT_OVERFLOW).build(),
+        button(ControlButton.NEXT_CHAPTER).setSlots(CommandButton.SLOT_FORWARD_SECONDARY, CommandButton.SLOT_OVERFLOW).build()
+    )
+
     private fun buttons(): List<CommandButton> {
         val list = settings.buttons
         val play = list.indexOf(ControlButton.PLAY_PAUSE).let { if (it < 0) list.size else it }
@@ -618,6 +739,7 @@ class PlaybackService :
         private const val SEEK_SETTLE_MS = 1_500L
         private const val MIN_MOVE_MS = 1_000L
         private const val AUTO_NEXT_FRACTION = 0.9
+        private const val PUBLISH_EVERY_MS = 10_000L
 
         /** Calls and alarms always pause. With PAUSE, navigation prompts pause too; with DUCK they lower the volume. */
         fun attributes(focus: FocusMode): AudioAttributes = AudioAttributes

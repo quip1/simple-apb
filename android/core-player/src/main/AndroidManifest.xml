@@ -9,6 +9,18 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application>
+        <!-- Android Auto finds the media service through this. -->
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
+
+        <!-- Covers for Android Auto's lists: not exported, granted per car host. -->
+        <provider
+            android:name=".CoverProvider"
+            android:authorities="${applicationId}.covers"
+            android:exported="false"
+            android:grantUriPermissions="true" />
+
         <!-- Exported without a permission on purpose: media controllers in other
              apps (system media controls, Android Auto, Wear, Bluetooth) must bind
              to it. The session decides per controller in onConnect. -->

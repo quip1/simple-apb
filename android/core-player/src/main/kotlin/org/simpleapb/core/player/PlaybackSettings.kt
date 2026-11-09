@@ -40,7 +40,11 @@ data class PlaybackSettings(
     /** Mirror the player controls (brief §11). */
     val leftHanded: Boolean = false,
     /** Per device: a phone on mobile data, a tablet on Wi-Fi… */
-    val quality: Quality = Quality.AUTO
+    val quality: Quality = Quality.AUTO,
+    /** Audio effects (brief §7.2), per device: they suit the speaker or headphones in use. */
+    val effects: EffectsConfig = EffectsConfig(),
+    /** Open car mode when the phone connects to a car's Bluetooth. */
+    val carModeAuto: Boolean = false
 ) {
     /** The same settings with every value inside its allowed range. */
     fun sanitized(): PlaybackSettings = copy(
@@ -51,7 +55,12 @@ data class PlaybackSettings(
         buttons = normalizeButtons(buttons),
         shakeExtendMin = shakeExtendMin.coerceIn(1, 30),
         lastSleepMin = lastSleepMin.coerceIn(1, 600),
-        einkTickS = einkTickS.coerceIn(EINK_TICK_RANGE)
+        einkTickS = einkTickS.coerceIn(EINK_TICK_RANGE),
+        effects =
+        effects.copy(
+            boostDb = effects.boostDb.coerceIn(EffectsConfig.BOOST_RANGE),
+            balance = (Math.round(effects.balance.coerceIn(-1f, 1f) * 10) / 10f)
+        )
     )
 
     fun action(g: Gesture): HeadsetAction = when (g) {

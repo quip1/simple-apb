@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package org.simpleapb.app.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,10 +36,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -56,6 +60,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import org.simpleapb.app.player.CarDetector
 import org.simpleapb.app.player.speedText
 import org.simpleapb.app.ui.FormColumn
 import org.simpleapb.app.ui.TouchTarget
@@ -170,6 +175,24 @@ fun PlaybackSettingsScreen(onBack: () -> Unit) {
                 vm.update { it.copy(shakeExtendMin = v) }
             }
         }
+
+        // Car mode opens by itself when a car's Bluetooth connects (it needs the "nearby devices" permission).
+        Section(stringResource(UiR.string.app_car_title))
+        val context = LocalContext.current
+        var denied by rememberSaveable { mutableStateOf(false) }
+        val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+            denied = !ok
+            if (ok) vm.update { it.copy(carModeAuto = true) }
+        }
+        org.simpleapb.app.ui.SwitchRow(
+            stringResource(UiR.string.app_car_auto),
+            s.carModeAuto && CarDetector.allowed(context),
+            { on ->
+                val perm = CarDetector.PERMISSION
+                if (on && perm != null && !CarDetector.allowed(context)) ask.launch(perm) else vm.update { it.copy(carModeAuto = on) }
+            },
+            help = stringResource(if (denied) UiR.string.app_car_auto_denied else UiR.string.app_car_auto_help)
+        )
     }
 }
 

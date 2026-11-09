@@ -31,9 +31,11 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.Forward30
 import androidx.compose.material.icons.filled.Forward5
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Pause
@@ -102,11 +104,11 @@ import org.simpleapb.core.player.Speed
 import org.simpleapb.core.ui.LocalEink
 import org.simpleapb.core.ui.R as UiR
 
-private enum class Sheet { NONE, SPEED, SLEEP, CHAPTERS, BOOKMARKS }
+private enum class Sheet { NONE, SPEED, SLEEP, CHAPTERS, BOOKMARKS, AUDIO }
 
 /** The full player (brief §7.4 screen 5). */
 @Composable
-fun PlayerScreen(vm: PlayerViewModel, onClose: () -> Unit) {
+fun PlayerScreen(vm: PlayerViewModel, onClose: () -> Unit, onCarMode: () -> Unit) {
     val book by vm.book.collectAsStateWithLifecycle()
     val ui by vm.ui.collectAsStateWithLifecycle()
     val sleep by vm.sleep.collectAsStateWithLifecycle()
@@ -215,6 +217,15 @@ fun PlayerScreen(vm: PlayerViewModel, onClose: () -> Unit) {
                 }
             )
         )
+
+        // Audio effects · car mode.
+        MirrorRow(
+            settings.leftHanded,
+            listOf(
+                { LabeledAction(Icons.Filled.GraphicEq, stringResource(UiR.string.app_audio_title), null) { sheet = Sheet.AUDIO } },
+                { LabeledAction(Icons.Filled.DirectionsCar, stringResource(UiR.string.app_car_title), null, onCarMode) }
+            )
+        )
     }
 
     val close = { sheet = Sheet.NONE }
@@ -224,6 +235,7 @@ fun PlayerScreen(vm: PlayerViewModel, onClose: () -> Unit) {
         Sheet.SLEEP -> SleepDialog(sleep, ui.sleepLeftMs, settings.lastSleepMin, vm::setSleep, close)
         Sheet.CHAPTERS -> b?.let { ChaptersDialog(it, ui.positionMs, { ms -> vm.seekTo(ms) }, close) }
         Sheet.BOOKMARKS -> b?.let { BookmarksDialog(vm, ui.positionMs, close) }
+        Sheet.AUDIO -> AudioDialog(settings.effects, vm::setEffects, close)
     }
 }
 
@@ -352,14 +364,14 @@ private fun LabeledAction(icon: ImageVector, text: String, description: String?,
     }
 }
 
-private fun replayIcon(s: Int) = when (s) {
+internal fun replayIcon(s: Int) = when (s) {
     5 -> Icons.Filled.Replay5
     10 -> Icons.Filled.Replay10
     30 -> Icons.Filled.Replay30
     else -> Icons.Filled.Replay
 }
 
-private fun forwardIcon(s: Int) = when (s) {
+internal fun forwardIcon(s: Int) = when (s) {
     5 -> Icons.Filled.Forward5
     10 -> Icons.Filled.Forward10
     30 -> Icons.Filled.Forward30

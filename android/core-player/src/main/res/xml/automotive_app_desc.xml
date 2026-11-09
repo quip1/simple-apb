@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- Android Auto: this app is a media app (brief §7.3). -->
+<automotiveApp>
+    <uses name="media" />
+</automotiveApp>

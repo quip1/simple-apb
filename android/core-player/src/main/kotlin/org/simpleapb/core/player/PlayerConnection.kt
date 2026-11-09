@@ -53,7 +53,11 @@ enum class SleepChoice { OFF, END_OF_CHAPTER, MINUTES }
 @Singleton
 class PlayerConnection
 @Inject
-constructor(@ApplicationContext private val context: Context, private val state: PlayerState) {
+constructor(
+    @ApplicationContext private val context: Context,
+    private val state: PlayerState,
+    private val store: PlaybackStore
+) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var controller: Deferred<MediaController>? = null
     private var ticker: Job? = null
@@ -149,6 +153,19 @@ constructor(@ApplicationContext private val context: Context, private val state:
     }
 
     fun pause() = with { it.pause() }
+
+    /** Plays the loaded book, or else the last one played on this device (car mode, the widget). */
+    fun playOrResume() {
+        scope.launch {
+            val c = controller()
+            if (state.book.value != null && c.mediaItemCount > 0) {
+                if (c.playbackState == Player.STATE_IDLE) c.prepare()
+                c.play()
+            } else {
+                store.lastBook()?.let { play(it.bookId) }
+            }
+        }
+    }
 
     fun togglePlay() = with { c ->
         val ended = c.playbackState == Player.STATE_ENDED

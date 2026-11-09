@@ -1093,6 +1093,65 @@ notifications. Downloading works either way; only the progress notification need
 Resuming a partial file, a damaged file and the storage limit are covered by unit tests (the demo
 files are too small to interrupt mid-download).
 
+---
+
+## ADR-0043 — Android audio effects, car mode, Android Auto and the widget (Phase 3, milestone 5)
+
+**Audio effects** (brief §7.2) run in ExoPlayer's own audio sink, as a custom `AudioProcessor`
+before the speed change, so they work on every output (speaker, headphones, Bluetooth, the car).
+The chain works on 16-bit PCM, in this order:
+- **Voice clarity:** a 100 Hz high-pass and a +5 dB presence lift at 3 kHz (biquad filters).
+- **Mono** mixdown.
+- **Balance.**
+- **Volume boost**, 0 to +12 dB.
+- **A limiter** with a -1 dBFS ceiling, an instant attack and a 150 ms release. A boost raises
+  quiet speech without ever clipping.
+
+Other formats (float, more than two channels) pass through untouched. With every effect off the
+audio is passed through bit for bit. Settings change live from the player's "Audio" panel and are
+kept per device, since they suit the speaker or headphones in use.
+
+**Car mode** is a full-screen page with five large buttons (back, play/pause, forward, add
+bookmark, next chapter), the title, the chapter and the time left in it, and the screen kept on. It
+opens from the player. It can also open by itself when a car's Bluetooth connects (optional, off by
+default):
+- While the app is open, an audio-device callback sees a Bluetooth audio device arrive.
+- The device's class tells a car ("car audio" or "hands-free") from headphones. Reading the class
+  needs the "nearby devices" permission on Android 12+, which is asked for only when the setting
+  is turned on. Without it the feature stays off.
+- Opening a screen from the background isn't allowed on recent Android, so this only works with
+  the app open. With the app closed, Android Auto or the notification covers the car.
+
+**Android Auto** (brief §7.3) uses the same Media3 session:
+- **Browse tree:** Continue listening · Recently added · Downloaded · Collections · Series ·
+  Authors, for the active account. Books show as a grid with their progress, using Android Auto's
+  completion extras. Offline, the lists come from the mirror.
+- **Search and voice:** "play <title>" searches the library and plays the best match.
+- **Car buttons:** a car host gets back, forward and both chapter skips, whatever the user picked
+  for the notification.
+- **Covers:** the car host can't fetch signed-in URLs, so covers are served by a content provider.
+  It is not exported: the service grants each cover only to the host it lists it for. Covers come
+  from the download, a small cache, or the server.
+- **Untested here:** the Desktop Head Unit isn't installed and the emulator image has no Android
+  Auto app. The browse tree, search and cover URIs are unit-tested, and the DHU checklist stays in
+  milestone 7 as planned.
+
+**Widget** (brief §7.6): a Glance widget.
+- At 2×2 it shows the cover, the title, chapter progress, and back, play/pause and forward. From
+  three cells wide it uses a wider layout that adds the chapter name; it stretches to 4×2.
+- Play with nothing loaded resumes the last book. Tapping the widget opens the player.
+- In the e-ink theme it is black on white, with no animation.
+- **Keeping it current:** the playback service publishes playing or paused and the position on
+  changes and every 10 s. The widget collects that state while its session is alive, and an
+  updater redraws placed widgets when the book, playback or theme changes. A first version read the
+  state once before drawing and didn't follow playback; the emulator showed it.
+
+**Checked on the emulator** (API 36): the Audio panel with every effect on during playback (no
+audio errors), car mode (pause and bookmark from it), and the widget at 2×2, three cells and 4×2.
+On the widget: play with nothing loaded resumed the last book, the pause icon and chapter progress
+followed playback, and the e-ink look was right. The effect DSP (no clipping at +12 dB, mono,
+balance, rumble cut) is unit-tested; listening tests need a real phone.
+
 ## Open questions for Jacob
 
 | # | Question | Current choice (until answered) |

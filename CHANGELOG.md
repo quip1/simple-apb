@@ -5,7 +5,7 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-**Current phase: 3 — Android phone app** (milestones 1–4 done: foundation, onboarding and sign-in; playback; screens and account settings; offline sync and downloads. Plan in ADR-0039). Phase 2 is feature-complete and awaits Jacob's sign-off; Phase 1 accepted 2026-11-08.
+**Current phase: 3 — Android phone app** (milestones 1–5 done: foundation, onboarding and sign-in; playback; screens and account settings; offline sync and downloads; audio effects, car mode, Android Auto and the widget. Plan in ADR-0039). Phase 2 is feature-complete and awaits Jacob's sign-off; Phase 1 accepted 2026-11-08.
 
 ### Added (Phase 3)
 - Android app foundation (milestone 1, ADR-0039): Gradle wrapper and current AndroidX/Compose/Media3/Room/Hilt versions, modules `core-ui`, `core-data` and `app` with `play`, `github` and `fdroid` flavors; the Fern dark and e-ink themes; strings generated from the shared `i18n` catalog; the Open book adaptive launcher icon.
@@ -23,6 +23,10 @@ All notable changes to this project are documented here. The format follows
 - Skip lengths, the speed for new books, the e-ink refresh and the left-handed layout now sync with the account, as on the web. Accounts that must use 2FA set it up in the app instead of being sent to the web.
 - Offline (milestone 4, ADR-0042): a Room mirror of each account's library, progress, bookmarks and collections. Home, the Library and book pages work offline from it. Progress and bookmarks written offline wait in an outbox and are sent in order. A sync engine (WorkManager every 15 minutes and on reconnect, plus `/ws` live hints while the app is open) pulls `/me/sync`. A position conflict met while offline is asked about when the book is open.
 - Downloads: a Downloads tab with the queue, progress and storage used. Downloads resume after interruptions and every file is checked against the server's SHA-256. Settings: storage limit, this device or the memory card, Wi-Fi only, and auto-download of the next book in a series at 90 %. Downloaded books play offline and are marked on covers, with a "Downloaded" view in the Library. A book that disappears from your library takes its download along.
+- Audio effects (milestone 5, ADR-0043): volume boost up to +12 dB with a limiter, voice clarity, mono and balance, in the player's own audio pipeline, from an "Audio" panel on the player.
+- Car mode: five large buttons, the chapter and the time left in it, the screen kept on. It opens from the player, or by itself when a car's Bluetooth connects (optional).
+- Android Auto: browse Continue listening, Recently added, Downloaded, Collections, Series and Authors (with covers and progress); search and "play <title>" by voice; skip and chapter-skip buttons in the car.
+- A Now playing home-screen widget (2×2, stretching to 4×2): cover, title, chapter progress, back, play/pause and forward; play resumes the last book; black on white in the e-ink theme.
 
 ### Fixed (Phase 3)
 - The server answers unknown library shelf, sort and facet values with 400 `invalid_filter` (unknown shelves were a 500, unknown sorts were ignored).

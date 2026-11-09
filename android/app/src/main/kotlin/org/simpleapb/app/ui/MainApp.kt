@@ -24,6 +24,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,6 +59,8 @@ import org.simpleapb.app.home.HomeScreen
 import org.simpleapb.app.library.LibraryScreen
 import org.simpleapb.app.library.PersonKind
 import org.simpleapb.app.library.PersonScreen
+import org.simpleapb.app.player.CarDetector
+import org.simpleapb.app.player.CarModeScreen
 import org.simpleapb.app.player.ConflictDialog
 import org.simpleapb.app.player.MiniPlayer
 import org.simpleapb.app.player.PlayerScreen
@@ -92,6 +95,8 @@ import org.simpleapb.core.ui.R as UiR
 @Serializable private data class PersonRoute(val kind: PersonKind, val id: String)
 
 @Serializable private object PlayerRoute
+
+@Serializable private object CarModeRoute
 
 @Serializable private object PlaybackSettingsRoute
 
@@ -130,6 +135,7 @@ fun MainApp(app: AppViewModel, account: Account, accounts: List<Account>, snackb
     val entry by nav.currentBackStackEntryAsState()
     val destination = entry?.destination
     val onPlayer = destination?.hasRoute<PlayerRoute>() == true
+    val onCar = destination?.hasRoute<CarModeRoute>() == true
     val openPlayer by app.openPlayer.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val res = LocalResources.current
@@ -155,6 +161,16 @@ fun MainApp(app: AppViewModel, account: Account, accounts: List<Account>, snackb
                     is PlayerEvent.BookmarkFailed -> errorMessage(context, e.failure)
                 }
             snackbar.showSnackbar(text)
+        }
+    }
+
+    // Car mode opens by itself when a car's Bluetooth connects, if the user asked for it.
+    val playerSettings by player.settings.collectAsStateWithLifecycle()
+    if (playerSettings.carModeAuto) {
+        DisposableEffect(Unit) {
+            val detector = CarDetector(context) { nav.navigate(CarModeRoute) { launchSingleTop = true } }
+            detector.start()
+            onDispose { detector.stop() }
         }
     }
 
@@ -213,13 +229,16 @@ fun MainApp(app: AppViewModel, account: Account, accounts: List<Account>, snackb
                         val r = e.toRoute<PersonRoute>()
                         PersonScreen(account, r.kind, r.id, onBack = back, onBook = openBook)
                     }
-                    composable<PlayerRoute> { PlayerScreen(player, onClose = back) }
+                    composable<PlayerRoute> {
+                        PlayerScreen(player, onClose = back, onCarMode = { nav.navigate(CarModeRoute) { launchSingleTop = true } })
+                    }
+                    composable<CarModeRoute> { CarModeScreen(player, onClose = back) }
                     composable<PlaybackSettingsRoute> { PlaybackSettingsScreen(onBack = back) }
                     composable<SecurityRoute> { SecurityScreen(onBack = back) }
                     composable<AccountsRoute> { AccountsScreen(app, account, accounts, onBack = back) }
                 }
             }
-            if (!onPlayer) {
+            if (!onPlayer && !onCar) {
                 MiniPlayer(player, onOpen = showPlayer)
                 TabBar(lit) { t -> nav.goToTab(t) }
             }

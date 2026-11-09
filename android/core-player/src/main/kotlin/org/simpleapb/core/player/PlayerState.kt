@@ -59,4 +59,9 @@ constructor() {
     val sleep = MutableStateFlow<SleepTimer?>(null)
     val conflict = MutableStateFlow<PendingConflict?>(null)
     val events = MutableSharedFlow<PlayerEvent>(extraBufferCapacity = 8)
+
+    /** Playing or not, and where (refreshed on changes and every few seconds): the widget's view. */
+    val now = MutableStateFlow(NowPlaying())
 }
+
+data class NowPlaying(val playing: Boolean = false, val positionMs: Long = 0)

@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import org.simpleapb.api.model.Bookmark
 import org.simpleapb.core.data.auth.Outcome
 import org.simpleapb.core.data.net.ApiFailure
+import org.simpleapb.core.player.EffectsConfig
 import org.simpleapb.core.player.LoadedBook
 import org.simpleapb.core.player.PendingConflict
 import org.simpleapb.core.player.PlaybackRepository
@@ -38,7 +39,7 @@ constructor(
     private val conn: PlayerConnection,
     private val state: PlayerState,
     private val repo: PlaybackRepository,
-    store: PlaybackStore
+    private val store: PlaybackStore
 ) : ViewModel() {
     val ui: StateFlow<PlaybackUi> = conn.ui
     val book: StateFlow<LoadedBook?> = state.book
@@ -58,7 +59,11 @@ constructor(
 
     fun play(bookId: String) = conn.play(bookId)
 
+    fun setEffects(e: EffectsConfig) = viewModelScope.launch { store.update { it.copy(effects = e) } }
+
     fun togglePlay() = conn.togglePlay()
+
+    fun playOrResume() = conn.playOrResume()
 
     fun skipBack() = conn.skipBack()
 
