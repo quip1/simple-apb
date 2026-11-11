@@ -20,7 +20,11 @@ func TestNormalizeChapters(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []store.Chapter{{0, "One", 0, 5000}, {1, "Two", 5000, 9000}, {2, "Three", 9000, 10_000}}
+	want := []store.Chapter{
+		{Index: 0, Title: "One", StartMS: 0, EndMS: 5000},
+		{Index: 1, Title: "Two", StartMS: 5000, EndMS: 9000},
+		{Index: 2, Title: "Three", StartMS: 9000, EndMS: 10_000},
+	}
 	for i, c := range cs {
 		if c != want[i] {
 			t.Fatalf("chapter %d: %+v, want %+v", i, c, want[i])
