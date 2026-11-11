@@ -1479,6 +1479,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** This server's version, the newest release, and the last update */
+        get: operations["getUpdateStatus"];
+        put?: never;
+        /**
+         * Update the server now (needs the updater container)
+         * @description Takes a database backup, then asks the updater container (see
+         *     docs/UPDATING.md) to switch to the given release. The updater pulls the
+         *     image, restarts the server, and goes back to the previous version if the
+         *     new one doesn't become healthy. Follow it with `GET /admin/update`.
+         */
+        post: operations["startUpdate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/update/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Look for a new release now (it is also checked daily) */
+        post: operations["checkForUpdate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/backups": {
         parameters: {
             query?: never;
@@ -3486,6 +3527,42 @@ export interface components {
             asin?: string;
             genres: string[];
             cover_url?: string;
+        };
+        ReleaseInfo: {
+            /** @example 0.5.0 */
+            version: string;
+            /** @description The release page */
+            url: string;
+            /** Format: date-time */
+            published_at: string;
+            /** @description Release notes (Markdown) */
+            notes: string;
+        };
+        UpdateStatus: {
+            /** @description "dev" for a build from source */
+            current_version: string;
+            latest?: components["schemas"]["ReleaseInfo"];
+            update_available: boolean;
+            /** Format: date-time */
+            checked_at?: string;
+            /** @description Why the last check failed (GitHub unreachable…) */
+            check_error?: string;
+            /** @description The updater container is running, so "Update now" works */
+            updater_present: boolean;
+            last_update?: components["schemas"]["UpdateAttempt"];
+        };
+        UpdateAttempt: {
+            from_version?: string;
+            to_version: string;
+            /** @enum {string} */
+            status: "requested" | "running" | "succeeded" | "rolled_back" | "failed";
+            message?: string;
+            /** Format: date-time */
+            at: string;
+        };
+        UpdateRequest: {
+            /** @description A released version, e.g. 0.5.0 */
+            version: string;
         };
         ChaptersUpdate: {
             chapters: {
@@ -6253,6 +6330,95 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getUpdateStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpdateStatus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    startUpdate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description The updater has the request */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpdateStatus"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description No updater is running, or an update is already under way */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The backup before the update failed; nothing was changed */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    checkForUpdate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpdateStatus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getBackups: {

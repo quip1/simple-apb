@@ -68,9 +68,11 @@ secrets:
 On Windows, `certutil -encode` adds header lines; `[Convert]::ToBase64String([IO.File]::ReadAllBytes("simpleapb-release.jks"))`
 in PowerShell gives the plain value.
 
-Pushing a tag such as `v0.3.0` then runs the **Android release** workflow. It builds and checks
-the signed `github` APK and `play` bundle, plus the unsigned `fdroid` APK, and keeps them as the
-run's artifacts. Publishing them on a GitHub release comes with Phase 6.
+A release tag (`docs/UPDATING.md`) then runs the **Release** workflow. It builds and checks the
+signed `github` APK and `play` bundle and attaches them to the GitHub release as
+`simple-apb-android-X.Y.Z.apk` and `…-play.aab`. Installed GitHub builds offer that APK as an
+update. Without the secrets, the release goes out without Android files, and the run shows a
+warning.
 
 ## F-Droid
 

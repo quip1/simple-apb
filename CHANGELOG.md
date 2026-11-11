@@ -7,6 +7,12 @@ All notable changes to this project are documented here. The format follows
 
 **Phases 4 (Windows app) and 5 (book tools) done; next is Phase 6.** Phase 3 — Android phone app (milestones 1–7 done: foundation, onboarding and sign-in; playback; screens and account settings; offline sync and downloads; audio effects, car mode, Android Auto and the widget; local folders, push, e-ink and accessibility; release signing and F-Droid checks. Next: Jacob's week of daily use and the Android Auto checklist. Plan in ADR-0039). Phase 2 is feature-complete and awaits Jacob's sign-off; Phase 1 accepted 2026-11-08.
 
+### Added (releases and updates, ADR-0049)
+- One version for every part, set by `scripts/release.mjs X.Y.Z`. A `vX.Y.Z` tag publishes the server image to GHCR, the signed Android APK and Play bundle, and the Windows installer as a GitHub release with the changelog notes (`docs/UPDATING.md`).
+- Server: Admin → Updates shows the running version and the newest release with its notes (checked daily). **Update now** backs up the database, then the optional updater container (`docker compose --profile updater up -d`) switches versions and rolls back by itself if the new one doesn't come up healthy. Without the updater, the page shows the two commands to run. CI tests an update and a rollback end to end.
+- Android (GitHub build): the app offers new releases on Home and in Settings → App updates. The APK installs over the current app.
+- `deploy/docker-compose.yml` now runs the release image (`SIMPLEAPB_VERSION`). Building from source moved to `deploy/docker-compose.build.yml`.
+
 ### Added (Phase 5)
 - Book tools (ADR-0048), for admins and for uploaders on their own books, on a new "Book tools" page:
   - a chapter editor (rename, add, remove and move chapters; listen at a chapter) with chapters found from silences. Saved chapters survive re-scans, and m4b files get them written in (no re-encode).

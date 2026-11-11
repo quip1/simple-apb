@@ -190,6 +190,9 @@ REST API for Simple APB. All endpoints live under `/api/v1`.
 | POST | `/admin/distributions` | Make a master-store book visible to a group or a user | yes | 201, 400, 401, 403, 404 |
 | DELETE | `/admin/distributions/{distributionId}` | Revoke a distribution | yes | 204, 401, 403, 404 |
 | POST | `/admin/library/scan` | Rescan the library folder now | yes | 202, 401, 403 |
+| GET | `/admin/update` | This server's version, the newest release, and the last update | yes | 200, 401, 403 |
+| POST | `/admin/update` | Update the server now (needs the updater container) | yes | 202, 400, 401, 403, 409, 500 |
+| POST | `/admin/update/check` | Look for a new release now (it is also checked daily) | yes | 200, 401, 403 |
 | GET | `/admin/backups` | Database backups and the latest backup/scrub status | yes | 200, 401, 403 |
 | POST | `/admin/backups` | Back up the database now | yes | 202, 401, 403 |
 | POST | `/admin/integrity-check` | Re-hash every library file against its stored checksum now | yes | 202, 401, 403 |
@@ -1641,6 +1644,43 @@ Enum: `title`, `subtitle`, `description`, `publisher`, `published_year`, `langua
 | `asin` | string |  |  |
 | `genres` | array of string | yes |  |
 | `cover_url` | string |  |  |
+
+### ReleaseInfo
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `version` | string | yes |  |
+| `url` | string | yes | The release page |
+| `published_at` | string (date-time) | yes |  |
+| `notes` | string | yes | Release notes (Markdown) |
+
+### UpdateStatus
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `current_version` | string | yes | "dev" for a build from source |
+| `latest` | `ReleaseInfo` |  |  |
+| `update_available` | boolean | yes |  |
+| `checked_at` | string (date-time) |  |  |
+| `check_error` | string |  | Why the last check failed (GitHub unreachable…) |
+| `updater_present` | boolean | yes | The updater container is running, so "Update now" works |
+| `last_update` | `UpdateAttempt` |  |  |
+
+### UpdateAttempt
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `from_version` | string |  |  |
+| `to_version` | string | yes |  |
+| `status` | string: requested \| running \| succeeded \| rolled_back \| failed | yes |  |
+| `message` | string |  |  |
+| `at` | string (date-time) | yes |  |
+
+### UpdateRequest
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `version` | string | yes | A released version, e.g. 0.5.0 |
 
 ### ChaptersUpdate
 

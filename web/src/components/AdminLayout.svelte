@@ -19,6 +19,7 @@
     { href: "/admin/trash", key: "admin.nav.trash" },
     { href: "/admin/audit", key: "admin.nav.audit" },
     { href: "/admin/backups", key: "admin.nav.backups" },
+    { href: "/admin/updates", key: "admin.nav.updates" },
     { href: "/admin/settings", key: "admin.nav.settings" },
   ];
 

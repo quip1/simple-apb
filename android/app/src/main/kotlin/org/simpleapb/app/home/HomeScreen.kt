@@ -54,6 +54,7 @@ import org.simpleapb.app.ui.ScreenHeader
 import org.simpleapb.app.ui.Shelf
 import org.simpleapb.app.ui.TouchTarget
 import org.simpleapb.app.ui.errorText
+import org.simpleapb.app.update.UpdateBanner
 import org.simpleapb.core.data.account.Account
 import org.simpleapb.core.data.auth.Outcome
 import org.simpleapb.core.data.auth.call
@@ -199,6 +200,7 @@ fun HomeScreen(account: Account, onBook: (String) -> Unit, onLibrary: (String?) 
             Icon(Icons.Filled.SwapHoriz, contentDescription = null)
             Text(stringResource(UiR.string.app_account_on, account.serverName), modifier = Modifier.padding(start = 8.dp))
         }
+        UpdateBanner()
         s.error?.let { Notice(errorText(it)) }
         if (s.offline) Notice(stringResource(UiR.string.app_offline_notice), error = false)
         when {

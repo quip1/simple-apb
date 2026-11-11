@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Build the server from this repository instead of pulling a release image:
+#   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.build.yml up -d --build
+
+services:
+  simpleapb:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile

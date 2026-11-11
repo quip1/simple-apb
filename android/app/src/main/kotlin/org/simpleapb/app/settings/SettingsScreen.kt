@@ -47,6 +47,7 @@ import org.simpleapb.app.ui.Section
 import org.simpleapb.app.ui.SwitchRow
 import org.simpleapb.app.ui.TouchTarget
 import org.simpleapb.app.ui.errorText
+import org.simpleapb.app.update.UpdateSection
 import org.simpleapb.core.data.account.Account
 import org.simpleapb.core.data.auth.Outcome
 import org.simpleapb.core.data.net.ApiFailure
@@ -215,6 +216,8 @@ fun SettingsScreen(
                 }
             }
         }
+
+        UpdateSection()
 
         Section(stringResource(UiR.string.settings_account)) {
             Text(stringResource(UiR.string.settings_signed_in_as, account.displayName, account.username) + " " + account.serverName)

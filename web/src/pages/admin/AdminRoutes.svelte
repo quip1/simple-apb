@@ -14,6 +14,7 @@
   import MasterLibrary from "./MasterLibrary.svelte";
   import Tags from "./Tags.svelte";
   import Trash from "./Trash.svelte";
+  import Updates from "./Updates.svelte";
   import UserDetail from "./UserDetail.svelte";
   import Users from "./Users.svelte";
 
@@ -45,6 +46,8 @@
   <Audit />
 {:else if match("/admin/backups", route.path)}
   <Backups />
+{:else if match("/admin/updates", route.path)}
+  <Updates />
 {:else if match("/admin/settings", route.path)}
   <InstanceSettings />
 {:else}

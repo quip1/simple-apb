@@ -1923,6 +1923,68 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  # ─────────────────────── Admin: updates (brief §6.21) ───────────────
+  /admin/update:
+    get:
+      tags: [admin]
+      operationId: getUpdateStatus
+      summary: This server's version, the newest release, and the last update
+      responses:
+        "200":
+          description: Status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UpdateStatus" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [admin]
+      operationId: startUpdate
+      summary: Update the server now (needs the updater container)
+      description: |
+        Takes a database backup, then asks the updater container (see
+        docs/UPDATING.md) to switch to the given release. The updater pulls the
+        image, restarts the server, and goes back to the previous version if the
+        new one doesn't become healthy. Follow it with `GET /admin/update`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateRequest" }
+      responses:
+        "202":
+          description: The updater has the request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UpdateStatus" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: No updater is running, or an update is already under way
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "500":
+          description: The backup before the update failed; nothing was changed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /admin/update/check:
+    post:
+      tags: [admin]
+      operationId: checkForUpdate
+      summary: Look for a new release now (it is also checked daily)
+      responses:
+        "200":
+          description: Status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UpdateStatus" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   # ─────────────────────── Admin: backups & integrity ─────────────────
   /admin/backups:
     get:
@@ -4385,6 +4447,46 @@ components:
         asin: { type: string }
         genres: { type: array, items: { type: string } }
         cover_url: { type: string }
+
+    # ── updates ──
+    ReleaseInfo:
+      type: object
+      required: [version, url, published_at, notes]
+      properties:
+        version: { type: string, example: "0.5.0" }
+        url: { type: string, description: "The release page" }
+        published_at: { type: string, format: date-time }
+        notes: { type: string, description: "Release notes (Markdown)" }
+
+    UpdateStatus:
+      type: object
+      required: [current_version, update_available, updater_present]
+      properties:
+        current_version: { type: string, description: '"dev" for a build from source' }
+        latest: { $ref: "#/components/schemas/ReleaseInfo" }
+        update_available: { type: boolean }
+        checked_at: { type: string, format: date-time }
+        check_error: { type: string, description: "Why the last check failed (GitHub unreachable…)" }
+        updater_present:
+          type: boolean
+          description: The updater container is running, so "Update now" works
+        last_update: { $ref: "#/components/schemas/UpdateAttempt" }
+
+    UpdateAttempt:
+      type: object
+      required: [to_version, status, at]
+      properties:
+        from_version: { type: string }
+        to_version: { type: string }
+        status: { type: string, enum: [requested, running, succeeded, rolled_back, failed] }
+        message: { type: string }
+        at: { type: string, format: date-time }
+
+    UpdateRequest:
+      type: object
+      required: [version]
+      properties:
+        version: { type: string, maxLength: 40, description: "A released version, e.g. 0.5.0" }
 
     # ── book tools ──
     ChaptersUpdate:

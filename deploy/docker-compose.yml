@@ -6,6 +6,14 @@
 #   docker compose -f deploy/docker-compose.yml up -d
 #   docker compose -f deploy/docker-compose.yml logs simpleapb | grep setup_token
 #
+# Updates (docs/UPDATING.md): set SIMPLEAPB_VERSION in .env (or leave
+# "latest"), then `docker compose pull && docker compose up -d`. For one-click
+# updates from the admin panel, also run the updater:
+#   docker compose --profile updater up -d
+#
+# To build the server from this repository instead of using release images:
+#   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.build.yml up -d --build
+#
 # Postgres instead of SQLite:  docker compose --profile postgres up -d
 # and choose "postgres" in the setup wizard with
 #   postgres://simpleapb:${POSTGRES_PASSWORD}@postgres:5432/simpleapb?sslmode=disable
@@ -17,12 +25,7 @@ name: simpleapb
 
 services:
   simpleapb:
-    image: ghcr.io/quip1/simple-apb-server:${SIMPLEAPB_VERSION:-latest}
-    # Until release images are published (Phase 6), build from this repo:
-    #   docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build
-    build:
-      context: ..
-      dockerfile: server/Dockerfile
+    image: ${SIMPLEAPB_IMAGE:-ghcr.io/quip1/simple-apb-server}:${SIMPLEAPB_VERSION:-latest}
     restart: unless-stopped
     stop_grace_period: 30s
     environment:
@@ -75,6 +78,25 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  # One-click updates from the admin panel (ADR-0049). Optional: it needs the
+  # Docker socket, which is as powerful as root on this machine. It has no
+  # network of its own; the Docker daemon downloads the images.
+  updater:
+    image: docker:29.9-cli
+    profiles: [updater]
+    restart: unless-stopped
+    network_mode: none
+    entrypoint: ["/bin/sh", "/opt/simpleapb/updater.sh"]
+    environment:
+      # This folder's absolute path on the host (it is mounted at the same path).
+      SIMPLEAPB_DEPLOY_DIR: ${SIMPLEAPB_DEPLOY_DIR:-}
+      SIMPLEAPB_UPDATE_TIMEOUT: ${SIMPLEAPB_UPDATE_TIMEOUT:-300}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./updater/updater.sh:/opt/simpleapb/updater.sh:ro
+      - ${SIMPLEAPB_DEPLOY_DIR:-./.updater-not-configured}:${SIMPLEAPB_DEPLOY_DIR:-/not-configured}
+      - ${SIMPLEAPB_CONFIG:-./data/config}/updater:/updater
 
   postgres:
     image: postgres:17-alpine

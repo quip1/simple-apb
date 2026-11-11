@@ -210,6 +210,14 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  # The one-click updater (deploy/updater, ADR-0049): an update and a rollback,
+  # with stand-in server images in a local registry.
+  updater:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: bash deploy/updater/test/test.sh
+
   docker-image:
     runs-on: ubuntu-latest
     needs: [server]

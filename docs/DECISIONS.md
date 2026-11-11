@@ -1485,6 +1485,74 @@ cover, into a work folder in the cache.
 Also checked in a browser against the demo server: chapters written into an m4b, detection,
 merging as a new book, and the duplicate review.
 
+---
+
+## ADR-0049 — Releases and the update path (part of Phase 6, brought forward)
+
+Jacob wants to run everything now and keep it updated as new versions come. So this part of
+Phase 6 (brief §6.21, §14) comes first.
+
+**One version.** The server, web app, Android app and Windows app share one semver.
+`scripts/release.mjs X.Y.Z` writes it into every place it lives:
+- `package.json` and the lock files;
+- the Windows app's `Cargo.toml`, `Cargo.lock` and `tauri.conf.json`;
+- Android's `versionName`, and its `versionCode` = major·10000 + minor·100 + patch (minus one for
+  a pre-release, so it installs below its release).
+
+It also dates the changelog. The server gets its version from the tag at build time. The
+release workflow checks the tag against the code before publishing anything.
+
+**The release workflow** (on `vX.Y.Z`; it replaces the Android-only one from ADR-0045):
+- the server image, for amd64 and arm64, to GHCR as `X.Y.Z`, `X.Y` and `latest`, labelled with its
+  version;
+- the signed Android APK and Play bundle, skipped with a warning when the keys aren't set;
+- the Windows installer;
+- a GitHub release with those files and the changelog section. A tag with a suffix is a
+  pre-release, which servers and apps never offer.
+
+**Server updates.**
+- **The check:** the server looks at the newest GitHub release daily (`update_check` job; "Check
+  now" on Admin → Updates). `SIMPLEAPB_RELEASES_URL` points it elsewhere, or `off`. A build from
+  source reports `dev` and is never offered an update.
+- **"Update now"** runs only with the optional updater container (`--profile updater`), which runs
+  `deploy/updater/updater.sh` on the official Docker CLI image.
+- **The handshake:** the server and the updater share `config/updater`. The updater touches a
+  heartbeat there, so the server knows it runs. The server takes a database backup, then writes
+  `request.json`. The updater:
+  - pins the version in `.env`, pulls, and recreates only the server;
+  - waits for its healthcheck;
+  - writes `result.json`: succeeded; rolled back to the version the running image's label names
+    (a locally tagged copy of the image for builds without a label); or failed.
+- **Why rolling back is safe:** a failed migration rolls itself back, and migrations only add
+  things, so the previous version starts on the database as it is.
+- **Paths:** the updater mounts the deploy folder at the same absolute path
+  (`SIMPLEAPB_DEPLOY_DIR`), so compose resolves the relative volume paths to the same host
+  folders as when the user runs it.
+- **What it can reach:** it has the Docker socket (root-equivalent, documented) and no network.
+- **Tested in CI:** a job runs the real compose file and script against a local registry with
+  stand-in images. One update succeeds; one whose server exits on start is rolled back, with its
+  last log lines in the result.
+
+**Manual path.** The same thing by hand is two commands, shown on the Updates page when there's
+no updater: set the version in `.env`, then `pull` and `up -d`. Release images are now the
+default in `deploy/docker-compose.yml`, and building from source moved to
+`docker-compose.build.yml`.
+
+**Apps.**
+- **Android (GitHub build only):** the app looks at the newest release at most every 12 hours.
+  If its `simple-apb-android-X.Y.Z.apk` is newer, Home offers Download or Not now, and Settings →
+  App updates can check by hand. The download opens in the browser and installs over the app,
+  since both are signed with the release key. Only `https://github.com/` downloads are offered.
+- **Windows:** the app's existing check (ADR-0047) uses the same releases.
+- **Version guard:** `min_client_version` stays at 0.0.0 until a release needs it raised.
+
+**Not done here:**
+- the Tauri updater's silent installs (they need an update-signing key);
+- a configurable version guard;
+- Play and F-Droid listings.
+
+These stay in Phase 6.
+
 ## Open questions for Jacob
 
 | # | Question | Current choice (until answered) |

@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/quip1/simple-apb/server/internal/auth"
@@ -22,6 +23,7 @@ import (
 	"github.com/quip1/simple-apb/server/internal/settings"
 	"github.com/quip1/simple-apb/server/internal/store"
 	"github.com/quip1/simple-apb/server/internal/stream"
+	"github.com/quip1/simple-apb/server/internal/update"
 )
 
 // JobSyncPrune trims the delta-sync change log; cursors older than
@@ -48,7 +50,10 @@ type App struct {
 	Push    *push.Notifier
 	Backup  *backup.Service
 	Meta    *metadata.Service
-	hlsCap  int64
+	// Updates finds new releases; UpdaterDir is shared with the updater container (ADR-0049).
+	Updates    *update.Checker
+	UpdaterDir string
+	hlsCap     int64
 	// StartedAt is when the server started (dashboard uptime).
 	StartedAt time.Time
 	log       *slog.Logger
@@ -111,6 +116,8 @@ func NewApp(ctx context.Context, db *store.DB, secrets *config.Secrets, log *slo
 		}}
 	a.Backup = newBackupService(a, o.Paths.Backups)
 	a.Backup.PGDump = os.Getenv("SIMPLEAPB_PG_DUMP")
+	a.Updates = update.NewChecker()
+	a.UpdaterDir = filepath.Join(o.Paths.Config, "updater")
 	a.registerJobs()
 	a.registerOpsJobs()
 	if a.Uploads, err = newUploadHandler(a, o.TrustedProxies); err != nil {
@@ -153,6 +160,15 @@ func (a *App) registerJobs() {
 		return res, err
 	})
 	a.registerToolJobs()
+	a.Jobs.Handle(JobUpdateCheck, func(ctx context.Context, _ *jobs.Job) (any, error) {
+		// A failed check is shown in the admin panel; it isn't worth retrying sooner than tomorrow.
+		_ = a.Updates.Check(ctx)
+		rel, _, msg := a.Updates.State()
+		if rel == nil {
+			return map[string]string{"latest": "", "error": msg}, nil
+		}
+		return map[string]string{"latest": rel.Version, "error": msg}, nil
+	})
 	a.Jobs.Handle(JobHLSPrune, func(_ context.Context, _ *jobs.Job) (any, error) {
 		n, err := a.HLS.Prune(a.hlsCap)
 		return map[string]int{"books_evicted": n}, err
@@ -190,6 +206,7 @@ func (a *App) Start(ctx context.Context) {
 	a.Jobs.Every(ctx, library.JobPurgeTrash, 24*time.Hour, nil)
 	a.Jobs.Every(ctx, library.JobPurgeRemoved, 24*time.Hour, nil)
 	a.Jobs.At(ctx, library.JobFindDuplicates, jobs.WeeklyAt(time.Saturday, 4))
+	a.Jobs.Every(ctx, JobUpdateCheck, 24*time.Hour, nil)
 	if err := a.Lib.Watch(ctx, a.TriggerScan); err != nil {
 		a.log.Warn("library watcher unavailable; relying on periodic rescans", "err", err)
 	}
