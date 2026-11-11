@@ -7,6 +7,7 @@
   import Backups from "./Backups.svelte";
   import BookAdmin from "./BookAdmin.svelte";
   import Dashboard from "./Dashboard.svelte";
+  import Duplicates from "./Duplicates.svelte";
   import Groups from "./Groups.svelte";
   import Inbox from "./Inbox.svelte";
   import InstanceSettings from "./InstanceSettings.svelte";
@@ -36,6 +37,8 @@
   <MasterLibrary />
 {:else if book}
   {#key book.id}<BookAdmin id={book.id!} />{/key}
+{:else if match("/admin/duplicates", route.path)}
+  <Duplicates />
 {:else if match("/admin/trash", route.path)}
   <Trash />
 {:else if match("/admin/audit", route.path)}

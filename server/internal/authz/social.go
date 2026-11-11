@@ -82,3 +82,16 @@ func EditBookMetadata(s Subject, uploader bool) bool {
 func SeeHiddenReviews(s Subject, author bool) bool {
 	return author || Allowed(s, Admin)
 }
+
+// UseBookTools decides who may use the book tools (brief §6.13: chapter
+// editor, merge to m4b, cover picker): admins on any book, uploaders on their
+// own uploads when they may edit metadata.
+func UseBookTools(s Subject, uploader bool) bool {
+	return EditBookMetadata(s, uploader)
+}
+
+// MergeAsNewBook decides whether a merge may keep the original and add the
+// m4b as a new book, which is an upload too.
+func MergeAsNewBook(s Subject, uploader bool) bool {
+	return UseBookTools(s, uploader) && Allowed(s, Upload)
+}

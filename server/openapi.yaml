@@ -2460,6 +2460,202 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  # ───────────────────────────── Book tools (brief §6.13) ─────────────
+  /books/{bookId}/chapters:
+    put:
+      tags: [library]
+      operationId: setBookChapters
+      summary: Replace a book's chapters (book tools; editors only)
+      description: |
+        Each chapter is given by its start; it ends where the next one starts, and
+        the last at the end of the book. The chapters are saved at once and kept
+        across re-scans. For a book that is one m4b/m4a file they are also
+        written into the file (a remux, no re-encode) by the returned job.
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChaptersUpdate" }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChaptersSaved" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /books/{bookId}/chapters/detect:
+    post:
+      tags: [library]
+      operationId: detectBookChapters
+      summary: Propose chapters from silences in the audio (book tools; editors only)
+      description: |
+        Runs `ffmpeg silencedetect` over the book as a job. The job's result is
+        `{"chapters": [Chapter…]}`, a proposal: nothing changes until it is saved
+        with `PUT /books/{bookId}/chapters`.
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SilenceDetect" }
+      responses:
+        "202":
+          description: Queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/JobRef" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /books/{bookId}/merge:
+    post:
+      tags: [library]
+      operationId: mergeBookToM4b
+      summary: Merge a book's files into one chaptered m4b (book tools; editors only)
+      description: |
+        Concatenates the files in order into one m4b with the book's chapters,
+        tags and cover. The audio is copied when every file has the same format,
+        and converted to AAC otherwise or when `reencode` is set. With
+        `keep_original` the m4b becomes a new book (also needs upload
+        permission) and the original stays; otherwise it replaces the files.
+        The job's result is `{"book_id": …}`.
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MergeRequest" }
+      responses:
+        "202":
+          description: Queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/JobRef" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Already a single m4b, or another tool is running on this book
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /books/{bookId}/cover/upload:
+    post:
+      tags: [library]
+      operationId: uploadBookCover
+      summary: Use an uploaded image as the cover (book tools; editors only)
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      requestBody:
+        required: true
+        description: A JPEG or PNG image, up to 10 MB
+        content:
+          image/*:
+            schema: { type: string, format: binary }
+      responses:
+        "204": { description: Cover saved }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413":
+          description: The image is larger than 10 MB
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /books/{bookId}/cover/embedded:
+    post:
+      tags: [library]
+      operationId: extractBookCover
+      summary: Use the cover embedded in the book's audio (book tools; editors only)
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "204": { description: Cover saved }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: The audio has no embedded cover
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /admin/duplicates:
+    get:
+      tags: [admin]
+      operationId: listDuplicates
+      summary: Books that look like duplicates, for review (brief §6.13)
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Open duplicate pairs, exact matches first
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DuplicatePage" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/duplicates/scan:
+    post:
+      tags: [admin]
+      operationId: scanDuplicates
+      summary: Look for duplicates now (also runs weekly)
+      description: |
+        Exact matches have the same whole-book checksum. Probable matches have the
+        same normalized title and author and durations within 2 %. Pairs already
+        decided are not raised again.
+      responses:
+        "202":
+          description: Queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/JobRef" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/duplicates/{duplicateId}:
+    post:
+      tags: [admin]
+      operationId: resolveDuplicate
+      summary: Keep both books, or merge them into one
+      description: |
+        `keep` closes the pair. `merge` keeps `keep_book_id` and moves the other
+        book to the Trash; first its place in user libraries, groups, collections,
+        progress, bookmarks and reviews moves to the kept book (where the kept book
+        doesn't already have them).
+      parameters:
+        - name: duplicateId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DuplicateResolve" }
+      responses:
+        "204": { description: Done }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /admin/metadata-review:
     get:
       tags: [admin]
@@ -4189,6 +4385,79 @@ components:
         asin: { type: string }
         genres: { type: array, items: { type: string } }
         cover_url: { type: string }
+
+    # ── book tools ──
+    ChaptersUpdate:
+      type: object
+      required: [chapters]
+      properties:
+        chapters:
+          type: array
+          minItems: 1
+          maxItems: 2000
+          items:
+            type: object
+            required: [title, start_ms]
+            properties:
+              title: { type: string, minLength: 1, maxLength: 200 }
+              start_ms: { type: integer, format: int64, minimum: 0 }
+
+    ChaptersSaved:
+      type: object
+      required: [chapters]
+      properties:
+        chapters: { type: array, items: { $ref: "#/components/schemas/Chapter" } }
+        job_id:
+          type: string
+          format: uuid
+          description: Writing the chapters into the m4b file (single-file m4b/m4a books only)
+
+    SilenceDetect:
+      type: object
+      properties:
+        noise_db:
+          type: number
+          minimum: -80
+          maximum: -10
+          default: -35
+          description: Anything quieter than this counts as silence (dBFS)
+        min_silence_ms:
+          type: integer
+          minimum: 300
+          maximum: 10000
+          default: 2000
+          description: How long a silence must last to start a new chapter
+
+    MergeRequest:
+      type: object
+      properties:
+        reencode: { type: boolean, default: false, description: "Convert to AAC even when the audio could be copied" }
+        keep_original: { type: boolean, default: false, description: "Add the m4b as a new book instead of replacing the files" }
+
+    DuplicateCandidate:
+      type: object
+      required: [id, kind, book_a, book_b, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [exact, probable] }
+        score: { type: number, description: "Probable matches: how close the durations are (1 = identical)" }
+        book_a: { $ref: "#/components/schemas/MasterBook" }
+        book_b: { $ref: "#/components/schemas/MasterBook" }
+        created_at: { type: string, format: date-time }
+
+    DuplicatePage:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/DuplicateCandidate" } }
+        next_cursor: { type: string, description: "Absent on the last page" }
+
+    DuplicateResolve:
+      type: object
+      required: [action]
+      properties:
+        action: { type: string, enum: [keep, merge] }
+        keep_book_id: { type: string, format: uuid, description: "Required for merge: the book to keep (one of the pair)" }
 
     CoverFromUrl:
       type: object

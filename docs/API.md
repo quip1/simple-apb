@@ -71,6 +71,11 @@ REST API for Simple APB. All endpoints live under `/api/v1`.
 | PUT | `/books/{bookId}/cover` | Use a cover image from a metadata provider (same permission as editing) | yes | 204, 400, 401, 403, 404, 502 |
 | GET | `/books/{bookId}/metadata/candidates` | Look a book up with the metadata providers, best match first (editors only) | yes | 200, 401, 403, 404, 502 |
 | POST | `/books/{bookId}/metadata/refresh` | Run the metadata pipeline for a book again (editors only) | yes | 202, 401, 403, 404 |
+| PUT | `/books/{bookId}/chapters` | Replace a book's chapters (book tools; editors only) | yes | 200, 400, 401, 403, 404 |
+| POST | `/books/{bookId}/chapters/detect` | Propose chapters from silences in the audio (book tools; editors only) | yes | 202, 400, 401, 403, 404 |
+| POST | `/books/{bookId}/merge` | Merge a book's files into one chaptered m4b (book tools; editors only) | yes | 202, 400, 401, 403, 404, 409 |
+| POST | `/books/{bookId}/cover/upload` | Use an uploaded image as the cover (book tools; editors only) | yes | 204, 400, 401, 403, 404, 413 |
+| POST | `/books/{bookId}/cover/embedded` | Use the cover embedded in the book's audio (book tools; editors only) | yes | 204, 401, 403, 404, 422 |
 
 ### progress
 
@@ -195,6 +200,9 @@ REST API for Simple APB. All endpoints live under `/api/v1`.
 | POST | `/admin/reports/{reportId}/resolve` | Close a report, and every other open report about the same thing | yes | 204, 400, 401, 403, 404, 409 |
 | POST | `/admin/reviews/{reviewId}/hide` | Hide a review from everyone but its author (a reason is required) | yes | 204, 400, 401, 403, 404 |
 | DELETE | `/admin/reviews/{reviewId}/hide` | Show a hidden review again | yes | 204, 401, 403, 404 |
+| GET | `/admin/duplicates` | Books that look like duplicates, for review (brief §6.13) | yes | 200, 401, 403 |
+| POST | `/admin/duplicates/scan` | Look for duplicates now (also runs weekly) | yes | 202, 401, 403 |
+| POST | `/admin/duplicates/{duplicateId}` | Keep both books, or merge them into one | yes | 204, 400, 401, 403, 404 |
 | GET | `/admin/metadata-review` | Books whose online match was too uncertain to apply ("needs review"), oldest first | yes | 200, 400, 401, 403 |
 | POST | `/admin/metadata-review/{bookId}/dismiss` | Keep a book's metadata as it is and clear "needs review" | yes | 204, 401, 403, 404 |
 
@@ -1633,6 +1641,58 @@ Enum: `title`, `subtitle`, `description`, `publisher`, `published_year`, `langua
 | `asin` | string |  |  |
 | `genres` | array of string | yes |  |
 | `cover_url` | string |  |  |
+
+### ChaptersUpdate
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `chapters` | array of object | yes |  |
+
+### ChaptersSaved
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `chapters` | array of `Chapter` | yes |  |
+| `job_id` | string (uuid) |  | Writing the chapters into the m4b file (single-file m4b/m4a books only) |
+
+### SilenceDetect
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `noise_db` | number |  | Anything quieter than this counts as silence (dBFS) |
+| `min_silence_ms` | integer |  | How long a silence must last to start a new chapter |
+
+### MergeRequest
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `reencode` | boolean |  | Convert to AAC even when the audio could be copied |
+| `keep_original` | boolean |  | Add the m4b as a new book instead of replacing the files |
+
+### DuplicateCandidate
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | yes |  |
+| `kind` | string: exact \| probable | yes |  |
+| `score` | number |  | Probable matches: how close the durations are (1 = identical) |
+| `book_a` | `MasterBook` | yes |  |
+| `book_b` | `MasterBook` | yes |  |
+| `created_at` | string (date-time) | yes |  |
+
+### DuplicatePage
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `items` | array of `DuplicateCandidate` | yes |  |
+| `next_cursor` | string |  | Absent on the last page |
+
+### DuplicateResolve
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `action` | string: keep \| merge | yes |  |
+| `keep_book_id` | string (uuid) |  | Required for merge: the book to keep (one of the pair) |
 
 ### CoverFromUrl
 

@@ -17,6 +17,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/quip1/simple-apb/server/internal/config"
 	"github.com/quip1/simple-apb/server/internal/media"
@@ -25,6 +26,8 @@ import (
 
 // Library wires the master-store services.
 type Library struct {
+	// ops serializes scans and the book tools' file changes (tools.go).
+	ops   sync.Mutex
 	DB    *store.DB
 	Tools media.Tools
 	Paths config.Paths

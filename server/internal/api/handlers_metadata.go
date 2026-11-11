@@ -210,7 +210,10 @@ func (s *Server) bookEditState(ctx context.Context, p *auth.Principal, b *store.
 	}
 	locked := make([]MetadataField, 0, len(st.Locked))
 	for _, f := range st.Locked {
-		locked = append(locked, MetadataField(f))
+		// Metadata fields only: the book tools' "chapters" lock isn't one.
+		if slices.Contains(store.MetaFields, f) {
+			locked = append(locked, MetadataField(f))
+		}
 	}
 	d.LockedFields, d.NeedsReview = &locked, &st.NeedsReview
 	return nil

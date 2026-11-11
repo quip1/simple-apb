@@ -152,6 +152,7 @@ func (a *App) registerJobs() {
 		}
 		return res, err
 	})
+	a.registerToolJobs()
 	a.Jobs.Handle(JobHLSPrune, func(_ context.Context, _ *jobs.Job) (any, error) {
 		n, err := a.HLS.Prune(a.hlsCap)
 		return map[string]int{"books_evicted": n}, err
@@ -188,6 +189,7 @@ func (a *App) Start(ctx context.Context) {
 	a.Jobs.Every(ctx, library.JobScan, time.Hour, nil)
 	a.Jobs.Every(ctx, library.JobPurgeTrash, 24*time.Hour, nil)
 	a.Jobs.Every(ctx, library.JobPurgeRemoved, 24*time.Hour, nil)
+	a.Jobs.At(ctx, library.JobFindDuplicates, jobs.WeeklyAt(time.Saturday, 4))
 	if err := a.Lib.Watch(ctx, a.TriggerScan); err != nil {
 		a.log.Warn("library watcher unavailable; relying on periodic rescans", "err", err)
 	}

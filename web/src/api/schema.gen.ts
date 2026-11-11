@@ -1923,6 +1923,172 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/books/{bookId}/chapters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace a book's chapters (book tools; editors only)
+         * @description Each chapter is given by its start; it ends where the next one starts, and
+         *     the last at the end of the book. The chapters are saved at once and kept
+         *     across re-scans. For a book that is one m4b/m4a file they are also
+         *     written into the file (a remux, no re-encode) by the returned job.
+         */
+        put: operations["setBookChapters"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/books/{bookId}/chapters/detect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Propose chapters from silences in the audio (book tools; editors only)
+         * @description Runs `ffmpeg silencedetect` over the book as a job. The job's result is
+         *     `{"chapters": [Chapter…]}`, a proposal: nothing changes until it is saved
+         *     with `PUT /books/{bookId}/chapters`.
+         */
+        post: operations["detectBookChapters"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/books/{bookId}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge a book's files into one chaptered m4b (book tools; editors only)
+         * @description Concatenates the files in order into one m4b with the book's chapters,
+         *     tags and cover. The audio is copied when every file has the same format,
+         *     and converted to AAC otherwise or when `reencode` is set. With
+         *     `keep_original` the m4b becomes a new book (also needs upload
+         *     permission) and the original stays; otherwise it replaces the files.
+         *     The job's result is `{"book_id": …}`.
+         */
+        post: operations["mergeBookToM4b"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/books/{bookId}/cover/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Use an uploaded image as the cover (book tools; editors only) */
+        post: operations["uploadBookCover"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/books/{bookId}/cover/embedded": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Use the cover embedded in the book's audio (book tools; editors only) */
+        post: operations["extractBookCover"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/duplicates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Books that look like duplicates, for review (brief §6.13) */
+        get: operations["listDuplicates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/duplicates/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Look for duplicates now (also runs weekly)
+         * @description Exact matches have the same whole-book checksum. Probable matches have the
+         *     same normalized title and author and durations within 2 %. Pairs already
+         *     decided are not raised again.
+         */
+        post: operations["scanDuplicates"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/duplicates/{duplicateId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Keep both books, or merge them into one
+         * @description `keep` closes the pair. `merge` keeps `keep_book_id` and moves the other
+         *     book to the Trash; first its place in user libraries, groups, collections,
+         *     progress, bookmarks and reviews moves to the kept book (where the kept book
+         *     doesn't already have them).
+         */
+        post: operations["resolveDuplicate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/metadata-review": {
         parameters: {
             query?: never;
@@ -3320,6 +3486,71 @@ export interface components {
             asin?: string;
             genres: string[];
             cover_url?: string;
+        };
+        ChaptersUpdate: {
+            chapters: {
+                title: string;
+                /** Format: int64 */
+                start_ms: number;
+            }[];
+        };
+        ChaptersSaved: {
+            chapters: components["schemas"]["Chapter"][];
+            /**
+             * Format: uuid
+             * @description Writing the chapters into the m4b file (single-file m4b/m4a books only)
+             */
+            job_id?: string;
+        };
+        SilenceDetect: {
+            /**
+             * @description Anything quieter than this counts as silence (dBFS)
+             * @default -35
+             */
+            noise_db: number;
+            /**
+             * @description How long a silence must last to start a new chapter
+             * @default 2000
+             */
+            min_silence_ms: number;
+        };
+        MergeRequest: {
+            /**
+             * @description Convert to AAC even when the audio could be copied
+             * @default false
+             */
+            reencode: boolean;
+            /**
+             * @description Add the m4b as a new book instead of replacing the files
+             * @default false
+             */
+            keep_original: boolean;
+        };
+        DuplicateCandidate: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "exact" | "probable";
+            /** @description Probable matches: how close the durations are (1 = identical) */
+            score?: number;
+            book_a: components["schemas"]["MasterBook"];
+            book_b: components["schemas"]["MasterBook"];
+            /** Format: date-time */
+            created_at: string;
+        };
+        DuplicatePage: {
+            items: components["schemas"]["DuplicateCandidate"][];
+            /** @description Absent on the last page */
+            next_cursor?: string;
+        };
+        DuplicateResolve: {
+            /** @enum {string} */
+            action: "keep" | "merge";
+            /**
+             * Format: uuid
+             * @description Required for merge: the book to keep (one of the pair)
+             */
+            keep_book_id?: string;
         };
         CoverFromUrl: {
             url: string;
@@ -6768,6 +6999,251 @@ export interface operations {
                     "application/json": components["schemas"]["JobRef"];
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    setBookChapters: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChaptersUpdate"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChaptersSaved"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    detectBookChapters: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SilenceDetect"];
+            };
+        };
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRef"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    mergeBookToM4b: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeRequest"];
+            };
+        };
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRef"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Already a single m4b, or another tool is running on this book */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    uploadBookCover: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        /** @description A JPEG or PNG image, up to 10 MB */
+        requestBody: {
+            content: {
+                "image/*": string;
+            };
+        };
+        responses: {
+            /** @description Cover saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The image is larger than 10 MB */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    extractBookCover: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookId: components["parameters"]["BookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cover saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The audio has no embedded cover */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listDuplicates: {
+        parameters: {
+            query?: {
+                /** @description Opaque pagination cursor from `next_cursor` */
+                cursor?: components["parameters"]["Cursor"];
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Open duplicate pairs, exact matches first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DuplicatePage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    scanDuplicates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRef"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    resolveDuplicate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                duplicateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DuplicateResolve"];
+            };
+        };
+        responses: {
+            /** @description Done */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];

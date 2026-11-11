@@ -229,6 +229,7 @@
           {/if}
           {#if book.can_edit}
             <Button variant="secondary" onclick={() => (editOpen = true)}>{t("book.edit")}</Button>
+            <Button variant="secondary" onclick={() => navigate(`/books/${id}/tools`)}>{t("tools.open")}</Button>
           {/if}
           {#if canShare}
             <Button variant="secondary" onclick={() => (shareOpen = true)}>{t("book.share")}</Button>

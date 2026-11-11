@@ -1406,6 +1406,85 @@ reputation or a signing certificate (brief §10). CI builds the installer on eve
   and dropping a real folder from Explorer onto the window. The drop code was tested only through
   the zip writer.
 
+---
+
+## ADR-0048 — The book tools (Phase 5)
+
+Phase 5 is the book tools only, since casting and Wear OS were dropped (ADR-0046). They're in the
+web app, so they work in the Windows app too. The new API is in `openapi.yaml` (`/books/{id}/chapters`,
+`…/chapters/detect`, `…/merge`, `…/cover/upload`, `…/cover/embedded`, `/admin/duplicates…`).
+
+**Who may use them.** `authz.UseBookTools`: admins on any book, uploaders on their own books if
+they may edit metadata (the same rule as editing details, so the book page's `can_edit` covers
+it). Merging while keeping the original adds a new book, so `authz.MergeAsNewBook` also needs
+upload permission. The duplicate finder is admin-only. A "Book tools" page
+(`/books/{id}/tools`) holds the chapter editor, the merge and the cover picker. The duplicate
+review is a new section of the admin panel.
+
+**One lock for files.** Scans and the tools' file changes take the same library lock, so a scan
+never sees half a change. Every file change is a job that can run again after a crash and
+finish the same change.
+
+**Chapters** (the phase's acceptance test: edits survive a re-scan):
+- **Saving:** the list (title and start; each chapter ends where the next starts) is saved at
+  once, and the book is marked with a `chapters` lock in `locked_fields`. Until now that column
+  held only metadata fields, and a helper silently dropped any other name. It now keeps them.
+- **m4b and m4a books:** a job also writes the chapters into the file. It remuxes into a temp
+  file next to the original (no re-encode), fsyncs it, renames it over the original, then
+  records the new checksum, so the weekly scrub doesn't flag the change.
+- **mp3 books:** the files can't hold chapters. A re-scan keeps the locked chapters, fitted to
+  the book's new length.
+- **Previews** play ten seconds from a chapter start through a signed stream link, without
+  touching the user's progress.
+
+**Silence detection** runs `ffmpeg silencedetect` over each file as a job, with the threshold
+and minimum length the user sets. A chapter starts at every file and half a second before the
+end of each silence inside a file. Breaks less than 10 s apart are dropped. The result is only a
+proposal in the job's result: nothing changes until it's saved.
+
+**Merging into one m4b.** The files are concatenated in order, with the book's chapters, tags and
+cover, into a work folder in the cache.
+- **Audio:** copied as it is when every file has the same codec (AAC, MP3 or ALAC), sample rate
+  and channels, "keeping the codec when possible". Otherwise, or when the user asks, it's
+  converted to AAC at 64 kbit/s per channel.
+- **Replace (the default):** the m4b is copied crash-safely into the book's folder. A note
+  listing the old files is written, the database switches to the new file, and the old files
+  (and empty disc folders) are deleted. If the server stops in between, the job's re-run
+  finishes the deletion, and scans skip a folder while its note is there. Progress stays
+  valid: the timeline is the same concatenation.
+- **Keep the original:** the m4b becomes a new book in its own folder, with the same uploader
+  (and in their library). The duplicate finder will then list the pair.
+
+**Covers.** The picker offers three sources:
+- **The metadata providers**, through the existing candidates search.
+- **An uploaded image:** JPEG or PNG up to 10 MB, through the same checks as provider covers.
+- **The audio's embedded cover.**
+
+**Duplicates.**
+- **Finding them:** a weekly job (and a "look now" button). Exact pairs have the same whole-book
+  checksum. Probable pairs have the same normalized title (lower case, no punctuation, leading
+  article or "(Unabridged)"-style aside) and first author, and durations within 2 %. A pair
+  that was decided is never raised again.
+- **Keep both** closes the pair.
+- **Keep this one:** the other book's data moves to the kept book where the kept book doesn't
+  already have it: library entries, active distributions, collection places, reviews,
+  recommendations, bookmarks, listening history and upload records. When both books have
+  progress, the newer wins. The other book then goes to the Trash, where it can still be
+  restored for 30 days. Takedown and review-queue history stay with it.
+
+**Tests.** Go tests cover each piece:
+- The acceptance test: an m4b's edited chapters are in the file and come back from a forced
+  re-import even unlocked, and an mp3 book's edits survive a re-scan that adds a file.
+- A merge in place, with checksum, scan and scrub checks, and a re-run finishing a merge
+  interrupted after the database switch.
+- A merge that keeps the original, re-encoded.
+- Silence detection; the chapter, silence and duplicate rules.
+- Moving user data in a duplicate merge.
+- The whole API flow, including the permission rules and the cover upload.
+
+Also checked in a browser against the demo server: chapters written into an m4b, detection,
+merging as a new book, and the duplicate review.
+
 ## Open questions for Jacob
 
 | # | Question | Current choice (until answered) |

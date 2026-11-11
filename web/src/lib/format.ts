@@ -14,6 +14,16 @@ export function clock(ms: number): string {
   return `${h > 0 ? `${h}:` : ""}${mm}:${String(s).padStart(2, "0")}`;
 }
 
+/** "1:02:03", "2:03" or "45" (seconds) → milliseconds; null if it isn't a time. */
+export function parseClock(text: string): number | null {
+  const parts = text.trim().split(":");
+  if (!parts.length || parts.length > 3 || parts.some((p) => !/^\d+(\.\d+)?$/.test(p))) return null;
+  const nums = parts.map(Number);
+  if (nums.slice(1).some((n) => n >= 60)) return null;
+  const s = nums.reduce((acc, n) => acc * 60 + n, 0);
+  return Math.round(s * 1000);
+}
+
 /** "5 h 12 min" — a human duration. */
 export function duration(ms: number): string {
   const mins = Math.round(ms / 60000);

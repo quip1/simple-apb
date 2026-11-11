@@ -15,6 +15,7 @@
     { href: "/admin/groups", key: "admin.nav.groups" },
     { href: "/admin/tags", key: "admin.nav.tags" },
     { href: "/admin/library", key: "admin.nav.library" },
+    { href: "/admin/duplicates", key: "admin.nav.duplicates" },
     { href: "/admin/trash", key: "admin.nav.trash" },
     { href: "/admin/audit", key: "admin.nav.audit" },
     { href: "/admin/backups", key: "admin.nav.backups" },

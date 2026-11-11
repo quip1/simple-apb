@@ -155,7 +155,15 @@ func sortFields(fs []string) []string {
 			out = append(out, f)
 		}
 	}
-	return out
+	// Other locks (the book tools' "chapters") keep their place after them.
+	var rest []string
+	for _, f := range fs {
+		if !slices.Contains(MetaFields, f) && !slices.Contains(rest, f) {
+			rest = append(rest, f)
+		}
+	}
+	slices.Sort(rest)
+	return append(out, rest...)
 }
 
 // UnlockFields lets providers fill the given fields again.

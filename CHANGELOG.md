@@ -5,7 +5,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-**Current phase: 3 — Android phone app** (milestones 1–7 done: foundation, onboarding and sign-in; playback; screens and account settings; offline sync and downloads; audio effects, car mode, Android Auto and the widget; local folders, push, e-ink and accessibility; release signing and F-Droid checks. Next: Jacob's week of daily use and the Android Auto checklist. Plan in ADR-0039). Phase 2 is feature-complete and awaits Jacob's sign-off; Phase 1 accepted 2026-11-08.
+**Phases 4 (Windows app) and 5 (book tools) done; next is Phase 6.** Phase 3 — Android phone app (milestones 1–7 done: foundation, onboarding and sign-in; playback; screens and account settings; offline sync and downloads; audio effects, car mode, Android Auto and the widget; local folders, push, e-ink and accessibility; release signing and F-Droid checks. Next: Jacob's week of daily use and the Android Auto checklist. Plan in ADR-0039). Phase 2 is feature-complete and awaits Jacob's sign-off; Phase 1 accepted 2026-11-08.
+
+### Added (Phase 5)
+- Book tools (ADR-0048), for admins and for uploaders on their own books, on a new "Book tools" page:
+  - a chapter editor (rename, add, remove and move chapters; listen at a chapter) with chapters found from silences. Saved chapters survive re-scans, and m4b files get them written in (no re-encode).
+  - merging a book's files into one chaptered m4b, copying the audio when possible. It replaces the files, or keeps the original as a separate book.
+  - a cover picker: provider search, an uploaded image, or the cover embedded in the audio.
+- Admin: a duplicate review (Admin → Duplicates). Exact (same audio) and probable (same title and author, length within 2 %) pairs are found weekly or on demand. "Keep both", or keep one: the other's listeners, progress, bookmarks and reviews move to it and it goes to the Trash.
+
+### Fixed (Phase 5)
+- Unlocking a metadata field dropped any lock that wasn't a metadata field.
 
 ### Added (Phase 4)
 - Simple APB for Windows (ADR-0047): a Tauri app showing the web app, with no default server (the first screen asks for it). It signs in as a Windows device, with the tokens in Windows Credential Manager.

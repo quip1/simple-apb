@@ -55,6 +55,8 @@ type Probe struct {
 	Codec       string
 	BitrateKbps int
 	MimeType    string
+	SampleRate  int // Hz
+	Channels    int
 	Tags        map[string]string // lowercased keys
 	Chapters    []Chapter
 	HasCover    bool
@@ -83,6 +85,8 @@ type ffprobeOut struct {
 		CodecType   string            `json:"codec_type"`
 		CodecName   string            `json:"codec_name"`
 		BitRate     string            `json:"bit_rate"`
+		SampleRate  string            `json:"sample_rate"`
+		Channels    int               `json:"channels"`
 		Tags        map[string]string `json:"tags"`
 		Disposition map[string]int    `json:"disposition"`
 	} `json:"streams"`
@@ -127,6 +131,8 @@ func (t Tools) ProbeFile(ctx context.Context, path string) (*Probe, error) {
 				audio = true
 				p.Codec = s.CodecName
 				p.BitrateKbps = kbps(s.BitRate)
+				p.SampleRate, _ = strconv.Atoi(s.SampleRate)
+				p.Channels = s.Channels
 				for k, v := range s.Tags { // some files keep tags on the stream
 					if _, ok := p.Tags[strings.ToLower(k)]; !ok {
 						p.Tags[strings.ToLower(k)] = v

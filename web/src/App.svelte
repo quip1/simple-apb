@@ -19,6 +19,7 @@
   import Player from "./pages/Player.svelte";
   import Security from "./pages/Security.svelte";
   import Settings from "./pages/Settings.svelte";
+  import BookTools from "./pages/BookTools.svelte";
   import Stats from "./pages/Stats.svelte";
   import Uploads from "./pages/Uploads.svelte";
   import Setup from "./pages/Setup.svelte";
@@ -113,7 +114,7 @@
   });
 
   const params = $derived.by(() => {
-    for (const p of ["/books/:id", "/authors/:id", "/narrators/:id", "/series/:id"]) {
+    for (const p of ["/books/:id", "/books/:id/tools", "/authors/:id", "/narrators/:id", "/series/:id"]) {
       const m = match(p, route.path);
       if (m) return { pattern: p, id: m.id! };
     }
@@ -176,6 +177,8 @@
       {/if}
     {:else if params?.pattern === "/books/:id"}
       {#key params.id}<BookDetail id={params.id} />{/key}
+    {:else if params?.pattern === "/books/:id/tools"}
+      {#key params.id}<BookTools id={params.id} />{/key}
     {:else if params?.pattern === "/authors/:id"}
       <PersonPage kind="author" id={params.id} />
     {:else if params?.pattern === "/narrators/:id"}

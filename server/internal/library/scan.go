@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -31,6 +33,8 @@ const reasonMissing = "files missing from the library folder"
 
 // Scan reconciles the library folder with the master store.
 func (l *Library) Scan(ctx context.Context, now time.Time) (*ScanResult, error) {
+	l.ops.Lock()
+	defer l.ops.Unlock()
 	res := &ScanResult{}
 	cands, err := Detect(l.Root)
 	if err != nil {
@@ -47,6 +51,13 @@ func (l *Library) Scan(ctx context.Context, now time.Time) (*ScanResult, error) 
 			return res, ctx.Err()
 		}
 		kb := known[c.Rel]
+		// A merge being finished (tools.go): its old files are about to go.
+		if mergePending(filepath.Join(l.Root, filepath.FromSlash(folderOf(c.Rel)))) {
+			if kb != nil {
+				seen[kb.FolderPath] = true
+			}
+			continue
+		}
 		if kb == nil {
 			if parent := knownAncestor(known, c.Rel); parent != nil {
 				seen[parent.FolderPath] = true
@@ -163,8 +174,15 @@ func (l *Library) reimport(ctx context.Context, id string, c Candidate) error {
 	if a.Problem != nil {
 		return a.Problem
 	}
+	// Chapters edited by hand stay (fitted to the new length); others come from the files.
+	chapters := a.Book.Chapters
+	if locked, err := store.LockedFields(ctx, l.DB, id); err == nil && slices.Contains(locked, store.LockedChapters) {
+		if kept, err := store.GetChapters(ctx, l.DB, id); err == nil && len(kept) > 0 {
+			chapters = clampChapters(kept, a.Book.DurationMS)
+		}
+	}
 	return l.DB.InTx(ctx, func(tx *store.Tx) error {
-		if err := store.ReplaceBookMedia(ctx, tx, id, a.Book.Files, a.Book.Chapters); err != nil {
+		if err := store.ReplaceBookMedia(ctx, tx, id, a.Book.Files, chapters); err != nil {
 			return err
 		}
 		if err := store.UpdateBookTotals(ctx, tx, id, a.Book.DurationMS, a.Book.SizeBytes, a.Book.Checksum); err != nil {
@@ -175,4 +193,12 @@ func (l *Library) reimport(ctx context.Context, id string, c Candidate) error {
 		}
 		return store.Audit(ctx, tx, store.AuditEntry{Action: "book.rescan_update", ObjectType: "book", ObjectID: id})
 	})
+}
+
+// folderOf is a candidate's folder: itself, or the folder of a single file.
+func folderOf(rel string) string {
+	if IsAudio(rel) {
+		return path.Dir(rel)
+	}
+	return rel
 }
