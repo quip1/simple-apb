@@ -37,7 +37,7 @@ import org.simpleapb.core.data.net.ApiFailure
 import org.simpleapb.core.data.sync.LocalLibrary
 import org.simpleapb.core.data.sync.SyncEngine
 
-enum class LibraryView { BOOKS, DOWNLOADED, SERIES, AUTHORS, NARRATORS, GENRES, COLLECTIONS }
+enum class LibraryView { BOOKS, DOWNLOADED, LOCAL, SERIES, AUTHORS, NARRATORS, GENRES, COLLECTIONS }
 
 data class LibraryState(
     val view: LibraryView = LibraryView.BOOKS,
@@ -106,6 +106,10 @@ constructor(
         when (_state.value.view) {
             LibraryView.BOOKS -> fetchBooks(null, append = false, page = 1, cursors = listOf(null))
             LibraryView.DOWNLOADED -> loadDownloaded()
+            // Books in folders on this device come straight from the scan.
+            LibraryView.LOCAL -> _state.update {
+                it.copy(books = emptyList(), nextCursor = null, loading = false, loaded = true, error = null, offline = false)
+            }
             LibraryView.COLLECTIONS -> loadCollections()
             else -> loadFacets()
         }

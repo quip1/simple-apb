@@ -62,6 +62,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.simpleapb.api.endpoints.LibraryApi.ShelfListLibrary
 import org.simpleapb.api.endpoints.LibraryApi.SortListLibrary
 import org.simpleapb.api.model.LibraryFacet
+import org.simpleapb.app.local.LocalBookCard
+import org.simpleapb.app.local.LocalBookRow
+import org.simpleapb.app.local.LocalViewModel
 import org.simpleapb.app.ui.BookCard
 import org.simpleapb.app.ui.BookRow
 import org.simpleapb.app.ui.ChoicePicker
@@ -86,6 +89,7 @@ private fun viewLabel(v: LibraryView) = stringResource(
     when (v) {
         LibraryView.BOOKS -> UiR.string.library_view_books
         LibraryView.DOWNLOADED -> UiR.string.app_library_view_downloaded
+        LibraryView.LOCAL -> UiR.string.app_local_title
         LibraryView.SERIES -> UiR.string.library_view_series
         LibraryView.AUTHORS -> UiR.string.library_view_authors
         LibraryView.NARRATORS -> UiR.string.library_view_narrators
@@ -129,9 +133,13 @@ fun LibraryScreen(
     startTag: String?,
     startTagName: String?,
     onBook: (String) -> Unit,
-    onPerson: (PersonKind, String) -> Unit
+    onPerson: (PersonKind, String) -> Unit,
+    onLocalBook: (String) -> Unit
 ) {
     val vm: LibraryViewModel = hiltViewModel()
+    val local: LocalViewModel = hiltViewModel()
+    val localBooks by local.books.collectAsStateWithLifecycle()
+    val localProgress by local.progress.collectAsStateWithLifecycle()
     val s by vm.state.collectAsStateWithLifecycle()
     val list by vm.listLayout.collectAsStateWithLifecycle()
     val eink = LocalEink.current
@@ -152,7 +160,18 @@ fun LibraryScreen(
     // E-ink: a new page starts at the top, without animation.
     LaunchedEffect(s.page, s.facetPage) { if (eink) grid.scrollToItem(0) }
 
-    val books = s.view == LibraryView.BOOKS || s.view == LibraryView.DOWNLOADED
+    val books = s.view == LibraryView.BOOKS || s.view == LibraryView.DOWNLOADED || s.view == LibraryView.LOCAL
+    // The merged library (brief §7.4): books on this device lead the first page of "All", and have a view of their own.
+    val q = s.query.trim()
+    val mergeLocal =
+        s.view == LibraryView.LOCAL ||
+            (s.view == LibraryView.BOOKS && s.tag == null && s.collectionId == null && s.shelf == ShelfListLibrary.ALL && s.page == 1)
+    val localShown =
+        if (!mergeLocal) {
+            emptyList()
+        } else {
+            localBooks.filter { b -> q.isEmpty() || b.title.contains(q, ignoreCase = true) || b.row.author?.contains(q, ignoreCase = true) == true }
+        }
     LazyVerticalGrid(
         columns = if (books && !list) GridCells.Adaptive(100.dp) else GridCells.Fixed(1),
         state = grid,
@@ -218,8 +237,8 @@ fun LibraryScreen(
         }
 
         when (s.view) {
-            LibraryView.BOOKS, LibraryView.DOWNLOADED -> {
-                if (s.loaded && s.books.isEmpty() && !s.loading) {
+            LibraryView.BOOKS, LibraryView.DOWNLOADED, LibraryView.LOCAL -> {
+                if (s.loaded && s.books.isEmpty() && localShown.isEmpty() && !s.loading) {
                     full("empty") {
                         Text(
                             if (s.query.isNotBlank()) {
@@ -235,6 +254,12 @@ fun LibraryScreen(
                     }
                 }
                 if (list) {
+                    items(localShown, key = { it.id }) { b ->
+                        Column {
+                            LocalBookRow(b, localProgress[b.id] ?: 0) { onLocalBook(b.id) }
+                            HorizontalDivider()
+                        }
+                    }
                     items(s.books, key = { it.id }) { b ->
                         Column {
                             BookRow(b, account.serverUrl) { onBook(b.id.toString()) }
@@ -242,6 +267,7 @@ fun LibraryScreen(
                         }
                     }
                 } else {
+                    items(localShown, key = { it.id }) { b -> LocalBookCard(b, localProgress[b.id] ?: 0, { onLocalBook(b.id) }) }
                     items(s.books, key = {
                         it.id
                     }) { b -> BookCard(b, account.serverUrl, { onBook(b.id.toString()) }) }

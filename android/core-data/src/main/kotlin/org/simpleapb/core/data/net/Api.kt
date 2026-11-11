@@ -25,6 +25,7 @@ import org.simpleapb.api.endpoints.MeApi
 import org.simpleapb.api.endpoints.MediaApi
 import org.simpleapb.api.endpoints.ProgressApi
 import org.simpleapb.api.endpoints.SocialApi
+import org.simpleapb.api.endpoints.UploadsApi
 import org.simpleapb.api.infrastructure.ApiClient
 import org.simpleapb.core.data.account.Account
 import org.simpleapb.core.data.account.AccountStore
@@ -42,6 +43,7 @@ class Api(client: ApiClient) {
     val progress: ProgressApi = client.createService(ProgressApi::class.java)
     val media: MediaApi = client.createService(MediaApi::class.java)
     val social: SocialApi = client.createService(SocialApi::class.java)
+    val uploads: UploadsApi = client.createService(UploadsApi::class.java)
 }
 
 /** Something about a session the UI must react to. */

@@ -53,6 +53,7 @@ import kotlinx.coroutines.guava.future
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.simpleapb.core.data.auth.Outcome
+import org.simpleapb.core.data.local.LocalFolders
 import org.simpleapb.core.data.net.AccountCalls
 import org.simpleapb.core.data.net.ApiFailure
 import org.simpleapb.core.data.net.AppScope
@@ -431,9 +432,16 @@ class PlaybackService :
     // ── loading a book ──
 
     private suspend fun resolve(bookId: String, accountId: String?, startMs: Long? = null): MediaSession.MediaItemsWithStartPosition {
-        val account = accountId?.let { repo.account(it) } ?: repo.activeAccount() ?: throw LoadFailed(ApiFailure("signed_out", "", 401))
+        // A book from a folder on this device needs no account.
+        val local = LocalFolders.isLocal(bookId)
+        val account = if (local) {
+            null
+        } else {
+            accountId?.let { repo.account(it) } ?: repo.activeAccount()
+                ?: throw LoadFailed(ApiFailure("signed_out", "", 401))
+        }
         val b =
-            when (val r = repo.load(account, bookId)) {
+            when (val r = if (account == null) repo.loadLocal(bookId) else repo.load(account, bookId)) {
                 // A chapter or bookmark picked on the book's page starts there.
                 is Outcome.Ok -> if (startMs != null) r.value.copy(startMs = startMs.coerceIn(0, r.value.timeline.durationMs)) else r.value
                 is Outcome.Failed -> {
@@ -451,7 +459,7 @@ class PlaybackService :
         lastSentMs = b.startMs
         lastReportAt = SystemClock.elapsedRealtime()
         exo.setPlaybackSpeed(b.speed)
-        store.setLastBook(account.id, b.id)
+        store.setLastBook(account?.id ?: PlaybackRepository.LOCAL_ACCOUNT, b.id)
         val p = b.timeline.locate(b.startMs)
         return MediaSession.MediaItemsWithStartPosition(repo.mediaItems(b), p.index, p.localMs)
     }

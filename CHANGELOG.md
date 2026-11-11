@@ -5,7 +5,7 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-**Current phase: 3 — Android phone app** (milestones 1–5 done: foundation, onboarding and sign-in; playback; screens and account settings; offline sync and downloads; audio effects, car mode, Android Auto and the widget. Plan in ADR-0039). Phase 2 is feature-complete and awaits Jacob's sign-off; Phase 1 accepted 2026-11-08.
+**Current phase: 3 — Android phone app** (milestones 1–6 done: foundation, onboarding and sign-in; playback; screens and account settings; offline sync and downloads; audio effects, car mode, Android Auto and the widget; local folders, push, e-ink and accessibility. Plan in ADR-0039). Phase 2 is feature-complete and awaits Jacob's sign-off; Phase 1 accepted 2026-11-08.
 
 ### Added (Phase 3)
 - Android app foundation (milestone 1, ADR-0039): Gradle wrapper and current AndroidX/Compose/Media3/Room/Hilt versions, modules `core-ui`, `core-data` and `app` with `play`, `github` and `fdroid` flavors; the Fern dark and e-ink themes; strings generated from the shared `i18n` catalog; the Open book adaptive launcher icon.
@@ -26,6 +26,11 @@ All notable changes to this project are documented here. The format follows
 - Audio effects (milestone 5, ADR-0043): volume boost up to +12 dB with a limiter, voice clarity, mono and balance, in the player's own audio pipeline, from an "Audio" panel on the player.
 - Car mode: five large buttons, the chapter and the time left in it, the screen kept on. It opens from the player, or by itself when a car's Bluetooth connects (optional).
 - Android Auto: browse Continue listening, Recently added, Downloaded, Collections, Series and Authors (with covers and progress); search and "play <title>" by voice; skip and chapter-skip buttons in the car.
+- Folders on this device (milestone 6, ADR-0044): pick folders with the system picker. Each subfolder (or loose audio file) is a book, with its tags and cover. Books on this device play from their files and sit in the library with an "On this device" badge, view and Home shelf. "Upload to <server>" sends one with the resumable tus protocol (a folder of mp3s as one zip) and follows its import.
+- "Just play files on this device" in onboarding: the app without a server, for books on the device. A server can be connected later.
+- Push notifications through UnifiedPush (ntfy or another distributor), one endpoint per account: new books, uploads, and admin events. Without a distributor the app syncs live while open and every 15 minutes, and tells about new books itself. Settings → Notifications explains which is in use.
+- Scan a QR code for the server address (the web app's Settings shows it under "Connect the Android app"); Home shows the server and switches between accounts.
+- E-ink and accessibility pass: dialogs don't dim the page grey on e-ink, a "Refresh the screen" button clears ghosting, outlined car-mode buttons, no buffering spinner. Every screen's controls are labelled for TalkBack. At 200 % text the tabs show icons only, shelf cards widen and car-mode labels wrap between words.
 - A Now playing home-screen widget (2×2, stretching to 4×2): cover, title, chapter progress, back, play/pause and forward; play resumes the last book; black on white in the e-ink theme.
 
 ### Fixed (Phase 3)
@@ -34,6 +39,8 @@ All notable changes to this project are documented here. The format follows
 - Android strings: ICU `{x, number}` arguments are converted (the speed label showed raw ICU text).
 - Android: an e-ink screen no longer flashes the dark theme while the app starts.
 - Android strings without arguments showed a literal "%%" where the text has a percent sign.
+- Server: a zip of loose mp3s imported its files in name order ("Part 1, Part 10, Part 2"); they now play in natural order.
+- Android: signing out left that account's book in the mini player.
 - Postgres backups of an instance kept in its own schema (`search_path` in the DSN) dump that schema only. This also fixes a flaky backup test, which dumped other tests' throwaway schemas while they were being dropped.
 
 ### Added (Phase 2)

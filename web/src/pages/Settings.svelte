@@ -14,6 +14,7 @@
   import { link, navigate } from "../lib/router.svelte";
   import { session } from "../lib/session.svelte";
   import { setTheme, themeState, type Theme } from "../lib/theme.svelte";
+  import QRCode from "qrcode";
 
   const SKIPS = [5, 10, 15, 30, 45, 60];
   const QUALITIES: Quality[] = ["auto", "original", "medium", "low"];
@@ -54,6 +55,13 @@
     prefs[key] = value;
     savePrefs();
   }
+
+  // A QR code of this server's address, for the Android app's "Scan a QR code" (brief §7.4).
+  const serverUrl = location.origin;
+  let appQr = $state("");
+  $effect(() => {
+    void QRCode.toDataURL(serverUrl, { margin: 1, width: 200 }).then((u) => (appQr = u));
+  });
 
   let signingOut = $state(false);
   async function signOut() {
@@ -167,6 +175,12 @@
     </section>
   {/if}
 
+  <section class="card stack" aria-labelledby="s-app">
+    <h2 id="s-app">{t("settings.app_qr")}</h2>
+    {#if appQr}<img src={appQr} alt={t("settings.app_qr_alt")} width="200" height="200" class="qr" />{/if}
+    <p class="muted">{t("settings.app_qr_help", { url: serverUrl })}</p>
+  </section>
+
   <section class="card stack" aria-labelledby="s-account">
     <h2 id="s-account">{t("settings.account")}</h2>
     <p>{t("settings.signed_in_as", { name: session.me?.display_name ?? "", user: session.me?.username ?? "" })}</p>
@@ -178,6 +192,11 @@
 </div>
 
 <style>
+  .qr {
+    background: #fff;
+    padding: 8px;
+    align-self: flex-start;
+  }
   .settings {
     max-width: 40rem;
   }

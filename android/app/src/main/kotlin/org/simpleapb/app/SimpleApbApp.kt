@@ -11,6 +11,9 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.hilt.work.HiltWorkerFactory
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
 import coil3.ImageLoader
 import coil3.PlatformContext
@@ -24,13 +27,18 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import org.simpleapb.app.downloads.DownloadNotifier
+import org.simpleapb.app.push.PushManager
 import org.simpleapb.app.widget.WidgetUpdater
 import org.simpleapb.core.data.download.DownloadNotifications
+import org.simpleapb.core.data.local.LocalFolders
 import org.simpleapb.core.data.net.AccountCalls
 import org.simpleapb.core.data.net.AppInfo
+import org.simpleapb.core.data.net.AppScope
 import org.simpleapb.core.data.sync.LiveHints
 import org.simpleapb.core.data.sync.SyncEngine
 import org.simpleapb.core.ui.AppTheme
@@ -50,6 +58,13 @@ class SimpleApbApp :
 
     @Inject lateinit var widgets: WidgetUpdater
 
+    @Inject lateinit var push: PushManager
+
+    @Inject lateinit var folders: LocalFolders
+
+    @Inject @AppScope
+    lateinit var appScope: CoroutineScope
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workers).build()
 
@@ -59,6 +74,18 @@ class SimpleApbApp :
         sync.schedule()
         live.start()
         widgets.start(this)
+        push.start()
+        // Folders on this device: rescanned whenever the app comes to the front (at most once a minute).
+        folders.scanSoon()
+        ProcessLifecycleOwner.get().lifecycle.addObserver(
+            object : DefaultLifecycleObserver {
+                override fun onStart(owner: LifecycleOwner) {
+                    folders.scanSoon()
+                    push.refresh()
+                }
+            }
+        )
+        appScope.launch { folders.observe() }
     }
 
     /** Covers are fetched signed in, as the account whose server they come from. */
@@ -81,6 +108,15 @@ class UiSettings(private val store: DataStore<Preferences>) {
 
     suspend fun setTheme(theme: AppTheme) {
         store.edit { it[themeKey] = theme.name }
+    }
+
+    private val localKey = booleanPreferencesKey("local_mode")
+
+    /** The user chose to play files on this device without a server. */
+    val localMode: Flow<Boolean> = store.data.map { it[localKey] ?: false }
+
+    suspend fun setLocalMode(on: Boolean) {
+        store.edit { it[localKey] = on }
     }
 
     private val listKey = booleanPreferencesKey("library_list")

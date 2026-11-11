@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package org.simpleapb.app.player
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,9 +20,9 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
@@ -40,6 +42,8 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.Hyphens
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -48,9 +52,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.roundToInt
 import org.simpleapb.app.settings.quietTicks
+import org.simpleapb.app.ui.AppAlertDialog
 import org.simpleapb.app.ui.SwitchRow
 import org.simpleapb.app.ui.TouchTarget
 import org.simpleapb.core.player.EffectsConfig
+import org.simpleapb.core.ui.LocalEink
 import org.simpleapb.core.ui.R as UiR
 
 /**
@@ -141,11 +147,23 @@ private fun BigButton(icon: ImageVector, description: String, modifier: Modifier
     FilledTonalButton(
         onClick = onClick,
         shape = RoundedCornerShape(24.dp),
+        contentPadding = PaddingValues(8.dp),
+        // E-ink: the tonal fill is white, so an outline shows where each button is.
+        border = if (LocalEink.current) BorderStroke(2.dp, MaterialTheme.colorScheme.onSurface) else null,
         modifier = modifier.fillMaxSize().semantics { contentDescription = description }
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(icon, contentDescription = null, modifier = Modifier.size(iconSize))
-            if (label) Text(description, fontSize = 20.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            // Words wrap whole, also at 200 % text size.
+            if (label) {
+                Text(
+                    description,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    style = LocalTextStyle.current.copy(hyphens = Hyphens.None, lineBreak = LineBreak.Paragraph)
+                )
+            }
         }
     }
 }
@@ -153,7 +171,7 @@ private fun BigButton(icon: ImageVector, description: String, modifier: Modifier
 /** Boost, voice clarity, mono and balance (brief §7.2), changed live. */
 @Composable
 fun AudioDialog(cfg: EffectsConfig, onChange: (EffectsConfig) -> Unit, onClose: () -> Unit) {
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onClose,
         title = { Text(stringResource(UiR.string.app_audio_title)) },
         text = {

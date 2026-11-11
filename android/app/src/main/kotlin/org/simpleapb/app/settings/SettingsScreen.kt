@@ -85,7 +85,15 @@ constructor(private val session: MeSession, private val store: PlaybackStore, pr
 
 /** Settings (brief §7.4 screen 8). Theme and quality are per device; the rest follows the account. */
 @Composable
-fun SettingsScreen(account: Account, onPlayback: () -> Unit, onSecurity: () -> Unit, onAccounts: () -> Unit, onSignOut: () -> Unit) {
+fun SettingsScreen(
+    account: Account,
+    onPlayback: () -> Unit,
+    onSecurity: () -> Unit,
+    onAccounts: () -> Unit,
+    onSignOut: () -> Unit,
+    onFolders: () -> Unit,
+    onNotifications: () -> Unit
+) {
     val vm: SettingsViewModel = hiltViewModel()
     val me by vm.me.collectAsStateWithLifecycle()
     val loaded by vm.settings.collectAsStateWithLifecycle()
@@ -156,6 +164,12 @@ fun SettingsScreen(account: Account, onPlayback: () -> Unit, onSecurity: () -> U
         Section(stringResource(UiR.string.settings_playback)) {
             OutlinedButton(onClick = onPlayback, modifier = Modifier.fillMaxWidth().heightIn(min = TouchTarget)) {
                 Text(stringResource(UiR.string.app_settings_playback_title))
+            }
+            OutlinedButton(onClick = onFolders, modifier = Modifier.fillMaxWidth().heightIn(min = TouchTarget)) {
+                Text(stringResource(UiR.string.app_local_folders))
+            }
+            OutlinedButton(onClick = onNotifications, modifier = Modifier.fillMaxWidth().heightIn(min = TouchTarget)) {
+                Text(stringResource(UiR.string.app_push_title))
             }
             Text(stringResource(UiR.string.settings_quality), style = MaterialTheme.typography.labelLarge)
             RadioGroup(s.quality, Quality.entries, { qualityLabel(it) }) { q -> vm.update { it.copy(quality = q) } }

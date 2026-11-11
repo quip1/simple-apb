@@ -2,6 +2,7 @@
 package org.simpleapb.core.data.db
 
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
@@ -88,8 +89,54 @@ data class DownloadRow(
     val finishedAt: Long?
 )
 
+/**
+ * A book in a folder on this device (brief §7.4 screen 9). [id] is
+ * `local:` + a hash of the folder's document URI; [files] is JSON of
+ * [LocalFile]s in playing order.
+ */
+@Entity(tableName = "local_books")
+data class LocalBookRow(
+    @PrimaryKey val id: String,
+    val treeUri: String,
+    val folderUri: String,
+    val title: String,
+    val author: String?,
+    val durationMs: Long,
+    val sizeBytes: Long,
+    val files: String,
+    val coverPath: String?,
+    /** The folder's newest file time, to skip unchanged folders on a rescan. */
+    val modified: Long,
+    /** Upload to a server: the account, the tus URL while sending, and the state. */
+    val uploadAccountId: String? = null,
+    val uploadUrl: String? = null,
+    val uploadState: String? = null,
+    val uploadError: String? = null,
+    val uploadBookId: String? = null
+)
+
 @Dao
 interface MirrorDao {
+    // ── books in folders on this device ──
+    @Upsert suspend fun upsertLocalBooks(rows: List<LocalBookRow>)
+
+    @Query("SELECT * FROM local_books ORDER BY title COLLATE NOCASE")
+    fun localBooks(): Flow<List<LocalBookRow>>
+
+    @Query("SELECT * FROM local_books ORDER BY title COLLATE NOCASE")
+    suspend fun allLocalBooks(): List<LocalBookRow>
+
+    @Query("SELECT * FROM local_books WHERE id = :id")
+    suspend fun localBook(id: String): LocalBookRow?
+
+    @Query("DELETE FROM local_books WHERE id IN (:ids)")
+    suspend fun deleteLocalBooks(ids: List<String>)
+
+    @Query(
+        "UPDATE local_books SET uploadAccountId = :account, uploadUrl = :url, uploadState = :state, uploadError = :error, uploadBookId = :bookId WHERE id = :id"
+    )
+    suspend fun updateUpload(id: String, account: String?, url: String?, state: String?, error: String?, bookId: String?)
+
     // ── books ──
     @Upsert suspend fun upsertBooks(rows: List<BookRow>)
 
@@ -258,10 +305,12 @@ interface MirrorDao {
 @Database(
     entities = [
         BookRow::class, DetailRow::class, ProgressRow::class, BookmarkRow::class, CollectionRow::class,
-        OutboxRow::class, ConflictRow::class, SyncedRow::class, SyncStateRow::class, DownloadRow::class
+        OutboxRow::class, ConflictRow::class, SyncedRow::class, SyncStateRow::class, DownloadRow::class,
+        LocalBookRow::class
     ],
-    version = 1,
-    exportSchema = true
+    version = 2,
+    exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2)]
 )
 abstract class MirrorDb : RoomDatabase() {
     abstract fun dao(): MirrorDao

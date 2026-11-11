@@ -15,6 +15,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import okhttp3.OkHttpClient
@@ -234,5 +235,48 @@ class SyncEngineTest {
         val f = tmp.newFile("x.bin").apply { writeText("abc") }
         assertEquals("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", DownloadWorker.sha256(f))
         assertEquals("https://b.example/sub/ws", LiveHints.wsUrl("https://b.example/sub/"))
+    }
+
+    @Test
+    fun newBooksAreAnnouncedButNotOnASnapshot() = runBlocking {
+        // First sync is a snapshot: nothing is "new".
+        server.enqueue(
+            json(
+                """{"cursor":"c1","has_more":false,"full":true,"library":[${summary(
+                    book1,
+                    "One"
+                )}],"progress":[],"bookmarks":[],"collections":[],"tombstones":[]}"""
+            )
+        )
+        val first = async { withTimeoutOrNull(1_500) { engine.newBooks.first() } }
+        assertTrue(engine.sync(account))
+        assertNull(first.await())
+        // Later a book appears: it is announced, the known one isn't.
+        server.enqueue(
+            json(
+                """{"cursor":"c2","has_more":false,"library":[${summary(
+                    book1,
+                    "One"
+                )},${summary(book2, "Two")}],"progress":[],"bookmarks":[],"collections":[],"tombstones":[]}"""
+            )
+        )
+        val next = async { withTimeout(5_000) { engine.newBooks.first() } }
+        assertTrue(engine.sync(account))
+        assertEquals(listOf("Two"), next.await().second.map { it.title })
+    }
+
+    @Test
+    fun localFolderHelpers() {
+        val names = listOf("Part 10.mp3", "part 2.mp3", "Part 1.mp3", "Intro.mp3")
+        assertEquals(
+            listOf("Intro.mp3", "Part 1.mp3", "part 2.mp3", "Part 10.mp3"),
+            names.sortedWith(org.simpleapb.core.data.local.LocalFolders.NaturalOrder)
+        )
+        assertTrue(org.simpleapb.core.data.local.LocalFolders.isAudio("Book.M4B", ""))
+        assertTrue(org.simpleapb.core.data.local.LocalFolders.isAudio("x", "audio/mpeg"))
+        assertFalse(org.simpleapb.core.data.local.LocalFolders.isAudio("cover.jpg", "image/jpeg"))
+        val a = org.simpleapb.core.data.local.LocalFolders.idFor("content://tree/primary%3AAudiobooks/document/primary%3AAudiobooks%2FHome")
+        assertEquals(a, org.simpleapb.core.data.local.LocalFolders.idFor("content://tree/primary%3AAudiobooks/document/primary%3AAudiobooks%2FHome"))
+        assertTrue(a.startsWith("local:") && a.length == "local:".length + 24)
     }
 }

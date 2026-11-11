@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -38,6 +37,7 @@ import org.simpleapb.api.model.Collection
 import org.simpleapb.api.model.ReportCreate
 import org.simpleapb.api.model.ReportReason
 import org.simpleapb.api.model.UserRef
+import org.simpleapb.app.ui.AppAlertDialog
 import org.simpleapb.app.ui.RadioGroup
 import org.simpleapb.app.ui.SectionTitle
 import org.simpleapb.app.ui.TouchTarget
@@ -63,7 +63,7 @@ private fun CheckRow(label: String, checked: Boolean, onChange: (Boolean) -> Uni
 @Composable
 fun CollectionsDialog(bookId: UUID, collections: List<Collection>?, onToggle: (Collection) -> Unit, onCreate: (String) -> Unit, onClose: () -> Unit) {
     var name by rememberSaveable { mutableStateOf("") }
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onClose,
         title = { Text(stringResource(UiR.string.collections_add_title)) },
         text = {
@@ -107,7 +107,7 @@ fun RecommendDialog(title: String, s: BookState, onSearch: (String) -> Unit, onS
         onSearch(query)
     }
     val sent = s.recommended
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onClose,
         title = { Text(stringResource(UiR.string.recommend_title, title)) },
         text = {
@@ -213,7 +213,7 @@ fun ReportDialog(targets: List<ReportTarget>, onSend: (ReportCreate.ObjectType, 
     var target by remember { mutableStateOf(targets.first()) }
     var reason by rememberSaveable { mutableStateOf(ReportReason.OTHER) }
     var details by rememberSaveable { mutableStateOf("") }
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onClose,
         title = { Text(if (targets.size == 1) reportTitle(target) else stringResource(UiR.string.report_title)) },
         text = {

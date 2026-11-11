@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.simpleapb.api.infrastructure.Serializer
+import org.simpleapb.api.model.BookSummary
 import org.simpleapb.api.model.ProgressConflict
 import org.simpleapb.api.model.SyncDelta
 import org.simpleapb.api.model.Tombstone
@@ -72,6 +73,14 @@ constructor(
 
     /** A queued position write met a far-away position from another device. */
     val conflicts: SharedFlow<ConflictRow> = _conflicts
+
+    private val _newBooks = MutableSharedFlow<Pair<String, List<BookSummary>>>(extraBufferCapacity = 8)
+
+    /**
+     * Books that appeared in an account's library since the last sync (not
+     * on a first or full snapshot): the push fallback tells about them.
+     */
+    val newBooks: SharedFlow<Pair<String, List<BookSummary>>> = _newBooks
 
     @Volatile private var lastOwnWrite = 0L
 
@@ -164,15 +173,24 @@ constructor(
         var cursor = dao.syncState(account.id)?.cursor
         var changed = false
         var pages = 0
+        var snapshot = cursor == null
         while (pages++ < MAX_PAGES) {
             val res = api.progress.getSyncDelta(since = cursor, limit = PAGE)
             if (res.code() == 410) {
                 // The change log was pruned past our cursor: start over with a snapshot.
                 cursor = null
+                snapshot = true
                 continue
             }
             val d = res.body() ?: return res.code() < 500
-            if (d.full == true && pages == 1) dao.clearForSnapshot(account.id)
+            if (d.full == true && pages == 1) {
+                dao.clearForSnapshot(account.id)
+                snapshot = true
+            }
+            if (!snapshot) {
+                val fresh = d.library.filter { dao.book(account.id, it.id.toString()) == null }
+                if (fresh.isNotEmpty()) _newBooks.tryEmit(account.id to fresh)
+            }
             if (apply(account, d)) changed = true
             cursor = d.cursor
             dao.upsertSyncState(SyncStateRow(account.id, cursor, System.currentTimeMillis()))

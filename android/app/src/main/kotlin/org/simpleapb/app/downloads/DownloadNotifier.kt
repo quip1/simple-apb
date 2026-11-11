@@ -23,7 +23,13 @@ class DownloadNotifier(private val context: Context) : DownloadNotifications {
         )
     }
 
-    override fun foreground(title: String, percent: Int?): ForegroundInfo {
+    override fun foreground(title: String, percent: Int?): ForegroundInfo =
+        info(context.getString(UiR.string.app_downloads_notification, title), percent, android.R.drawable.stat_sys_download, ID)
+
+    override fun uploadForeground(title: String, percent: Int?): ForegroundInfo =
+        info(context.getString(UiR.string.app_local_upload_notification, title), percent, android.R.drawable.stat_sys_upload, UPLOAD_ID)
+
+    private fun info(text: String, percent: Int?, icon: Int, id: Int): ForegroundInfo {
         val open =
             PendingIntent.getActivity(
                 context,
@@ -34,8 +40,8 @@ class DownloadNotifier(private val context: Context) : DownloadNotifications {
         val n =
             NotificationCompat
                 .Builder(context, CHANNEL)
-                .setSmallIcon(android.R.drawable.stat_sys_download)
-                .setContentTitle(context.getString(UiR.string.app_downloads_notification, title))
+                .setSmallIcon(icon)
+                .setContentTitle(text)
                 .setProgress(100, percent ?: 0, percent == null)
                 .setOnlyAlertOnce(true)
                 .setOngoing(true)
@@ -43,14 +49,15 @@ class DownloadNotifier(private val context: Context) : DownloadNotifications {
                 .setContentIntent(open)
                 .build()
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ForegroundInfo(ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            ForegroundInfo(id, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
         } else {
-            ForegroundInfo(ID, n)
+            ForegroundInfo(id, n)
         }
     }
 
     private companion object {
         const val CHANNEL = "downloads"
         const val ID = 4201
+        const val UPLOAD_ID = 4202
     }
 }

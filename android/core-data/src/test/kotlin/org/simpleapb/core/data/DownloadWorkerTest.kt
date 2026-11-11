@@ -106,6 +106,8 @@ class DownloadWorkerTest {
         val notes =
             object : DownloadNotifications {
                 override fun foreground(title: String, percent: Int?) = ForegroundInfo(1, Notification())
+
+                override fun uploadForeground(title: String, percent: Int?) = ForegroundInfo(2, Notification())
             }
         val factory =
             object : WorkerFactory() {

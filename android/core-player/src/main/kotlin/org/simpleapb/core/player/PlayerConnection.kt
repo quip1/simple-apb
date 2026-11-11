@@ -154,6 +154,15 @@ constructor(
 
     fun pause() = with { it.pause() }
 
+    /** Unloads the book if it belongs to [accountId] (that account signed out). */
+    fun closeAccount(accountId: String) = with { c ->
+        if (state.book.value?.accountId != accountId) return@with
+        c.stop()
+        c.clearMediaItems()
+        state.book.value = null
+        state.conflict.value = null
+    }
+
     /** Plays the loaded book, or else the last one played on this device (car mode, the widget). */
     fun playOrResume() {
         scope.launch {

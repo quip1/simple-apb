@@ -31,6 +31,9 @@ import org.simpleapb.core.data.sync.LocalLibrary
 /** The app draws the download notification (its strings live in the shared catalog). */
 interface DownloadNotifications {
     fun foreground(title: String, percent: Int?): ForegroundInfo
+
+    /** The same for an upload of a book on this device. */
+    fun uploadForeground(title: String, percent: Int?): ForegroundInfo
 }
 
 /**

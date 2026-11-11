@@ -47,7 +47,6 @@ import androidx.compose.material.icons.filled.Replay5
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledIconButton
@@ -93,7 +92,9 @@ import coil3.compose.AsyncImage
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import org.simpleapb.app.settings.quietTicks
+import org.simpleapb.app.ui.AppAlertDialog
 import org.simpleapb.app.ui.Notice
+import org.simpleapb.app.ui.ScreenRefreshButton
 import org.simpleapb.app.ui.TouchTarget
 import org.simpleapb.app.ui.errorText
 import org.simpleapb.core.player.LoadedBook
@@ -131,8 +132,9 @@ fun PlayerScreen(vm: PlayerViewModel, onClose: () -> Unit, onCarMode: () -> Unit
             Text(
                 stringResource(UiR.string.player_now_playing),
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.semantics { heading() }
+                modifier = Modifier.weight(1f).semantics { heading() }
             )
+            ScreenRefreshButton()
         }
         if (b == null) {
             Text(stringResource(UiR.string.player_nothing_playing), modifier = Modifier.padding(top = 24.dp))
@@ -176,7 +178,7 @@ fun PlayerScreen(vm: PlayerViewModel, onClose: () -> Unit, onCarMode: () -> Unit
                 },
                 {
                     FilledIconButton(onClick = vm::togglePlay, modifier = Modifier.size(72.dp)) {
-                        if (ui.buffering && ui.playing) {
+                        if (ui.buffering && ui.playing && !LocalEink.current) {
                             CircularProgressIndicator(Modifier.size(32.dp), color = MaterialTheme.colorScheme.onPrimary)
                         }
                         Icon(
@@ -395,7 +397,7 @@ private fun SpeedDialog(speed: Float, onSpeed: (Float) -> Unit, onClose: () -> U
         value = Speed.clamp(s)
         onSpeed(value)
     }
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onClose,
         confirmButton = { TextButton(onClick = onClose) { Text(stringResource(UiR.string.common_done)) } },
         title = { Text(stringResource(UiR.string.player_speed)) },
@@ -452,7 +454,7 @@ private fun SpeedDialog(speed: Float, onSpeed: (Float) -> Unit, onClose: () -> U
 private fun SleepDialog(current: SleepTimer?, leftMs: Long?, lastMinutes: Int, onSet: (SleepChoice, Int) -> Unit, onClose: () -> Unit) {
     var custom by rememberSaveable { mutableStateOf(lastMinutes.toString()) }
     val presets = listOf(5, 10, 15, 30, 45, 60)
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onClose,
         confirmButton = { TextButton(onClick = onClose) { Text(stringResource(UiR.string.common_close)) } },
         title = { Text(stringResource(UiR.string.player_sleep)) },
@@ -524,7 +526,7 @@ private fun SleepOption(label: String, selected: Boolean, onClick: () -> Unit) {
 private fun ChaptersDialog(b: LoadedBook, positionMs: Long, onSeek: (Long) -> Unit, onClose: () -> Unit) {
     val current = b.timeline.chapterAt(positionMs)
     val list = rememberLazyListState(initialFirstVisibleItemIndex = b.timeline.chapters.indexOf(current).coerceAtLeast(0))
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onClose,
         confirmButton = { TextButton(onClick = onClose) { Text(stringResource(UiR.string.common_close)) } },
         title = { Text(pluralStringResource(UiR.plurals.chapters_title, b.timeline.chapters.size, b.timeline.chapters.size)) },
@@ -561,7 +563,7 @@ private fun BookmarksDialog(vm: PlayerViewModel, positionMs: Long, onClose: () -
     val s by vm.bookmarks.collectAsStateWithLifecycle()
     var note by rememberSaveable { mutableStateOf("") }
     val eink = LocalEink.current
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onClose,
         confirmButton = { TextButton(onClick = onClose) { Text(stringResource(UiR.string.common_close)) } },
         title = { Text(stringResource(UiR.string.bookmarks_title)) },
@@ -624,7 +626,7 @@ fun ConflictDialog(vm: PlayerViewModel) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val mine = ui.positionMs
     val device = conflict.serverDevice ?: stringResource(UiR.string.player_another_device)
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = {},
         title = { Text(stringResource(UiR.string.player_conflict_title)) },
         text = {

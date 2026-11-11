@@ -11,6 +11,9 @@
     <!-- Optional: recognise a car's Bluetooth to open car mode (asked for only when that setting is turned on). -->
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- Scanning a server address from a QR code; asked only when scanning. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <!-- No backups (tokens are sealed with a Keystore key that never travels).
          Self-hosted servers on a home network may not have TLS; the app warns
@@ -47,6 +50,15 @@
                 android:value="androidx.startup"
                 tools:node="remove" />
         </provider>
+
+        <!-- Push messages from the UnifiedPush distributor app (brief §6.14). -->
+        <service
+            android:name=".push.PushReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="org.unifiedpush.android.connector.PUSH_EVENT" />
+            </intent-filter>
+        </service>
 
         <!-- The Now playing widget (brief §7.6). -->
         <receiver

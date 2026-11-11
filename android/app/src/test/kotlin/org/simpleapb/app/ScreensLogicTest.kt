@@ -146,4 +146,16 @@ class ScreensLogicTest {
         assertEquals(99, percent(999, 1000))
         assertEquals(100, percent(2000, 1000))
     }
+
+    @Test
+    fun qrCodesDecodeFromCameraBrightness() {
+        val url = "https://books.example.org/sub"
+        val m = com.google.zxing.qrcode.QRCodeWriter().encode(url, com.google.zxing.BarcodeFormat.QR_CODE, 240, 240)
+        // A camera row is often wider than the image (row stride).
+        val stride = 256
+        val data = ByteArray(stride * m.height) { 0x80.toByte() }
+        for (y in 0 until m.height) for (x in 0 until m.width) data[y * stride + x] = if (m.get(x, y)) 0 else 0xFF.toByte()
+        assertEquals(url, org.simpleapb.app.onboarding.decodeLuminance(org.simpleapb.app.onboarding.qrReader(), data, stride, m.width, m.height))
+        assertNull(org.simpleapb.app.onboarding.decodeLuminance(org.simpleapb.app.onboarding.qrReader(), ByteArray(stride * 240), stride, 240, 240))
+    }
 }

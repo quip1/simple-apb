@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import org.simpleapb.api.model.Me
 import org.simpleapb.app.UiSettings
 import org.simpleapb.app.data.MeSession
+import org.simpleapb.app.push.PushManager
 import org.simpleapb.core.data.account.Account
 import org.simpleapb.core.data.account.AccountStore
 import org.simpleapb.core.data.account.AccountsState
@@ -23,6 +24,7 @@ import org.simpleapb.core.data.download.Downloads
 import org.simpleapb.core.data.net.ApiFactory
 import org.simpleapb.core.data.net.SessionEvent
 import org.simpleapb.core.data.sync.SyncEngine
+import org.simpleapb.core.player.PlayerConnection
 import org.simpleapb.core.ui.AppTheme
 
 /** App-wide state: accounts, the active one, the theme, and sign-out notices. */
@@ -36,7 +38,9 @@ constructor(
     private val ui: UiSettings,
     session: MeSession,
     private val sync: SyncEngine,
-    downloadsRepo: Downloads
+    downloadsRepo: Downloads,
+    private val push: PushManager,
+    private val player: PlayerConnection
 ) : ViewModel() {
     /** Every download on the device (badges, the Downloaded view). */
     val downloads: StateFlow<List<DownloadRow>> = downloadsRepo.all.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
@@ -60,6 +64,7 @@ constructor(
             apis.sessionEvents.collect { e ->
                 if (e is SessionEvent.SignedOut) {
                     val acc = store.current().accounts.firstOrNull { it.id == e.accountId }
+                    player.closeAccount(e.accountId)
                     apis.forget(e.accountId)
                     store.remove(e.accountId)
                     sync.forget(e.accountId)
@@ -114,6 +119,30 @@ constructor(
         _openPlayer.value = false
     }
 
+    private val _openBook = MutableStateFlow<String?>(null)
+
+    /** A notification about a book was tapped: show its page (after switching to its account). */
+    val openBook: StateFlow<String?> = _openBook.asStateFlow()
+
+    fun requestBook(accountId: String?, bookId: String) = viewModelScope.launch {
+        if (accountId != null &&
+            store.current().activeId != accountId &&
+            store.current().accounts.any { it.id == accountId }
+        ) {
+            store.setActive(accountId)
+        }
+        _openBook.value = bookId
+    }
+
+    fun bookOpened() {
+        _openBook.value = null
+    }
+
+    /** "Just play files on this device": the app without a server (brief §7.4 onboarding). */
+    val localMode: StateFlow<Boolean?> = ui.localMode.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    fun useLocal(on: Boolean) = viewModelScope.launch { ui.setLocalMode(on) }
+
     fun setTheme(theme: AppTheme) = viewModelScope.launch { ui.setTheme(theme) }
 
     fun switchTo(account: Account) = viewModelScope.launch { store.setActive(account.id) }
@@ -121,6 +150,8 @@ constructor(
     /** Signs out and forgets the account's mirror, queued writes and downloads on this device. */
     fun signOut(account: Account) = viewModelScope.launch {
         sync.sync(account) // send queued progress first, if the server is reachable
+        push.unregister(account)
+        player.closeAccount(account.id)
         auth.signOut(account)
         sync.forget(account.id)
     }

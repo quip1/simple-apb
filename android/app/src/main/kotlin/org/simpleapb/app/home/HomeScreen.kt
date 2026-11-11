@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -47,6 +48,7 @@ import org.simpleapb.api.model.Recommendation
 import org.simpleapb.app.data.MeSession
 import org.simpleapb.app.library.OfflineFilter
 import org.simpleapb.app.library.summary
+import org.simpleapb.app.local.LocalShelf
 import org.simpleapb.app.ui.Notice
 import org.simpleapb.app.ui.ScreenHeader
 import org.simpleapb.app.ui.Shelf
@@ -175,7 +177,7 @@ constructor(
 }
 
 @Composable
-fun HomeScreen(account: Account, onBook: (String) -> Unit, onLibrary: (String?) -> Unit) {
+fun HomeScreen(account: Account, onBook: (String) -> Unit, onLibrary: (String?) -> Unit, onLocalBook: (String) -> Unit, onSwitch: () -> Unit) {
     val vm: HomeViewModel = hiltViewModel()
     val s by vm.state.collectAsStateWithLifecycle()
     LaunchedEffect(account.id) { vm.load() }
@@ -191,6 +193,11 @@ fun HomeScreen(account: Account, onBook: (String) -> Unit, onLibrary: (String?) 
             IconButton(onClick = { vm.load() }, modifier = Modifier.heightIn(min = TouchTarget)) {
                 Icon(Icons.Filled.Refresh, contentDescription = stringResource(UiR.string.app_common_refresh))
             }
+        }
+        // Which server this is, and the way to another (brief §7.4: several servers, one switcher).
+        TextButton(onClick = onSwitch, modifier = Modifier.heightIn(min = TouchTarget)) {
+            Icon(Icons.Filled.SwapHoriz, contentDescription = null)
+            Text(stringResource(UiR.string.app_account_on, account.serverName), modifier = Modifier.padding(start = 8.dp))
         }
         s.error?.let { Notice(errorText(it)) }
         if (s.offline) Notice(stringResource(UiR.string.app_offline_notice), error = false)
@@ -218,6 +225,7 @@ fun HomeScreen(account: Account, onBook: (String) -> Unit, onLibrary: (String?) 
                         }
                     }
                 }
+                LocalShelf(onLocalBook)
                 if (s.downloaded.isNotEmpty()) Shelf(stringResource(UiR.string.app_library_view_downloaded), s.downloaded, account.serverUrl, open)
                 if (s.nextUp.isNotEmpty()) Shelf(stringResource(UiR.string.home_next_in_series), s.nextUp, account.serverUrl, open)
                 if (s.recent.isNotEmpty()) {

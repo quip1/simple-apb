@@ -13,6 +13,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.AndroidEntryPoint
+import org.simpleapb.app.push.PushManager
 import org.simpleapb.app.ui.AppRoot
 import org.simpleapb.app.ui.AppViewModel
 import org.simpleapb.core.player.PlaybackService
@@ -55,6 +56,10 @@ class MainActivity : ComponentActivity() {
         if (intent?.getBooleanExtra(PlaybackService.EXTRA_OPEN_PLAYER, false) == true) {
             intent.removeExtra(PlaybackService.EXTRA_OPEN_PLAYER)
             app.requestPlayer()
+        }
+        intent?.getStringExtra(PushManager.EXTRA_BOOK)?.let { book ->
+            app.requestBook(intent.getStringExtra(PushManager.EXTRA_ACCOUNT), book)
+            intent.removeExtra(PushManager.EXTRA_BOOK)
         }
     }
 }

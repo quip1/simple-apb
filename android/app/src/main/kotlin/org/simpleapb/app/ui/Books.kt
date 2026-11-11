@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Contrast
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -31,8 +32,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -113,8 +116,26 @@ fun ScreenHeader(title: String, onBack: (() -> Unit)? = null, actions: @Composab
             modifier = Modifier.weight(1f).semantics { heading() }
         )
         actions()
+        ScreenRefreshButton()
     }
 }
+
+/** Flashes the whole screen black, then white, to clear e-ink ghosting (provided by [AppRoot]). */
+val LocalScreenRefresh = staticCompositionLocalOf<(() -> Unit)?> { null }
+
+/** On e-ink: the "refresh the screen" button (brief §11). Elsewhere: nothing. */
+@Composable
+fun ScreenRefreshButton() {
+    val refresh = LocalScreenRefresh.current ?: return
+    if (!LocalEink.current) return
+    IconButton(onClick = refresh, modifier = Modifier.size(TouchTarget)) {
+        Icon(Icons.Filled.Contrast, contentDescription = stringResource(UiR.string.nav_refresh_screen))
+    }
+}
+
+/** A shelf card's width: wider with large text (up to 1.6×, brief §11: 200 % text), so titles and buttons fit. */
+@Composable
+fun shelfCardWidth(eink: Boolean): Dp = (if (eink) 104.dp else 132.dp) * LocalDensity.current.fontScale.coerceIn(1f, 1.6f)
 
 /** A section heading. */
 @Composable
@@ -258,8 +279,8 @@ fun Shelf(
         if (LocalEink.current) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 books.take(6).forEach { b ->
-                    Column(Modifier.width(104.dp)) {
-                        BookCard(b, serverUrl, { onBook(b) }, width = 104.dp)
+                    Column(Modifier.width(shelfCardWidth(eink = true))) {
+                        BookCard(b, serverUrl, { onBook(b) }, width = shelfCardWidth(eink = true))
                         below(b)
                     }
                 }
@@ -267,8 +288,8 @@ fun Shelf(
         } else {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(books, key = { it.id }) { b ->
-                    Column(Modifier.width(132.dp)) {
-                        BookCard(b, serverUrl, { onBook(b) }, width = 132.dp)
+                    Column(Modifier.width(shelfCardWidth(eink = false))) {
+                        BookCard(b, serverUrl, { onBook(b) }, width = shelfCardWidth(eink = false))
                         below(b)
                     }
                 }

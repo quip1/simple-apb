@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -39,6 +38,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.simpleapb.api.model.SignupRequest
 import org.simpleapb.app.R
+import org.simpleapb.app.ui.AppAlertDialog
 import org.simpleapb.app.ui.BusyButton
 import org.simpleapb.app.ui.FormColumn
 import org.simpleapb.app.ui.Notice
@@ -53,7 +53,7 @@ private fun Heading(text: String) {
 }
 
 @Composable
-fun WelcomeScreen(onConnect: () -> Unit) {
+fun WelcomeScreen(onConnect: () -> Unit, onLocal: () -> Unit) {
     FormColumn {
         Image(
             painter = painterResource(R.drawable.ic_launcher_foreground),
@@ -63,14 +63,30 @@ fun WelcomeScreen(onConnect: () -> Unit) {
         Heading(stringResource(UiR.string.app_welcome_title))
         Text(stringResource(UiR.string.app_welcome_body), style = MaterialTheme.typography.bodyLarge)
         BusyButton(stringResource(UiR.string.app_welcome_connect), busy = false, onClick = onConnect)
+        // The other path (brief §7.4): play audiobook files already on this device, no server.
+        OutlinedButton(onClick = onLocal, modifier = Modifier.fillMaxWidth().heightIn(min = TouchTarget)) {
+            Text(stringResource(UiR.string.app_welcome_local))
+        }
     }
 }
 
 @Composable
 fun ServerScreen(vm: OnboardingViewModel, onReady: () -> Unit) {
     val s by vm.state.collectAsStateWithLifecycle()
+    var scanning by rememberSaveable { mutableStateOf(false) }
     FormColumn {
         Heading(stringResource(UiR.string.app_server_title))
+        if (scanning) {
+            QrScanner(
+                onResult = { text ->
+                    scanning = false
+                    vm.setAddress(text.trim())
+                    vm.connect(onReady)
+                },
+                onCancel = { scanning = false }
+            )
+            return@FormColumn
+        }
         OutlinedTextField(
             value = s.address,
             onValueChange = vm::setAddress,
@@ -101,6 +117,9 @@ fun ServerScreen(vm: OnboardingViewModel, onReady: () -> Unit) {
             onClick = { vm.connect(onReady) },
             enabled = s.address.isNotBlank()
         )
+        OutlinedButton(onClick = { scanning = true }, modifier = Modifier.fillMaxWidth().heightIn(min = TouchTarget)) {
+            Text(stringResource(UiR.string.app_server_scan))
+        }
     }
 }
 
@@ -300,7 +319,7 @@ fun RequestAccountScreen(vm: OnboardingViewModel, onBackToSignIn: () -> Unit) {
                 .filter { it.isNotBlank() }
                 .joinToString("\n\n")
                 .ifEmpty { stringResource(UiR.string.app_signup_none) }
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { showTerms = false },
             title = { Text(stringResource(UiR.string.app_signup_terms_title)) },
             text = { Text(text) },

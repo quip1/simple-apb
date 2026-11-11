@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/quip1/simple-apb/server/internal/fsutil"
@@ -431,6 +432,8 @@ func DetectUpload(root string) ([]Candidate, error) {
 			merged.Newest = c.Newest
 		}
 	}
+	// The loose files came sorted by name ("Part 10" before "Part 2"); play them in natural order.
+	slices.SortFunc(merged.Files, NaturalCompare)
 	hasMP3 := false
 	for _, f := range merged.Files {
 		hasMP3 = hasMP3 || strings.EqualFold(filepath.Ext(f), ".mp3")

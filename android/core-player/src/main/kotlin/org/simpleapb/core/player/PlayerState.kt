@@ -25,7 +25,10 @@ data class LoadedBook(
     val localDir: String? = null,
     /** For downloading the next book in the series. */
     val seriesId: String? = null
-)
+) {
+    /** A book from a folder on this device. */
+    val isLocal get() = id.startsWith("local:")
+}
 
 /**
  * The server holds a position from another device that is far from ours

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package org.simpleapb.app.ui
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -26,6 +28,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,11 +36,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogWindowProvider
+import org.simpleapb.core.ui.LocalEink
 import org.simpleapb.core.ui.R as UiR
 
 /** A labelled button that opens a menu of choices ("Sort by: Title"). */
@@ -111,7 +117,7 @@ fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit, enab
 /** "Are you sure?" with a confirm and a cancel button. */
 @Composable
 fun ConfirmDialog(title: String, body: String, confirm: String, onConfirm: () -> Unit, onDismiss: () -> Unit, busy: Boolean = false) {
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = { Text(body) },
@@ -128,7 +134,7 @@ fun ConfirmDialog(title: String, body: String, confirm: String, onConfirm: () ->
 @Composable
 fun TextDialog(title: String, label: String, initial: String, confirm: String, onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
     var text by rememberSaveable { mutableStateOf(initial) }
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
@@ -156,4 +162,39 @@ fun Section(title: String, content: @Composable () -> Unit) {
         SectionTitle(title)
         content()
     }
+}
+
+/**
+ * The app's alert dialog. On e-ink there is no grey dimming behind it (no
+ * greys, brief §11): the page stays white and the dialog gets a black
+ * outline instead.
+ */
+@Composable
+fun AppAlertDialog(
+    onDismissRequest: () -> Unit,
+    confirmButton: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    dismissButton: @Composable (() -> Unit)? = null,
+    title: @Composable (() -> Unit)? = null,
+    text: @Composable (() -> Unit)? = null
+) {
+    val eink = LocalEink.current
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        confirmButton = {
+            if (eink) NoDim()
+            confirmButton()
+        },
+        modifier = if (eink) modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, AlertDialogDefaults.shape) else modifier,
+        dismissButton = dismissButton,
+        title = title,
+        text = text
+    )
+}
+
+/** Turns off the dialog window's dimming (called from inside the dialog). */
+@Composable
+private fun NoDim() {
+    val window = (LocalView.current.parent as? DialogWindowProvider)?.window
+    SideEffect { window?.setDimAmount(0f) }
 }

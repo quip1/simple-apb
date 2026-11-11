@@ -82,3 +82,21 @@ func TestNaturalCompareAndSafeName(t *testing.T) {
 		}
 	}
 }
+
+// A zip of loose mp3s (no top folder) becomes one book whose files play in
+// natural order, not name order.
+func TestDetectUploadLooseFilesInNaturalOrder(t *testing.T) {
+	root := t.TempDir()
+	touch(t, root, "Part 1.mp3", "Part 10.mp3", "Part 2.mp3", "cover.jpg")
+	cands, err := DetectUpload(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cands) != 1 {
+		t.Fatalf("want one book, got %+v", cands)
+	}
+	want := []string{"Part 1.mp3", "Part 2.mp3", "Part 10.mp3"}
+	if got := cands[0].Files; !slices.Equal(got, want) {
+		t.Fatalf("order %v, want %v", got, want)
+	}
+}

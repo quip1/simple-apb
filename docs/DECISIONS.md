@@ -1152,6 +1152,110 @@ On the widget: play with nothing loaded resumed the last book, the pause icon an
 followed playback, and the e-ink look was right. The effect DSP (no clipping at +12 dB, mono,
 balance, rumble cut) is unit-tested; listening tests need a real phone.
 
+---
+
+## ADR-0044 — Android local folders, push, the server switcher, e-ink and accessibility (Phase 3, milestone 6)
+
+**Folders on this device** (brief §7.4 screen 9):
+- **Picking:** the user picks folders with the system picker (Storage Access Framework), so no
+  storage permission is needed, and read access is kept across restarts.
+- **What counts as a book:** each subfolder of a picked folder is a book (one level of disc
+  subfolders such as CD1 and CD2 included), and an audio file lying directly in a picked folder is a
+  book of its own.
+- **What's read from the files:** the files play in natural order ("Part 2" before "Part 10"). The
+  title, author, durations and cover come from the files' tags (or `cover.jpg`/`folder.jpg`). The
+  cover is copied into the app.
+- **Stored:** the books live in a new `local_books` table (Room schema 2, migrated automatically
+  from 1). Their ids are a hash of the folder's address, so progress survives rescans.
+- **Rescans:** when the app comes to the front (at most once a minute), on request, and when
+  Android reports a change. Not every storage provider reports changes.
+- **Playback:** local books play straight from their `content://` addresses. Each file is a
+  chapter; chapter marks embedded in a single m4b aren't read. Position, speed and bookmarks stay
+  on the device.
+- **Merged library:** local books lead the first page of the library's "All" view and have their
+  own "On this device" view and Home shelf. The "on this device" badge is an icon, and screen
+  readers say it.
+
+**"Just play files on this device"** is the second onboarding path. It opens a smaller app: the
+books on this device, the player, car mode, folders, playback settings and the theme. A server can
+be connected from there at any time. Signing out of the last account returns to it.
+
+**Upload to the server.** A local book's page offers "Upload to <server>" for accounts that may
+upload.
+- **Format:** a single m4b, m4a or mp3 goes as it is. A folder of mp3s goes as one zip, stored
+  rather than compressed (mp3 doesn't shrink), with its cover. These are the formats the server
+  accepts (§6.11).
+- **Transport:** the server's tus endpoint, in 8 MB chunks with the file's SHA-256. After a dropped
+  connection the upload resumes from what the server says it has.
+- **Afterwards:** the app follows the server's import through `/me/uploads` and shows when the
+  book is in the library or why it failed.
+- **Runs as:** a WorkManager job with a progress notification.
+
+**Push** (§6.14) uses UnifiedPush, through the connector library:
+- **Registration:** each signed-in account registers its own endpoint (the account id is the
+  UnifiedPush "instance"), so events from different servers never mix. The endpoint goes to that
+  server with `POST /devices/push-subscription`, and is removed on sign-out.
+- **On a message:** the app syncs that account and shows a notification: a new book (with its
+  title, fetched from the API), an upload finished or failed, or, for admins, the admin events.
+  Tapping a new-book notification opens that book on its account.
+- **Without a distributor** (ntfy or another), as the brief describes: live `/ws` hints while the
+  app is open, the 15-minute WorkManager sync otherwise. The sync engine then announces books new
+  in the library itself, never for a first or full snapshot.
+- **Settings → Notifications** shows which way it works, lets the user pick among several
+  distributors, and explains the trade-off.
+- **Libraries:** the connector brings Google's Tink library for encrypted Web Push. Tink is
+  Apache-2.0 open source, so it is fine for the F-Droid build, which excludes only proprietary
+  Google libraries.
+
+**Servers.** Home shows which server it is ("On Demo shelf"); tapping it switches account, adds a
+server, or opens the account list.
+
+**QR code sign-in** (the brief's onboarding "URL or QR code", missing from milestone 1):
+- "Scan a QR code" on the server screen reads the address with CameraX and the open-source ZXing
+  decoder, so the F-Droid build has it too. The camera permission is asked only when scanning.
+- The web app's Settings now shows the server's address as a QR code under "Connect the Android
+  app".
+
+**E-ink pass:**
+- Dialogs no longer dim the page grey. On e-ink they have a black outline on a white page.
+- The player's buffering spinner (an animation) is hidden.
+- The big car-mode buttons get outlines, since their tonal fill is white on e-ink.
+- An optional "Refresh the screen" button sits in every screen title on e-ink. It flashes the
+  screen black, then white, to clear ghosting.
+
+**Accessibility pass:**
+- A script dumps each screen's accessibility tree and lists any tappable element with no text or
+  label inside it. Home, Library, a book page, Downloads, Stats, Settings, the player, the Audio
+  panel and car mode had none.
+- At 200 % text:
+  - The five tabs show icons only, still named for TalkBack (from 150 %; their labels broke
+    mid-word). On e-ink a bar marks the selected tab.
+  - Shelf cards widen with the text size (up to 1.6×).
+  - Car-mode labels wrap between words.
+- A full TalkBack walk-through and other phones are left to milestone 7's UI tests and Jacob's
+  week of daily use.
+
+**Bugs found on the way:**
+- **Server, wrong file order:** a zip of loose mp3s imported its files in name order ("Part 1,
+  Part 10, Part 2"). The loose files are now merged in natural order (test added).
+- **Stale mini player:** signing out left that account's book in the mini player; it is now
+  unloaded.
+- **Bookmarks on local books:** local book ids aren't UUIDs, which would have broken bookmarks; they
+  get a stable UUID derived from their id.
+
+**Checked on the emulator** (API 36):
+- Picking a folder, finding two books, the merged library, playing a local book (with chapters in
+  natural order), and local-only mode after signing out.
+- Uploading a three-file mp3 book: imported as one book.
+- The fallback "New in your library" notification: arrived within 10 s of an upload from another
+  device, and tapping it opened the book.
+- The notifications screen, the account switcher, and the QR scanner opening the camera.
+- The e-ink dialogs, the screen refresh, the 200 % text layouts, and the label check.
+
+Not checked here: a real UnifiedPush distributor (none on the emulator; registration is the
+connector's documented flow), and a QR code through a real camera (the decoder is unit-tested with
+a generated code).
+
 ## Open questions for Jacob
 
 | # | Question | Current choice (until answered) |

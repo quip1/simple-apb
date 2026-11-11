@@ -29,6 +29,7 @@ import org.simpleapb.core.data.auth.Outcome
 import org.simpleapb.core.data.auth.call
 import org.simpleapb.core.data.download.DownloadWorker
 import org.simpleapb.core.data.download.Downloads
+import org.simpleapb.core.data.local.LocalFolders
 import org.simpleapb.core.data.net.ApiFactory
 import org.simpleapb.core.data.net.ApiFailure
 import org.simpleapb.core.data.net.ServerUrl
@@ -59,7 +60,8 @@ constructor(
     private val store: PlaybackStore,
     private val local: LocalLibrary,
     private val downloads: Downloads,
-    private val engine: SyncEngine
+    private val engine: SyncEngine,
+    private val folders: LocalFolders
 ) {
     // Progress writes for one device go out one at a time, in order.
     private val writes = Mutex()
@@ -105,6 +107,42 @@ constructor(
         )
     }
 
+    /**
+     * A book from a folder on this device: its files play in order, each file
+     * is a chapter (embedded chapter marks aren't read), and its position
+     * and bookmarks stay on this device.
+     */
+    suspend fun loadLocal(bookId: String): Outcome<LoadedBook> {
+        val book = folders.book(bookId) ?: return Outcome.Failed(ApiFailure("not_found", "", 404))
+        var offset = 0L
+        val files =
+            book.files.map { f ->
+                TimelineFile(f.uri, offset, f.durationMs, f.mimeType).also { offset += f.durationMs }
+            }
+        val chapters =
+            if (book.files.size > 1) {
+                files.mapIndexed { i, f -> TimelineChapter(i, book.files[i].name.substringBeforeLast('.'), f.offsetMs, f.offsetMs + f.durationMs) }
+            } else {
+                listOf(TimelineChapter(0, book.title, 0, offset))
+            }
+        val timeline = BookTimeline(files, chapters)
+        val settings = store.settings()
+        return Outcome.Ok(
+            LoadedBook(
+                id = bookId,
+                accountId = LOCAL_ACCOUNT,
+                serverUrl = "",
+                title = book.title,
+                authors = book.row.author.orEmpty(),
+                narrators = "",
+                coverUrl = book.row.coverPath?.let { File(it).toUri().toString() },
+                timeline = timeline,
+                startMs = chooseStart(null, store.localPosition(bookId), timeline.durationMs),
+                speed = Speed.clamp(store.speed(bookId) ?: settings.defaultSpeed)
+            )
+        )
+    }
+
     /** A position conflict found while this device was offline, to ask about now. */
     suspend fun storedConflict(b: LoadedBook): PendingConflict? =
         local.conflict(b.accountId, b.id)?.let { PendingConflict(b.id, it.conflictId, it.serverPositionMs, it.serverDevice) }
@@ -121,6 +159,7 @@ constructor(
     fun mediaItems(b: LoadedBook): List<MediaItem> = b.timeline.files.mapIndexed { i, f ->
         val uri =
             when {
+                b.isLocal -> f.id // a file on this device: its content:// address
                 b.localDir != null -> File(b.localDir, "${f.id}.${DownloadWorker.extension(f.mimeType)}").toUri().toString()
                 b.hlsProfile != null -> ServerUrl.api(b.serverUrl) + "stream/${b.id}/hls/${b.hlsProfile}/index.m3u8"
                 else -> ServerUrl.api(b.serverUrl) + "books/${b.id}/files/${f.id}"
@@ -158,6 +197,10 @@ constructor(
      * A report that can't reach the server goes to the outbox (brief §6.8).
      */
     suspend fun report(b: LoadedBook, positionMs: Long, speed: Float, finished: Boolean?, resolution: String?): ReportResult = writes.withLock {
+        if (b.isLocal) {
+            store.saveLocalPosition(b.id, positionMs, System.currentTimeMillis())
+            return ReportResult.Ok
+        }
         val account = account(b.accountId) ?: return ReportResult.Failed(ApiFailure("signed_out", "", 401))
         store.saveLocalPosition(b.id, positionMs, System.currentTimeMillis())
         val body =
@@ -258,6 +301,7 @@ constructor(
 
     /** The book's bookmarks; the mirror's copy when the server is out of reach. */
     suspend fun bookmarks(b: LoadedBook): Outcome<List<Bookmark>> {
+        if (b.isLocal) return Outcome.Ok(local.bookmarks(LOCAL_ACCOUNT, bookUuid(b.id).toString()))
         val account = account(b.accountId) ?: return Outcome.Failed(ApiFailure("signed_out", "", 401))
         return when (val r = call { apis.forAccount(account).progress.listBookmarks(UUID.fromString(b.id)) }) {
             is Outcome.Ok -> {
@@ -269,15 +313,20 @@ constructor(
     }
 
     suspend fun addBookmark(b: LoadedBook, positionMs: Long, note: String?): Outcome<Bookmark> {
-        val account = account(b.accountId) ?: return Outcome.Failed(ApiFailure("signed_out", "", 401))
         val body =
             BookmarkCreate(
-                bookId = UUID.fromString(b.id),
+                bookId = bookUuid(b.id),
                 positionMs = positionMs.coerceAtLeast(0),
                 id = UUID.randomUUID(),
                 note = note?.trim()?.ifEmpty { null },
                 clientTs = Instant.now().toString()
             )
+        if (b.isLocal) {
+            val m = Bookmark(body.id!!, body.bookId, body.positionMs, body.clientTs!!, body.note)
+            local.saveBookmarks(LOCAL_ACCOUNT, listOf(m))
+            return Outcome.Ok(m)
+        }
+        val account = account(b.accountId) ?: return Outcome.Failed(ApiFailure("signed_out", "", 401))
         engine.wrote()
         return when (val r = call { apis.forAccount(account).progress.createBookmark(body) }) {
             is Outcome.Ok -> {
@@ -295,6 +344,10 @@ constructor(
     }
 
     suspend fun deleteBookmark(b: LoadedBook, id: UUID): Outcome<Unit> {
+        if (b.isLocal) {
+            local.dao.deleteBookmark(LOCAL_ACCOUNT, id.toString())
+            return Outcome.Ok(Unit)
+        }
         val account = account(b.accountId) ?: return Outcome.Failed(ApiFailure("signed_out", "", 401))
         engine.wrote()
         return when (val r = call { apis.forAccount(account).progress.deleteBookmark(id) }) {
@@ -312,6 +365,12 @@ constructor(
     }
 
     companion object {
+        /** The "account" of books in folders on this device (bookmarks and the last book). */
+        const val LOCAL_ACCOUNT = "local"
+
+        /** A book's id as a UUID; books on this device get a stable one derived from theirs. */
+        fun bookUuid(id: String): UUID = if (LocalFolders.isLocal(id)) UUID.nameUUIDFromBytes(id.toByteArray()) else UUID.fromString(id)
+
         /** The HLS profile to stream, or null for the original files. */
         fun hlsProfile(quality: Quality, metered: Boolean): String? = when (quality) {
             Quality.ORIGINAL -> null
