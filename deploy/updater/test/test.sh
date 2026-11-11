@@ -4,12 +4,29 @@
 # End-to-end test of the updater (CI, needs Docker): a local registry with
 # three stand-in server images, the real compose file, and two updates: one
 # that works and one that has to be rolled back.
-set -euo pipefail
+set -Eeuo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
 deploy=$(cd "$here/../.." && pwd)
 work=$(mktemp -d)
 reg=localhost:5000/sapb-test
+
+# On failure, say where and show the containers' state as CI annotations.
+report() {
+  trap - ERR
+  local line=$1
+  local ann
+  ann() { echo "::error title=$1::$(printf '%s' "$2" | tail -c 3500 | sed ':a;N;$!ba;s/%/%25/g;s///g;s/
+/%0A/g')"; }
+  ann "updater test failed at line $line" "$(sed -n "${line}p" "$0")"
+  if [ -d "$work/deploy" ]; then
+    (cd "$work/deploy" && ann "compose ps" "$(docker compose --profile updater ps -a 2>&1)")
+    (cd "$work/deploy" && ann "updater log" "$(docker compose --profile updater logs --no-color --tail 40 updater 2>&1)")
+    (cd "$work/deploy" && ann "server log" "$(docker compose logs --no-color --tail 20 simpleapb 2>&1)")
+    ann "updater folder" "$(sudo ls -la "$work/deploy/data/config/updater" 2>&1; sudo cat "$work/deploy/data/config/updater/result.json" 2>&1)"
+  fi
+}
+trap 'report $LINENO' ERR
 
 cleanup() {
   (cd "$work/deploy" && docker compose --profile updater down -v >/dev/null 2>&1) || true
@@ -50,8 +67,8 @@ wait_for() { # seconds, condition...
 healthy() { [ "$(docker inspect -f '{{.State.Health.Status}}' "$(docker compose ps -q simpleapb)")" = healthy ]; }
 result_is() { sudo grep -q "\"status\":\"$1\"" data/config/updater/result.json 2>/dev/null; }
 
-wait_for 120 healthy || { echo "server never became healthy"; docker compose logs; exit 1; }
-wait_for 30 sudo test -f data/config/updater/heartbeat || { echo "no updater heartbeat"; docker compose logs updater; exit 1; }
+wait_for 120 healthy || { echo "server never became healthy"; report $LINENO; exit 1; }
+wait_for 30 sudo test -f data/config/updater/heartbeat || { echo "no updater heartbeat"; report $LINENO; exit 1; }
 echo "running $(running_version), updater up"
 
 update() { # to
@@ -59,20 +76,20 @@ update() { # to
   sudo rm -f data/config/updater/result.json
   printf '{"from":"%s","to":"%s","status":"requested","at":"2026-01-01T00:00:00Z"}' "$(running_version)" "$1" |
     sudo tee data/config/updater/request.json >/dev/null
-  wait_for 180 sudo test -f data/config/updater/result.json || { echo "no result"; docker compose logs updater; exit 1; }
+  wait_for 180 sudo test -f data/config/updater/result.json || { echo "no result"; report $LINENO; exit 1; }
   sudo cat data/config/updater/result.json
 }
 
 update 1.1.0
-result_is succeeded || { echo "1.1.0 should succeed"; exit 1; }
-[ "$(running_version)" = 1.1.0 ] || { echo "running $(running_version), want 1.1.0"; exit 1; }
-grep -q '^SIMPLEAPB_VERSION=1.1.0$' .env || { echo ".env not pinned to 1.1.0"; exit 1; }
+result_is succeeded || { echo "1.1.0 should succeed"; report $LINENO; exit 1; }
+[ "$(running_version)" = 1.1.0 ] || { echo "running $(running_version), want 1.1.0"; report $LINENO; exit 1; }
+grep -q '^SIMPLEAPB_VERSION=1.1.0$' .env || { echo ".env not pinned to 1.1.0"; report $LINENO; exit 1; }
 
 update 1.2.0
-result_is rolled_back || { echo "1.2.0 should be rolled back"; exit 1; }
-sudo grep -q 'migration 00042 failed' data/config/updater/result.json || { echo "the failure's log is missing"; exit 1; }
-wait_for 60 healthy || { echo "not healthy after the rollback"; exit 1; }
-[ "$(running_version)" = 1.1.0 ] || { echo "running $(running_version) after rollback, want 1.1.0"; exit 1; }
-grep -q '^SIMPLEAPB_VERSION=1.1.0$' .env || { echo ".env not back on 1.1.0"; exit 1; }
+result_is rolled_back || { echo "1.2.0 should be rolled back"; report $LINENO; exit 1; }
+sudo grep -q 'migration 00042 failed' data/config/updater/result.json || { echo "the failure's log is missing"; report $LINENO; exit 1; }
+wait_for 60 healthy || { echo "not healthy after the rollback"; report $LINENO; exit 1; }
+[ "$(running_version)" = 1.1.0 ] || { echo "running $(running_version) after rollback, want 1.1.0"; report $LINENO; exit 1; }
+grep -q '^SIMPLEAPB_VERSION=1.1.0$' .env || { echo ".env not back on 1.1.0"; report $LINENO; exit 1; }
 
 echo "updater: update and rollback work"
