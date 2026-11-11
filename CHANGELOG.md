@@ -5,6 +5,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-11
+
 **Phases 4 (Windows app) and 5 (book tools) done; next is Phase 6.** Phase 3 — Android phone app (milestones 1–7 done: foundation, onboarding and sign-in; playback; screens and account settings; offline sync and downloads; audio effects, car mode, Android Auto and the widget; local folders, push, e-ink and accessibility; release signing and F-Droid checks. Next: Jacob's week of daily use and the Android Auto checklist. Plan in ADR-0039). Phase 2 is feature-complete and awaits Jacob's sign-off; Phase 1 accepted 2026-11-08.
 
 ### Added (releases and updates, ADR-0049)
