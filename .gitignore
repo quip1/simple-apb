@@ -14,6 +14,7 @@ server/coverage.out
 # Node / web
 node_modules/
 web/dist/
+web/dist-desktop/
 web/test-results/
 web/playwright-report/
 server/internal/web/dist/*
@@ -32,6 +33,7 @@ captures/
 
 # Tauri / Rust
 desktop/src-tauri/target/
+desktop/src-tauri/gen/
 
 # OS / editors
 .DS_Store

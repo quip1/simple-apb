@@ -12,6 +12,7 @@
   import { live } from "../lib/live.svelte";
   import { link } from "../lib/router.svelte";
   import { session } from "../lib/session.svelte";
+  import { filesFromDrop, pending } from "../lib/dropbook";
   import { tusUpload, UploadError } from "../lib/upload";
 
   type Item = Schemas["UploadItem"];
@@ -61,11 +62,18 @@
     sending = sending.map((x) => (x.key === key ? { ...x, ...patch } : x));
   }
 
+  // Folders too: a folder of mp3s goes as one zip (lib/dropbook.ts).
   function onDrop(e: DragEvent) {
     e.preventDefault();
+    e.stopPropagation();
     dragging = false;
-    if (e.dataTransfer?.files.length) start(e.dataTransfer.files);
+    if (e.dataTransfer) void filesFromDrop(e.dataTransfer).then((files) => files.length && start(files));
   }
+
+  // Files dropped elsewhere in the window (the Windows app) start here.
+  $effect(() => {
+    if (pending.length && canUpload) start(pending.splice(0));
+  });
 </script>
 
 <svelte:head><title>{t("uploads.title")} · {session.instance?.name ?? ""}</title></svelte:head>

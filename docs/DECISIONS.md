@@ -1323,6 +1323,89 @@ What stays, because it's already built, tested and harmless:
 The AGPL linking exception for the Google Cast SDK and Play Services (`LICENSE-EXCEPTION.md`) now
 covers nothing the apps use. Whether to keep it for later or remove it is Q13.
 
+---
+
+## ADR-0047 — The Windows app (Phase 4)
+
+**One app, served by a native layer.** The Windows app is Tauri 2 (brief §10) showing the same
+web app, built with `npm run build:desktop`. That build turns on the desktop features, which are
+dead code in the server's build. The window loads `sapb://localhost/` (WebView2 sees
+`http://sapb.localhost`), and a Rust handler answers every request:
+- **The web app's files**, built into the exe, with `index.html` for every route and a strict
+  Content Security Policy.
+- **`/api/…`**, passed to the user's server.
+- **`/desktop/…`**, the app's own endpoints: the server address, downloads and local files, the
+  player state, the update check.
+
+The web app stays same-origin, so its relative URLs (covers, uploads, the audit export) work
+unchanged. The server needs no CORS, and the page needs no Tauri JavaScript API or IPC
+permissions at all. Writes and `/desktop/…` calls from any other origin are refused, and
+navigation outside the app opens the browser.
+
+**Signing in as a token client.** The web app posts its usual login. The Rust side replaces the
+device info with the desktop's (platform `windows`, named after the computer), keeps the token
+pair in Windows Credential Manager, and gives the web app the answer without the tokens. Every
+API request carries the access token. A 401 for an expired token refreshes the pair once and
+retries, and parallel requests share that one refresh. The web app's own refresh call is
+answered from the stored pair, so its existing sign-out handling works as it is. There's no
+default server: the first screen asks for the address and checks it answers as Simple APB.
+
+**Offline** (the phase's acceptance test):
+- **Cache:** the last good answer to each GET (JSON and covers, up to 200 MB in all) is kept on
+  disk, so Home, the library and book pages open with the server down. The sign-in answer is
+  kept as `/me`, so the app starts signed in offline.
+- **Outbox:** a progress write that can't reach the server waits on disk, the newest per book.
+  It's sent within 30 s of the server answering again, with its original time and
+  `last_synced_at`. A write the server refuses as a conflict is dropped: the player's next write
+  meets the same conflict and the usual prompt asks the user.
+- **Downloads:** books are saved in `<folder>\<server>-<user>\<book>\`; the default folder is
+  Music\Simple APB, and Settings or the Downloads page changes it. Downloads resume after an
+  interruption, and every file must match the server's SHA-256. `book.json` is written last: a
+  book counts as downloaded exactly when it's there.
+- **Playing a downloaded book:** its stream-link request is answered with its own files, online
+  or not, and the player always uses the original files for it.
+
+**Windows integration.**
+- **Media controls:** the app drives Windows' media controls itself through the souvlaki crate,
+  and WebView2's own media-key handling is turned off so there's only one session. The volume
+  flyout shows the cover, title and author, and the keyboard's media keys and the flyout buttons
+  control the book.
+- **Tray:** play/pause, back, forward, show, the mini player and quit. Closing the window hides
+  it to the tray and the book keeps playing.
+- **Mini player:** a small always-on-top window with the cover and the controls. The web app's
+  player in the main window stays the only player: it posts its state to the native side, and
+  the tray, media controls and mini player send commands back.
+- **Live updates:** the app has no `/ws` socket to its server. It refreshes when the window comes
+  back to the front and every two minutes instead.
+
+**Uploads.** The existing tus client runs through the proxy, which passes the tus headers both
+ways. Files and folders dropped anywhere on the window go to the Uploads page; the web app's
+Uploads page now takes dropped folders too. A folder with .m4b/.m4a files sends those. A folder
+of mp3 files, including CD1/CD2 subfolders, is packed in the page into one zip, stored rather
+than compressed, with its cover. That's the format the server reads as one book.
+
+**Updates and the installer.** The app compares its version with the newest GitHub release and
+offers the download page, with "Skip this version". It installs nothing by itself. The Tauri
+updater would need an update-signing key that only Jacob can create, so automatic updates come
+with the release work in Phase 6. The installer is NSIS, installed per user with no admin
+rights. It isn't code-signed, so Windows SmartScreen warns on first run until the app has a
+reputation or a signing certificate (brief §10). CI builds the installer on every push, after
+`cargo fmt`, `clippy -D warnings` and the unit tests.
+
+**Checked here**, against the demo server (Windows 11, driven through WebView2's debugging port):
+- Connecting, signing in (the session is listed as "Windows (…)"), Home with covers, and
+  downloading a book (checksum verified).
+- **Server stopped:** the app restarted, opened Home from the cache, and played the downloaded
+  book. Its position was queued, then reached the server within 30 s of the server starting
+  again. This is the phase's acceptance test.
+- Windows' media session showing the title, author, cover and playing state; the Play/Pause
+  media key pausing the book; closing the window keeping it playing; the mini player's buttons.
+- An mp3 uploaded through the app imported. The zip writer's output read back with Python's
+  zipfile, checksums intact.
+- **Not checked here:** clicking the tray menu (it calls the same commands as the media keys),
+  and dropping a real folder from Explorer onto the window. The drop code was tested only through
+  the zip writer.
+
 ## Open questions for Jacob
 
 | # | Question | Current choice (until answered) |

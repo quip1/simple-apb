@@ -7,9 +7,11 @@ import pkg from "./package.json" with { type: "json" };
 // WebSocket calls are proxied so cookies stay same-origin.
 const server = process.env.SIMPLEAPB_DEV_SERVER ?? "http://127.0.0.1:8080";
 
-export default defineConfig({
+// `--mode desktop` builds the copy the Windows app embeds (desktop/, ADR-0047):
+// the same app, with the desktop features switched on.
+export default defineConfig(({ mode }) => ({
   plugins: [svelte()],
-  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
+  define: { __APP_VERSION__: JSON.stringify(pkg.version), __DESKTOP__: JSON.stringify(mode === "desktop") },
   server: {
     port: 5173,
     // Shared files outside web/: /i18n strings and the privacy template.
@@ -27,4 +29,4 @@ export default defineConfig({
     // The SPA is embedded in the Go binary; keep chunks few and cacheable.
     assetsDir: "assets",
   },
-});
+}));

@@ -9,6 +9,7 @@
 // apart). Hints arriving shortly after one of our writes are echoes and are
 // dropped (the server polls every 500 ms); bursts are coalesced.
 
+import { DESKTOP } from "./desktop.svelte";
 import { api } from "../api/client";
 
 export const live = $state({ tick: 0, connected: false });
@@ -65,13 +66,27 @@ function connect(): void {
   };
 }
 
+// The Windows app has no socket to its server (its requests go through the
+// app, ADR-0047): it checks for changes when the window comes back and every
+// two minutes.
+let poll: ReturnType<typeof setInterval> | undefined;
+const bumpNow = () => live.tick++;
+
 export function startLive(): void {
   wanted = true;
+  if (DESKTOP) {
+    window.addEventListener("focus", bumpNow);
+    poll ??= setInterval(bumpNow, 120_000);
+    return;
+  }
   connect();
 }
 
 export function stopLive(): void {
   wanted = false;
+  window.removeEventListener("focus", bumpNow);
+  clearInterval(poll);
+  poll = undefined;
   clearTimeout(timer);
   socket?.close();
   socket = null;

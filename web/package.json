@@ -12,6 +12,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:embed": "vite build && node scripts/embed.mjs",
+    "build:desktop": "vite build --mode desktop --outDir dist-desktop",
     "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
     "format": "prettier --write \"src/**/*.{ts,svelte,css}\" \"e2e/**/*.ts\" playwright.config.ts",
     "format:check": "prettier --check \"src/**/*.{ts,svelte,css}\" \"e2e/**/*.ts\" playwright.config.ts",

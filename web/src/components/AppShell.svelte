@@ -3,6 +3,7 @@
   // Signed-in layout: header navigation, page content, the mini-player bar and
   // a polite live region announcing playback state (brief §11 accessibility).
   import type { Snippet } from "svelte";
+  import { DESKTOP, desktop, openExternal, skipUpdate } from "../lib/desktop.svelte";
   import { t } from "../lib/i18n";
   import { player } from "../lib/player.svelte";
   import { link, route } from "../lib/router.svelte";
@@ -19,6 +20,8 @@
   const tabs = [
     { href: "/", key: "nav.home" },
     { href: "/library", key: "nav.library" },
+    // The Windows app keeps books on the computer (ADR-0047).
+    ...(DESKTOP ? [{ href: "/downloads", key: "desktop.downloads.title" }] : []),
     { href: "/stats", key: "nav.stats" },
     { href: "/settings", key: "nav.settings" },
   ];
@@ -64,6 +67,14 @@
 </Dialog>
 
 <main id="main" class="content" class:with-mini={showMini}>
+  {#if DESKTOP && desktop.update?.available && desktop.update.version}
+    {@const u = desktop.update}
+    <div class="update card" role="status">
+      <span>{t("desktop.update.available", { version: u.version ?? "" })}</span>
+      <Button variant="secondary" onclick={() => u.url && openExternal(u.url)}>{t("desktop.update.download")}</Button>
+      <Button variant="ghost" onclick={() => u.version && void skipUpdate(u.version)}>{t("desktop.update.skip")}</Button>
+    </div>
+  {/if}
   {@render children()}
 </main>
 {#if session.instance?.copyright_contact}
@@ -183,5 +194,12 @@
     nav a {
       padding: 0 0.5rem;
     }
+  }
+  .update {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
   }
 </style>

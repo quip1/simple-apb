@@ -7,6 +7,13 @@ All notable changes to this project are documented here. The format follows
 
 **Current phase: 3 — Android phone app** (milestones 1–7 done: foundation, onboarding and sign-in; playback; screens and account settings; offline sync and downloads; audio effects, car mode, Android Auto and the widget; local folders, push, e-ink and accessibility; release signing and F-Droid checks. Next: Jacob's week of daily use and the Android Auto checklist. Plan in ADR-0039). Phase 2 is feature-complete and awaits Jacob's sign-off; Phase 1 accepted 2026-11-08.
 
+### Added (Phase 4)
+- Simple APB for Windows (ADR-0047): a Tauri app showing the web app, with no default server (the first screen asks for it). It signs in as a Windows device, with the tokens in Windows Credential Manager.
+- Offline: whole books download to a folder you choose (resumable, checksum-verified) and play with no network. The library and book pages open from a cache, and progress made offline is sent when the server is back.
+- Windows media controls (cover, title and author in the volume flyout; the keyboard's media keys), a tray icon with play/pause, skip, show, mini player and quit, close-to-tray, and an always-on-top mini player.
+- Drag and drop: files or folders dropped on the window upload. A folder of mp3s goes as one zip. The web app's Uploads page takes folders too.
+- An update check against GitHub releases, a per-user NSIS installer, and a CI job that lints, tests and builds the installer on every push.
+
 ### Changed (scope)
 - Casting (Chromecast, DLNA/UPnP, Sonos) and the Wear OS app are dropped (ADR-0046). Phase 5 is now the book tools only.
 

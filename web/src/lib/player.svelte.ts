@@ -15,6 +15,7 @@
 
 import type HlsType from "hls.js";
 import { api, deviceId, putProgress, readCookie, type Book, type ProgressConflict } from "../api/client";
+import { DESKTOP, isDownloaded, postPlayer } from "./desktop.svelte";
 import { clock } from "./format";
 import { t } from "./i18n";
 import { prefs, readLocal, writeLocal, type Quality } from "./prefs.svelte";
@@ -98,6 +99,8 @@ function local(u: string): string {
 }
 
 function chooseProfile(book: Book, q: Quality): Profile {
+  // The Windows app plays a downloaded book from its own files.
+  if (DESKTOP && isDownloaded(book.id)) return "original";
   const probe = document.createElement("audio");
   const playable = book.files.length > 0 && book.files.every((f) => probe.canPlayType(f.mime_type) !== "");
   if (q === "low" || q === "medium") return q;
@@ -615,6 +618,36 @@ function mediaSessionPosition(): void {
   } catch {
     /* invalid state during loading */
   }
+}
+
+// ── the Windows app: tray, media keys and mini player follow this player ──
+
+if (DESKTOP) {
+  $effect.root(() => {
+    $effect(() => {
+      const b = player.book;
+      postPlayer({
+        book_id: b?.id ?? null,
+        title: b?.title,
+        author: b?.authors.map((a) => a.name).join(", "),
+        series: b?.series?.name,
+        cover: b?.has_cover ? (isDownloaded(b.id) ? `/desktop/cover/${b.id}` : b.cover_url) : undefined,
+        playing: player.playing,
+        position_ms: Math.round(player.positionMs),
+        duration_ms: b?.duration_ms ?? 0,
+      });
+    });
+  });
+  window.addEventListener("sapb:command", (e) => {
+    const action = (e as CustomEvent<string>).detail;
+    if (action === "toggle") toggle();
+    else if (action === "play") play();
+    else if (action === "pause") pause();
+    else if (action === "back") skip(-prefs.skipBackS);
+    else if (action === "forward") skip(prefs.skipForwardS);
+    else if (action === "previous_chapter") previousChapter();
+    else if (action === "next_chapter") nextChapter();
+  });
 }
 
 /** "4:12:30" for the conflict prompt and labels. */

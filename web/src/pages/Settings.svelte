@@ -4,6 +4,7 @@
   // on its own page. Theme and stream quality are per device; the other
   // playback preferences follow the account (prefs.svelte.ts).
   import { api, type Me, type Schemas } from "../api/client";
+  import { DESKTOP, checkUpdate, desktop, openExternal, toggleMini } from "../lib/desktop.svelte";
   import Alert from "../components/Alert.svelte";
   import Button from "../components/Button.svelte";
   import Field from "../components/Field.svelte";
@@ -57,13 +58,19 @@
   }
 
   // A QR code of this server's address, for the Android app's "Scan a QR code" (brief §7.4).
-  const serverUrl = location.origin;
+  // The Windows app runs on its own origin: show the server's address instead.
+  const serverUrl = $derived(DESKTOP ? (desktop.info?.server_url ?? "") : location.origin);
   let appQr = $state("");
   $effect(() => {
     void QRCode.toDataURL(serverUrl, { margin: 1, width: 200 }).then((u) => (appQr = u));
   });
 
   let signingOut = $state(false);
+  async function useAnotherServer() {
+    await signOut();
+    desktop.choosingServer = true;
+  }
+
   async function signOut() {
     signingOut = true;
     await closeBook();
@@ -146,6 +153,30 @@
       <small class="muted">{t("settings.conflict_threshold_help")}</small>
     </label>
   </section>
+
+  {#if DESKTOP && desktop.info}
+    <!-- The Windows app (ADR-0047) -->
+    <section class="card stack" aria-labelledby="s-computer">
+      <h2 id="s-computer">{t("desktop.settings.title")}</h2>
+      <p>{t("desktop.settings.server", { url: desktop.info.server_url ?? "" })}</p>
+      <div class="row">
+        <Button variant="secondary" onclick={() => void useAnotherServer()}>{t("desktop.server.change")}</Button>
+        <Button variant="secondary" onclick={toggleMini}>{t("desktop.tray.mini")}</Button>
+      </div>
+      <p class="muted">{t("desktop.settings.tray_hint")}</p>
+      <p>{t("desktop.settings.version", { version: desktop.info.version })}</p>
+      <div class="row">
+        <Button variant="secondary" onclick={() => void checkUpdate()}>{t("desktop.update.check")}</Button>
+        {#if desktop.update && !desktop.update.available}
+          <span class="muted" role="status">{t("desktop.update.none")}</span>
+        {/if}
+        {#if desktop.update?.available && desktop.update.url}
+          {@const u = desktop.update.url}
+          <Button onclick={() => openExternal(u)}>{t("desktop.update.download")}</Button>
+        {/if}
+      </div>
+    </section>
+  {/if}
 
   <section class="card stack" aria-labelledby="s-privacy">
     <h2 id="s-privacy">{t("settings.privacy")}</h2>

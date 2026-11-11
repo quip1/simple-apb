@@ -23,13 +23,53 @@
   import Uploads from "./pages/Uploads.svelte";
   import Setup from "./pages/Setup.svelte";
   import Signup from "./pages/Signup.svelte";
+  import Connect from "./pages/desktop/Connect.svelte";
+  import Downloads from "./pages/desktop/Downloads.svelte";
+  import Button from "./components/Button.svelte";
+  import { DESKTOP, checkUpdate, desktop, loadInfo, refreshDownloads } from "./lib/desktop.svelte";
+  import { filesFromDrop, pending } from "./lib/dropbook";
 
   const PUBLIC = ["/login", "/signup"];
   // Reachable signed in or out.
   const OPEN = ["/reset-password", "/forgot-password"];
   const loadAdmin = () => import("./pages/admin/AdminRoutes.svelte");
 
-  onMount(loadSession);
+  // The Windows app first needs a server (ADR-0047).
+  async function start() {
+    if (DESKTOP) {
+      const info = await loadInfo();
+      if (!info?.server_url) {
+        desktop.choosingServer = true;
+        return;
+      }
+      void refreshDownloads();
+      void checkUpdate();
+    }
+    await loadSession();
+  }
+  onMount(start);
+
+  function connected() {
+    desktop.choosingServer = false;
+    session.loaded = false;
+    session.me = null;
+    navigate("/", { replace: true });
+    void start();
+  }
+
+  // Windows app: files or folders dropped anywhere on the window are uploaded.
+  function onWindowDrop(e: DragEvent) {
+    if (!DESKTOP || !e.dataTransfer || !session.me) return;
+    e.preventDefault();
+    void filesFromDrop(e.dataTransfer).then((files) => {
+      if (!files.length) return;
+      pending.push(...files);
+      if (route.path !== "/uploads") navigate("/uploads");
+    });
+  }
+  function onWindowDragOver(e: DragEvent) {
+    if (DESKTOP && session.me) e.preventDefault();
+  }
 
   // Routing guard: setup first, then sign-in, then (if required) 2FA enrollment.
   $effect(() => {
@@ -81,10 +121,19 @@
   });
 </script>
 
-{#if !session.loaded}
+<svelte:window ondrop={onWindowDrop} ondragover={onWindowDragOver} />
+
+{#if DESKTOP && desktop.choosingServer}
+  <Connect onConnected={connected} current={desktop.info?.server_url ?? ""} />
+{:else if !session.loaded}
   <p class="loading" role="status">{t("common.loading")}</p>
 {:else if session.instance === null}
-  <main class="loading"><p role="alert">{t("error.server_unreachable")}</p></main>
+  <main class="loading stack">
+    <p role="alert">{t("error.server_unreachable")}</p>
+    {#if DESKTOP}
+      <div><Button variant="secondary" onclick={() => (desktop.choosingServer = true)}>{t("desktop.server.change")}</Button></div>
+    {/if}
+  </main>
 {:else if route.path === "/setup"}
   <Setup />
 {:else if match("/reset-password", route.path)}
@@ -113,6 +162,8 @@
       <Stats />
     {:else if match("/uploads", route.path)}
       <Uploads />
+    {:else if DESKTOP && match("/downloads", route.path)}
+      <Downloads />
     {:else if route.path === "/admin" || route.path.startsWith("/admin/")}
       {#if session.me.role === "admin"}
         {#await loadAdmin()}

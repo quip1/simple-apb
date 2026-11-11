@@ -18,6 +18,7 @@
   import ReportDialog from "../components/ReportDialog.svelte";
   import Reviews from "../components/Reviews.svelte";
   import ShareDialog from "../components/ShareDialog.svelte";
+  import { DESKTOP, desktop, download, removeDownload } from "../lib/desktop.svelte";
   import { ago, duration, percent, seriesLabel } from "../lib/format";
   import { t, tError } from "../lib/i18n";
   import { live } from "../lib/live.svelte";
@@ -202,6 +203,18 @@
           <Button onclick={() => playFrom()}>
             {isCurrent && player.playing ? t("book.open_player") : started ? t("book.resume") : t("book.play")}
           </Button>
+          {#if DESKTOP}
+            {@const job = desktop.downloads[id]}
+            {#if job?.status === "done"}
+              <Button variant="secondary" onclick={() => void removeDownload(id)}>{t("desktop.book.remove_download")}</Button>
+            {:else if job?.status === "queued" || job?.status === "downloading"}
+              <Button variant="secondary" busy>
+                {t("desktop.book.downloading", { pct: job.total_bytes ? Math.round((job.done_bytes / job.total_bytes) * 100) : 0 })}
+              </Button>
+            {:else}
+              <Button variant="secondary" onclick={() => void download(id)}>{t("desktop.book.download")}</Button>
+            {/if}
+          {/if}
           <Button variant="secondary" {busy} onclick={() => setFinished(!finished)}>
             {finished ? t("book.mark_unfinished") : t("book.mark_finished")}
           </Button>

@@ -169,6 +169,47 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  # The Windows app (desktop/, ADR-0047): Rust checks, tests and the installer.
+  desktop:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            desktop/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+      - run: npm ci
+        working-directory: web
+      - run: npm ci
+        working-directory: desktop
+      - name: Build the web app for the desktop
+        run: npm run build:desktop
+        working-directory: web
+      - name: Format, lint and test
+        working-directory: desktop/src-tauri
+        run: |
+          cargo fmt --check
+          cargo clippy --all-targets --locked -- -D warnings
+          cargo test --locked
+      - name: Installer
+        run: npm run build
+        working-directory: desktop
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer-${{ github.sha }}
+          path: desktop/src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+          retention-days: 14
+
   docker-image:
     runs-on: ubuntu-latest
     needs: [server]
