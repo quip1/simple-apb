@@ -5,7 +5,7 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-**Current phase: 3 — Android phone app** (milestones 1–6 done: foundation, onboarding and sign-in; playback; screens and account settings; offline sync and downloads; audio effects, car mode, Android Auto and the widget; local folders, push, e-ink and accessibility. Plan in ADR-0039). Phase 2 is feature-complete and awaits Jacob's sign-off; Phase 1 accepted 2026-11-08.
+**Current phase: 3 — Android phone app** (milestones 1–7 done: foundation, onboarding and sign-in; playback; screens and account settings; offline sync and downloads; audio effects, car mode, Android Auto and the widget; local folders, push, e-ink and accessibility; release signing and F-Droid checks. Next: Jacob's week of daily use and the Android Auto checklist. Plan in ADR-0039). Phase 2 is feature-complete and awaits Jacob's sign-off; Phase 1 accepted 2026-11-08.
 
 ### Added (Phase 3)
 - Android app foundation (milestone 1, ADR-0039): Gradle wrapper and current AndroidX/Compose/Media3/Room/Hilt versions, modules `core-ui`, `core-data` and `app` with `play`, `github` and `fdroid` flavors; the Fern dark and e-ink themes; strings generated from the shared `i18n` catalog; the Open book adaptive launcher icon.
@@ -13,6 +13,9 @@ All notable changes to this project are documented here. The format follows
 - Several servers and accounts with one active; tokens sealed with an Android Keystore key, refreshed once on expiry, and a sign-out notice when the server refuses the refresh; no backups of account data.
 - CI builds every flavor, runs ktlint, Android lint (warnings fail) and the unit tests, and checks a minified release build.
 - CI keeps the debug APKs of every flavor from each push as a downloadable artifact for 14 days.
+- Release signing (milestone 7, ADR-0045): the github APK and the play bundle are signed with keys from the environment or `~/.gradle/gradle.properties`, never the repository. A `v*` tag builds them from keys in Actions secrets. The fdroid build stays unsigned, for F-Droid to sign. Setup in `docs/ANDROID-RELEASE.md`.
+- F-Droid checks: every push fails if the fdroid build depends on or contains a proprietary Google library. Each night the fdroid APK is built in two checkouts and must come out byte-identical. Release builds no longer embed the git commit.
+- `docs/ANDROID-AUTO-CHECKLIST.md`: the Desktop Head Unit checks for Android Auto, with setup steps.
 - Playback (milestone 2, ADR-0040): new `core-player` module with one Media3 service for the app, notification, lock screen, headset and Bluetooth. Multi-file books play on one timeline, streamed with the account's sign-in. Notification and lock-screen buttons are configurable (up to 5; default back 30, play/pause, forward 30). Also: speed per book (0.5–3.5×), configurable skips, auto-rewind on resume, sleep timer (presets, custom, end of chapter) with fade-out and shake to extend, pause or lower the volume for navigation prompts, single/double/triple/long headset presses, and resuming the last book from a headset button.
 - Player screen (cover, chapter and book progress, skip, chapter skip, speed, sleep timer, chapters, bookmarks with notes), mini player, the "Continue where you left off?" conflict prompt, a Playback settings screen, and covers loaded signed in. Home rows play the book.
 - Progress reports every 15 s, on pause, after seeks and at the end; the position is also kept on the device so an unreachable server never loses it.

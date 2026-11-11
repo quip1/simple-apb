@@ -1256,6 +1256,48 @@ Not checked here: a real UnifiedPush distributor (none on the emulator; registra
 connector's documented flow), and a QR code through a real camera (the decoder is unit-tested with
 a generated code).
 
+---
+
+## ADR-0045 — Android release signing, F-Droid checks and the Android Auto checklist (Phase 3, milestone 7)
+
+**Release signing.** Each of the three flavors is signed its own way (`docs/ANDROID-RELEASE.md`):
+- **`github`:** signed with the release key. Sideloaded updates install only over the same
+  key, so losing it would strand every sideloaded install.
+- **`play`:** signed with a separate upload key when one is given, otherwise the release key.
+  Google Play re-signs it with the key it keeps (Play App Signing), and a lost upload key can be
+  reset; a lost release key can't.
+- **`fdroid`:** never signed here. F-Droid builds it from source and signs it itself.
+
+The keys come from environment variables or `~/.gradle/gradle.properties`
+(`SIMPLEAPB_KEYSTORE`, `SIMPLEAPB_PLAY_KEYSTORE`, with their passwords and aliases), never from
+the repository. Without them, release builds stay unsigned, as before. A new workflow builds the
+signed APK and bundle, plus the unsigned fdroid APK, on a `v*` tag, from keystores held in Actions
+secrets. It verifies the signatures and keeps the files as run artifacts. Publishing a GitHub
+release with every platform's files belongs to Phase 6.
+
+**F-Droid checks** (brief §7.1, §14):
+- **No proprietary libraries:** `:app:checkFdroid` fails if the fdroid release build depends on,
+  or has classes from, Google Play Services, Firebase, Play Core, ML Kit, the ads SDK or
+  Crashlytics. It runs on every push. It was checked by banning a library the app does use: both
+  the dependency check and the APK scan failed as they should.
+- **Same APK wherever it's built:** release builds no longer embed the git commit
+  (`vcsInfo.include = false`), so a build from a source tarball matches one from a checkout. Two
+  clean builds here gave byte-identical APKs. A nightly job builds the fdroid APK in two separate
+  checkouts and compares them, and builds the signed outputs with a throwaway key to keep the
+  signing path working.
+- The F-Droid metadata and the inclusion request stay in Phase 6, as planned.
+
+**Android Auto.** `docs/ANDROID-AUTO-CHECKLIST.md` lists the Desktop Head Unit checks the phase
+must pass: browsing, playing, voice, offline and errors, interruptions, and the phone while
+driving. It also says how to set up the DHU with a phone. The checks need a phone with the
+Android Auto app, so Jacob runs them; they weren't run here.
+
+**On-device UI tests: skipped, on Jacob's decision.** The plan included instrumented tests for
+the playback service and Compose UI tests for e-ink, 200 % text and TalkBack labels (brief §15).
+They were started against a recorded fake server, but Jacob chose to skip them: the app works
+now, and users can report UI problems. Logged as Q12. The milestone 6 accessibility pass and the
+unit tests stay as the cover for now.
+
 ## Open questions for Jacob
 
 | # | Question | Current choice (until answered) |
@@ -1267,6 +1309,7 @@ a generated code).
 | Q8 | ~~Web framework (brief #8)~~ **Answered: Svelte** (ADR-0026) | — |
 | Q9 | ~~Accent colour and icon (brief #9)~~ **Answered: Fern accent, Open book icon** (ADR-0038) | — |
 | Q10 | Copyright/takedown contact in the footer (brief #3) | Yes, admin-editable (proposed default) |
+| Q12 | Brief §15's instrumented playback-service tests and Compose UI tests (e-ink, 200 % font, TalkBack labels) were skipped in Phase 3 milestone 7 (ADR-0045). Add them later, before v1.0? | Skipped for now (Jacob, 2026-11-11) |
 | Q11 | Brief §7.4 "open EPUB if attached": the API has `has_epub` but no endpoint to fetch the EPUB. Add `GET /books/{id}/epub` (and a way to attach one) in Phase 5 with the book tools? | Yes, Phase 5 (proposed) |
 | Q5 | ~~TOTP replay protection~~ **Answered: yes** (ADR-0027) | — |
 | Q7 | ~~AAC-LC instead of HE-AAC~~ **Answered: AAC-LC is fine** (ADR-0018) | — |

@@ -1,0 +1,69 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Signed Android builds for a version tag (brief §14, ADR-0045):
+#   github — a signed APK for sideloading (the release key)
+#   play   — a signed bundle for Google Play (the upload key, or the release key)
+#   fdroid — unsigned: F-Droid builds it from source and signs it itself
+# The keys live only in the repository's Actions secrets (see docs/ANDROID-RELEASE.md).
+# The outputs are kept as workflow artifacts; publishing a GitHub release with
+# every platform's files comes with the release work of Phase 6.
+name: Android release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android-release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v5
+      - name: Unpack the signing keys
+        env:
+          RELEASE_KEYSTORE: ${{ secrets.SIMPLEAPB_KEYSTORE_BASE64 }}
+          PLAY_KEYSTORE: ${{ secrets.SIMPLEAPB_PLAY_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$RELEASE_KEYSTORE" ]; then
+            echo "::error::The SIMPLEAPB_KEYSTORE_BASE64 secret is not set (docs/ANDROID-RELEASE.md)."
+            exit 1
+          fi
+          echo "$RELEASE_KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "SIMPLEAPB_KEYSTORE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+          if [ -n "$PLAY_KEYSTORE" ]; then
+            echo "$PLAY_KEYSTORE" | base64 -d > "$RUNNER_TEMP/upload.jks"
+            echo "SIMPLEAPB_PLAY_KEYSTORE=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+          fi
+      - name: Build
+        env:
+          SIMPLEAPB_KEYSTORE_PASSWORD: ${{ secrets.SIMPLEAPB_KEYSTORE_PASSWORD }}
+          SIMPLEAPB_KEY_ALIAS: ${{ secrets.SIMPLEAPB_KEY_ALIAS }}
+          SIMPLEAPB_KEY_PASSWORD: ${{ secrets.SIMPLEAPB_KEY_PASSWORD }}
+          SIMPLEAPB_PLAY_KEYSTORE_PASSWORD: ${{ secrets.SIMPLEAPB_PLAY_KEYSTORE_PASSWORD }}
+          SIMPLEAPB_PLAY_KEY_ALIAS: ${{ secrets.SIMPLEAPB_PLAY_KEY_ALIAS }}
+          SIMPLEAPB_PLAY_KEY_PASSWORD: ${{ secrets.SIMPLEAPB_PLAY_KEY_PASSWORD }}
+        run: ./gradlew --no-daemon :app:checkFdroid :app:assembleGithubRelease :app:bundlePlayRelease
+      - name: Check the signatures
+        run: |
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BT/apksigner" verify --print-certs app/build/outputs/apk/github/release/app-github-release.apk
+          jarsigner -verify app/build/outputs/bundle/playRelease/app-play-release.aab | grep "jar verified"
+          rm -f "$RUNNER_TEMP"/*.jks
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-release-${{ github.ref_name }}
+          path: |
+            android/app/build/outputs/apk/github/release/app-github-release.apk
+            android/app/build/outputs/bundle/playRelease/app-play-release.aab
+            android/app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk
+          if-no-files-found: error

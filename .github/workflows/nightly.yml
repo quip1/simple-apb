@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# Nightly durability checks: the SIGKILL crash harness on both operating
-# systems the server is developed on.
+# Nightly checks: the server's SIGKILL crash harness, and the Android release
+# builds (the fdroid build is reproducible; release signing works).
 name: Nightly
 
 on:
@@ -30,3 +30,35 @@ jobs:
           SIMPLEAPB_CRASH_TEST: "1"
           SIMPLEAPB_CRASH_ITERATIONS: "40"
         run: go test -count=1 -v -timeout 20m -run TestCrashHarness ./cmd/simpleapb
+
+  android-release-builds:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      # Two checkouts in different directories: F-Droid rebuilds on its own
+      # machine, so the APK must not depend on where it was built (ADR-0045).
+      - uses: actions/checkout@v5
+        with:
+          path: one
+      - uses: actions/checkout@v5
+        with:
+          path: two
+      - name: Build the fdroid release twice
+        run: |
+          (cd one/android && ./gradlew --no-daemon --no-build-cache -q :app:checkFdroid)
+          (cd two/android && ./gradlew --no-daemon --no-build-cache -q :app:assembleFdroidRelease)
+      - name: The two fdroid APKs are identical
+        run: |
+          sha256sum one/android/app/build/outputs/apk/fdroid/release/*.apk two/android/app/build/outputs/apk/fdroid/release/*.apk
+          cmp one/android/app/build/outputs/apk/fdroid/release/*.apk two/android/app/build/outputs/apk/fdroid/release/*.apk
+      - name: Release signing works (with a throwaway key)
+        working-directory: one/android
+        run: |
+          keytool -genkeypair -keystore "$RUNNER_TEMP/ci.jks" -storepass ci-only -alias ci -keyalg RSA -keysize 2048 -validity 1 -dname "CN=CI only"
+          SIMPLEAPB_KEYSTORE="$RUNNER_TEMP/ci.jks" SIMPLEAPB_KEYSTORE_PASSWORD=ci-only SIMPLEAPB_KEY_ALIAS=ci             ./gradlew --no-daemon -q :app:assembleGithubRelease :app:bundlePlayRelease
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BT/apksigner" verify --print-certs app/build/outputs/apk/github/release/app-github-release.apk | grep "CN=CI only"
+          jarsigner -verify app/build/outputs/bundle/playRelease/app-play-release.aab | grep "jar verified"

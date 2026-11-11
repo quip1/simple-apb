@@ -160,7 +160,7 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@v5
       - name: Build, lint and test
-        run: ./gradlew --no-daemon ktlintCheck test assembleDebug :app:lintFdroidDebug :app:assembleFdroidRelease
+        run: ./gradlew --no-daemon ktlintCheck test assembleDebug :app:lintFdroidDebug :app:assembleFdroidRelease :app:checkFdroid
       # Debug APKs of every flavor, to install for testing (signed with this run's debug key).
       - uses: actions/upload-artifact@v4
         with:
