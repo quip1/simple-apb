@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Design system shared by the phone app, widget and (later) Wear: the Fern
+// Design system shared by the phone app and widget: the Fern
 // dark theme and the e-ink theme (brief §11), plus common components.
 //
 // It also owns the app's strings: they are generated from the shared

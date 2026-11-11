@@ -63,7 +63,7 @@
   "setup.library.unusable": "The server can't use this folder.",
   "setup.url.title": "Public address",
   "setup.url.label": "Public base URL",
-  "setup.url.hint": "How phones and browsers reach this server, e.g. https://books.example.com. Used in links and casting.",
+  "setup.url.hint": "How phones and browsers reach this server, e.g. https://books.example.com. Used in links.",
   "setup.smtp.title": "Email",
   "setup.smtp.help": "Optional. Used for sign-up decisions, password resets and admin alerts.",
   "setup.smtp.enable": "Send email",

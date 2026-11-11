@@ -2,7 +2,7 @@
 //
 // Playback (brief §7.2): one Media3 MediaLibraryService for background play,
 // the notification and lock screen, headset and Bluetooth buttons, and later
-// Android Auto and Wear. Also the book timeline, sleep timer and progress
+// Android Auto. Also the book timeline, sleep timer and progress
 // reporting shared by every controller.
 
 plugins {

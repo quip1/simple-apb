@@ -1,10 +1,11 @@
 # Simple APB
 
 A simple, self-hostable, local-first audiobook platform: a Go server that holds
-your library and syncs progress, plus players for Android (phone, Android Auto,
-Wear OS), the web and Windows.
+your library and syncs progress, plus players for Android (phone and Android
+Auto), the web and Windows.
 
-> **Status:** early development (Phase 0 — foundations). Nothing here is usable yet.
+> **Status:** in development. The server, web app and Android app are built; the Windows app,
+> the book tools and the first release are next. See `CHANGELOG.md`.
 
 ## Repository layout
 
@@ -13,7 +14,7 @@ Wear OS), the web and Windows.
 | `server/` | Go server: API, sync, streaming, scanner, admin. `server/openapi.yaml` is the API source of truth. |
 | `web/` | TypeScript SPA (web player + admin panel), served by the server |
 | `desktop/` | Windows app (Tauri wrapping `web/`) |
-| `android/` | Android phone, Wear OS and shared modules (Gradle) |
+| `android/` | Android phone app and shared modules (Gradle) |
 | `deploy/` | Docker Compose and deployment guides |
 | `docs/` | Architecture, decisions log, API reference, self-hosting |
 | `i18n/` | Shared translation strings |

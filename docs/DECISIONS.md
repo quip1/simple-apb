@@ -1298,6 +1298,31 @@ They were started against a recorded fake server, but Jacob chose to skip them: 
 now, and users can report UI problems. Logged as Q12. The milestone 6 accessibility pass and the
 unit tests stay as the cover for now.
 
+---
+
+## ADR-0046 — Casting and Wear OS dropped from scope
+
+Jacob dropped two parts of the brief on 2026-11-11: **casting** (Chromecast, DLNA/UPnP, Sonos,
+§7.7) and the **Wear OS app** (remote, standalone playback and tile, §8). Phase 5 is now the book
+tools only: the chapter editor with silence detection, the mp3 → m4b merge, the cover picker and
+the duplicate finder. It is accepted when chapter edits survive a re-scan.
+
+What changes:
+- The empty `android/cast` and `android/wear` placeholders are removed, along with the unused
+  `CAST` build flag.
+- The `play` and `github` flavors now differ only in the in-app update check, and no flavor links
+  a proprietary Google library. The F-Droid checks (ADR-0045) still guard the fdroid build.
+- The player gets no cast button.
+
+What stays, because it's already built, tested and harmless:
+- The signed stream URLs (`POST /books/{id}/stream-url`, ADR-0016). They're unused by the apps
+  for now; an external player could use them.
+- The `wear` platform value and its version-guard entry in the API.
+- Android Auto, which was never part of either.
+
+The AGPL linking exception for the Google Cast SDK and Play Services (`LICENSE-EXCEPTION.md`) now
+covers nothing the apps use. Whether to keep it for later or remove it is Q13.
+
 ## Open questions for Jacob
 
 | # | Question | Current choice (until answered) |
@@ -1309,6 +1334,7 @@ unit tests stay as the cover for now.
 | Q8 | ~~Web framework (brief #8)~~ **Answered: Svelte** (ADR-0026) | — |
 | Q9 | ~~Accent colour and icon (brief #9)~~ **Answered: Fern accent, Open book icon** (ADR-0038) | — |
 | Q10 | Copyright/takedown contact in the footer (brief #3) | Yes, admin-editable (proposed default) |
+| Q13 | Casting is dropped (ADR-0046), so no app links the Google Cast SDK or Play Services. Keep the AGPL §7 linking exception (`LICENSE-EXCEPTION.md`) for later use, or remove it so the license is plain AGPL? | Keep for now (harmless) |
 | Q12 | Brief §15's instrumented playback-service tests and Compose UI tests (e-ink, 200 % font, TalkBack labels) were skipped in Phase 3 milestone 7 (ADR-0045). Add them later, before v1.0? | Skipped for now (Jacob, 2026-11-11) |
 | Q11 | Brief §7.4 "open EPUB if attached": the API has `has_epub` but no endpoint to fetch the EPUB. Add `GET /books/{id}/epub` (and a way to attach one) in Phase 5 with the book tools? | Yes, Phase 5 (proposed) |
 | Q5 | ~~TOTP replay protection~~ **Answered: yes** (ADR-0027) | — |

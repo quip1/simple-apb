@@ -5,7 +5,7 @@
 ## Overview
 
 ```
- Android / Wear / Web / Windows clients
+ Android / Web / Windows clients
         │  HTTPS  (REST /api/v1, WebSocket /ws, signed stream URLs)
         ▼
  reverse proxy (TLS)
@@ -52,7 +52,7 @@
 | Kotlin client | `android/core-api` | generated at build time; query enums send wire values |
 | Android app | `android/app`, `core-ui`, `core-data` | Compose app (flavors play/github/fdroid): onboarding, sign-in with 2FA, accounts with Keystore-sealed tokens and refresh, Fern/e-ink themes, strings generated from `i18n` (ADR-0039); player screen, mini player, playback settings; Home, Library, book, author/series, Stats, Settings, Security and Accounts screens with account-synced preferences (ADR-0041); local-only mode, UnifiedPush, QR sign-in, account switcher (ADR-0044); release signing per flavor and F-Droid checks (ADR-0045) |
 | Android offline | `android/core-data` (`db`, `sync`, `download`) | Room mirror per account, outbox, WorkManager sync engine with `/me/sync` and `/ws` hints, resumable checksum-verified downloads with cap, location and Wi-Fi-only (ADR-0042); folders on this device and tus uploads (`local`, ADR-0044) |
-| Android playback | `android/core-player` | One Media3 `MediaLibraryService` + session for app, notification, headset, Bluetooth (later Auto/Wear); books as file playlists on one timeline, signed-in streaming (original files or the HLS data saver), sleep timer, headset gestures, progress reports and conflicts (ADR-0040); audio effect chain in the sink, Android Auto browse tree and search, cover provider (ADR-0043) |
+| Android playback | `android/core-player` | One Media3 `MediaLibraryService` + session for app, notification, headset, Bluetooth, Android Auto; books as file playlists on one timeline, signed-in streaming (original files or the HLS data saver), sleep timer, headset gestures, progress reports and conflicts (ADR-0040); audio effect chain in the sink, Android Auto browse tree and search, cover provider (ADR-0043) |
 | CI | `.github/workflows/ci.yml` | spec lint + codegen freshness, Go tests on SQLite and Postgres, golangci-lint, Kotlin client build, Docker image build |
 
 ## Request path

@@ -22,7 +22,7 @@
             android:grantUriPermissions="true" />
 
         <!-- Exported without a permission on purpose: media controllers in other
-             apps (system media controls, Android Auto, Wear, Bluetooth) must bind
+             apps (system media controls, Android Auto, Bluetooth) must bind
              to it. The session decides per controller in onConnect. -->
         <service
             android:name=".PlaybackService"

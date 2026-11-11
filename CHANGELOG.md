@@ -7,6 +7,9 @@ All notable changes to this project are documented here. The format follows
 
 **Current phase: 3 — Android phone app** (milestones 1–7 done: foundation, onboarding and sign-in; playback; screens and account settings; offline sync and downloads; audio effects, car mode, Android Auto and the widget; local folders, push, e-ink and accessibility; release signing and F-Droid checks. Next: Jacob's week of daily use and the Android Auto checklist. Plan in ADR-0039). Phase 2 is feature-complete and awaits Jacob's sign-off; Phase 1 accepted 2026-11-08.
 
+### Changed (scope)
+- Casting (Chromecast, DLNA/UPnP, Sonos) and the Wear OS app are dropped (ADR-0046). Phase 5 is now the book tools only.
+
 ### Added (Phase 3)
 - Android app foundation (milestone 1, ADR-0039): Gradle wrapper and current AndroidX/Compose/Media3/Room/Hilt versions, modules `core-ui`, `core-data` and `app` with `play`, `github` and `fdroid` flavors; the Fern dark and e-ink themes; strings generated from the shared `i18n` catalog; the Open book adaptive launcher icon.
 - Onboarding: connect to a server (address checks, version guard, warning before plain http), sign in with 2FA or a recovery code, request an account, "Forgot your password?" when the server offers email reset, and a 3-screen tour.

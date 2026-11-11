@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // The phone app (brief §7). Flavors (§7.1):
-//   play   — Google Cast, no in-app update check
-//   github — Google Cast and the in-app update check (sideloaded APKs)
-//   fdroid — no Google libraries at all, no Cast, no update check
+//   play   — for Google Play: no in-app update check
+//   github — sideloaded APKs: the in-app update check
+//   fdroid — no Google libraries at all, no update check
+// (Casting, which would have put the Google Cast SDK in play and github, was dropped: ADR-0046.)
 //
 // Release signing (ADR-0045): the keys come from environment variables or
 // ~/.gradle/gradle.properties, never from this repository. Without them,
@@ -57,18 +58,15 @@ android {
         create("play") {
             dimension = "distribution"
             (signingConfigs.findByName("upload") ?: signingConfigs.findByName("release"))?.let { signingConfig = it }
-            buildConfigField("boolean", "CAST", "true")
             buildConfigField("boolean", "UPDATE_CHECK", "false")
         }
         create("github") {
             dimension = "distribution"
             signingConfigs.findByName("release")?.let { signingConfig = it }
-            buildConfigField("boolean", "CAST", "true")
             buildConfigField("boolean", "UPDATE_CHECK", "true")
         }
         create("fdroid") {
             dimension = "distribution"
-            buildConfigField("boolean", "CAST", "false")
             buildConfigField("boolean", "UPDATE_CHECK", "false")
         }
     }

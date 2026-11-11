@@ -3,7 +3,7 @@
 Playback for the Android app (brief §7.2, ADR-0040).
 
 - `PlaybackService` is the one Media3 `MediaLibraryService`. The app, the notification and lock
-  screen, headset and Bluetooth buttons, Android Auto (and later Wear) all go through its
+  screen, headset and Bluetooth buttons, and Android Auto all go through its
   session.
 - `BookTimeline` maps book-global positions to (file, offset) and answers chapter questions.
 - `PlaybackRepository` loads books, reports progress (409 conflicts), and handles bookmarks.

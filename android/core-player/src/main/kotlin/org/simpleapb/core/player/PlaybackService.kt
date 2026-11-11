@@ -63,7 +63,7 @@ import org.simpleapb.core.ui.R as UiR
 /**
  * The one playback service (brief §7.2): background play, the notification
  * and lock screen, headset and Bluetooth buttons, and (later) Android Auto
- * and Wear, all through one MediaSession.
+ * all through one MediaSession.
  *
  * A book plays as a playlist of its files; everything the user sees and
  * every progress report uses the book-global position from [BookTimeline].
