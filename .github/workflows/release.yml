@@ -120,7 +120,7 @@ jobs:
           cp app/build/outputs/apk/github/release/app-github-release.apk "$RUNNER_TEMP/out/simple-apb-android-$v.apk"
           cp app/build/outputs/bundle/playRelease/app-play-release.aab "$RUNNER_TEMP/out/simple-apb-android-$v-play.aab"
           rm -f "$RUNNER_TEMP"/*.jks
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: steps.keys.outputs.skip != 'true'
         with:
           name: android
@@ -148,7 +148,7 @@ jobs:
         run: |
           mkdir -p out
           cp desktop/src-tauri/target/release/bundle/nsis/*-setup.exe "out/simple-apb-windows-${{ needs.version.outputs.version }}-setup.exe"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows
           path: out/*
@@ -161,7 +161,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
