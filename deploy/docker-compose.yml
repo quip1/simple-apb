@@ -105,7 +105,8 @@ services:
     environment:
       POSTGRES_USER: simpleapb
       POSTGRES_DB: simpleapb
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      # Only needed with the postgres profile (the image refuses to start without it).
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
     volumes:
       - ${POSTGRES_DATA:-./data/postgres}:/var/lib/postgresql/data
     networks: [simpleapb]
