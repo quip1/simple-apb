@@ -15,9 +15,8 @@ reg=localhost:5000/sapb-test
 report() {
   trap - ERR
   local line=$1
-  local ann
-  ann() { echo "::error title=$1::$(printf '%s' "$2" | tail -c 3500 | sed ':a;N;$!ba;s/%/%25/g;s///g;s/
-/%0A/g')"; }
+  # One annotation per piece; newlines become %0A (GitHub's escape for them).
+  ann() { echo "::error title=$1::$(printf '%s' "$2" | tail -c 3500 | tr -d '\r' | awk 'BEGIN{ORS="%0A"} {gsub(/%/,"%25"); print}')"; }
   ann "updater test failed at line $line" "$(sed -n "${line}p" "$0")"
   if [ -d "$work/deploy" ]; then
     (cd "$work/deploy" && ann "compose ps" "$(docker compose --profile updater ps -a 2>&1)")
