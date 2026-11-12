@@ -5,6 +5,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-12
+
 ### Fixed
 - Releases: the last step couldn't collect the built files, so 0.5.0 published its server image but no GitHub release.
 

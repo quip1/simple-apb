@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 [package]
 name = "simple-apb-desktop"
-version = "0.5.0"
+version = "0.5.1"
 description = "Simple APB for Windows"
 license = "AGPL-3.0-or-later"
 edition = "2021"
