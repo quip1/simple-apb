@@ -5,6 +5,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-11-12
+
 ### Added
 - A preset Android app for one server (ADR-0050): set the `SIMPLEAPB_PRESET_SERVER` secret and each release also carries `simple-apb-android-X.Y.Z-preset.apk`. It opens straight to that server's sign-in, with no setup and no other servers.
 

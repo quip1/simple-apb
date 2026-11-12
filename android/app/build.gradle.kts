@@ -41,8 +41,8 @@ android {
         applicationId = "org.simpleapb.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 502
-        versionName = "0.5.2"
+        versionCode = 503
+        versionName = "0.5.3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "PRESET_SERVER", "\"${presetServer()}\"")
     }
