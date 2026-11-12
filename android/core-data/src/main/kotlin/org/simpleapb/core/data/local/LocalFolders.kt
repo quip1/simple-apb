@@ -126,14 +126,16 @@ constructor(
                 for (tree in trees) {
                     val treeUri = tree.toUri()
                     val root = runCatching { DocumentsContract.getTreeDocumentId(treeUri) }.getOrNull() ?: continue
-                    for (child in children(treeUri, root)) {
-                        val row =
-                            when {
-                                child.isDir -> folderBook(treeUri, tree, child, known)
-                                isAudio(child.name, child.mime) -> fileBook(treeUri, tree, child, known)
-                                else -> null
+                    // The same book rules as the server's scan (BookLayout).
+                    val entries = mutableMapOf<String, Entry>()
+                    val top = Entry(root, "", Document.MIME_TYPE_DIR, 0, 0)
+                    for (book in BookLayout.plan(node(treeUri, top, entries, 0))) {
+                        found +=
+                            when (book) {
+                                is BookLayout.Book.Folder ->
+                                    folderBook(treeUri, tree, entries.getValue(book.dir.id), book.files.map { entries.getValue(it.id) }, known)
+                                is BookLayout.Book.File -> fileBook(treeUri, tree, entries.getValue(book.file.id), known)
                             }
-                        if (row != null) found += row
                     }
                 }
                 dao.upsertLocalBooks(found)
@@ -178,18 +180,26 @@ constructor(
         return out.sortedWith(compareBy(NaturalOrder) { it.name })
     }
 
-    /** Audio files of a book folder, in order, one level of subfolders included (CD1, CD2…). */
-    private fun audioFiles(tree: Uri, docId: String, depth: Int = 0): List<Entry> = children(tree, docId).flatMap { e ->
-        when {
-            e.isDir && depth < 1 -> audioFiles(tree, e.docId, depth + 1)
-            isAudio(e.name, e.mime) -> listOf(e)
-            else -> emptyList()
-        }
+    /** A folder and everything under it (to [BookLayout.MAX_DEPTH]), remembering each entry. */
+    private fun node(tree: Uri, e: Entry, entries: MutableMap<String, Entry>, depth: Int): BookLayout.Node {
+        entries[e.docId] = e
+        val kids =
+            if (depth < BookLayout.MAX_DEPTH) {
+                children(tree, e.docId).map { c ->
+                    if (c.isDir) {
+                        node(tree, c, entries, depth + 1)
+                    } else {
+                        entries[c.docId] = c
+                        BookLayout.Node(c.docId, c.name, isDir = false, isAudio = isAudio(c.name, c.mime))
+                    }
+                }
+            } else {
+                emptyList()
+            }
+        return BookLayout.Node(e.docId, e.name, isDir = true, children = kids)
     }
 
-    private fun folderBook(tree: Uri, treeStr: String, dir: Entry, known: Map<String, LocalBookRow>): LocalBookRow? {
-        val audio = audioFiles(tree, dir.docId)
-        if (audio.isEmpty()) return null
+    private fun folderBook(tree: Uri, treeStr: String, dir: Entry, audio: List<Entry>, known: Map<String, LocalBookRow>): LocalBookRow {
         val folderUri = DocumentsContract.buildDocumentUriUsingTree(tree, dir.docId).toString()
         val id = idFor(folderUri)
         val modified = maxOf(dir.modified, audio.maxOf { it.modified })

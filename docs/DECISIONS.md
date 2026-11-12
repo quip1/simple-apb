@@ -1159,7 +1159,7 @@ balance, rumble cut) is unit-tested; listening tests need a real phone.
 **Folders on this device** (brief §7.4 screen 9):
 - **Picking:** the user picks folders with the system picker (Storage Access Framework), so no
   storage permission is needed, and read access is kept across restarts.
-- **What counts as a book:** each subfolder of a picked folder is a book (one level of disc
+- **What counts as a book** (superseded by ADR-0050, which follows the server's rules): each subfolder of a picked folder is a book (one level of disc
   subfolders such as CD1 and CD2 included), and an audio file lying directly in a picked folder is a
   book of its own.
 - **What's read from the files:** the files play in natural order ("Part 2" before "Part 10"). The
@@ -1552,6 +1552,46 @@ default in `deploy/docker-compose.yml`, and building from source moved to
 - Play and F-Droid listings.
 
 These stay in Phase 6.
+
+---
+
+## ADR-0050 — A preset Android app for one server, and folders split like the server
+
+**Preset build.** Jacob wants an app his listeners can install and sign in to with no setup.
+The repository may never name an instance (CLAUDE.md), so the server is baked in at build time:
+- **Where it comes from:** `SIMPLEAPB_PRESET_SERVER` (an environment variable or Gradle
+  property). The build accepts only a plain http(s) address and fails otherwise. It becomes
+  `BuildConfig.PRESET_SERVER`, which is empty in every ordinary build.
+- **In releases:** the release workflow builds the github flavor a second time with the
+  `SIMPLEAPB_PRESET_SERVER` secret and attaches `simple-apb-android-X.Y.Z-preset.apk`. Without
+  the secret there's no preset APK.
+- **Public:** Jacob chose the public GitHub release, so the APK, and the server name inside it,
+  is public. The code stays generic.
+
+**What the preset app does differently:**
+- It opens straight to the server's sign-in (and "Request an account" when sign-ups are open),
+  with no welcome or server screen. When the server can't be reached, it says so, with a retry.
+  A plain-http preset is accepted without the warning, since the builder chose it.
+- There's no "Add a server", in the account switcher or under Accounts, and no files-only mode.
+  Signing out returns to that sign-in. Folders on this device still work while signed in.
+- It has the same package and signing key as the regular GitHub APK, so either installs over the
+  other. Its update check takes the release's `-preset.apk`, and the regular one never does.
+- **Checked on the emulator** with a preset pointing at the demo server:
+  - first start opened on the sign-in;
+  - the account switcher offered no "Add a server";
+  - signing out came back to the sign-in;
+  - with the server unreachable, the retry message showed, and retrying worked once it was back.
+
+**Folders on this device now split like the server** (correcting ADR-0044's "each subfolder is
+a book"). A folder of several m4b files, such as a series, was shown as one long book. Android
+now follows the server's rules (`detect.go`, ADR-0015), in `BookLayout`, at any depth below a
+picked folder:
+- a folder with mp3s, or with one audio file, is one book;
+- a folder with several m4b/m4a files holds one book per file;
+- a folder whose only content is disc folders (CD1, Disc 2, Part 3) is one book.
+
+Unit tests cover the series folder, nested Author/Series/Book folders, disc sets, and
+non-disc subfolders (books of their own).
 
 ## Open questions for Jacob
 

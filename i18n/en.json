@@ -1077,7 +1077,7 @@
   "app.welcome.local": "Just play files on this device",
   "app.local.title": "On this device",
   "app.local.folders": "Folders on this device",
-  "app.local.folders_help": "Pick folders with your audiobooks. Each folder inside is a book, and a single audio file is a book too. The files stay where they are.",
+  "app.local.folders_help": "Pick folders with your audiobooks. A folder of mp3 files is one book, and so is each m4b or m4a file. Folders inside folders are looked through too. The files stay where they are.",
   "app.local.add": "Add a folder",
   "app.local.remove": "Stop using {name}",
   "app.local.rescan": "Look for changes",
@@ -1265,5 +1265,8 @@
   "app.update.current": "This is version {version}.",
   "app.update.check": "Check for updates",
   "app.update.none": "You have the newest version.",
-  "app.update.failed": "Couldn't check for updates. Try again later."
+  "app.update.failed": "Couldn't check for updates. Try again later.",
+  "app.preset.connecting": "Connecting…",
+  "app.preset.unreachable": "The server can't be reached. Check your internet connection and try again.",
+  "app.preset.retry": "Try again"
 }

@@ -12,6 +12,7 @@ The **Release** workflow (`.github/workflows/release.yml`) runs on the tag and p
 |---|---|---|
 | Server image | `ghcr.io/quip1/simple-apb-server:X.Y.Z` (also `X.Y` and `latest`) | Admin → Updates → **Update now**, or two commands (below) |
 | Android app | `simple-apb-android-X.Y.Z.apk` on the GitHub release | The app offers it on Home and in Settings; it installs over the old one |
+| Preset Android app | `simple-apb-android-X.Y.Z-preset.apk` (only with the `SIMPLEAPB_PRESET_SERVER` secret) | Like the Android app, from the preset APK; see `docs/ANDROID-RELEASE.md` |
 | Play bundle | `simple-apb-android-X.Y.Z-play.aab` on the GitHub release | Upload it in the Play Console |
 | Windows app | `simple-apb-windows-X.Y.Z-setup.exe` on the GitHub release | The app shows "X.Y.Z is available"; run the new installer over the old one |
 

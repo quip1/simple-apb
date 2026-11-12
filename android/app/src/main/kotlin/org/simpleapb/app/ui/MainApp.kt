@@ -61,6 +61,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import kotlinx.serialization.Serializable
+import org.simpleapb.app.Preset
 import org.simpleapb.app.book.BookScreen
 import org.simpleapb.app.book.EditBookScreen
 import org.simpleapb.app.downloads.DownloadsScreen
@@ -376,7 +377,9 @@ private fun AccountSwitcher(
         text = {
             Column {
                 RadioGroup(active, accounts, { a -> "${a.displayName} · ${a.serverName}" }) { if (it.id != active.id) onSwitch(it) }
-                TextButton(onClick = onAdd, modifier = Modifier.heightIn(min = TouchTarget)) { Text(stringResource(UiR.string.app_account_add)) }
+                if (Preset.server == null) {
+                    TextButton(onClick = onAdd, modifier = Modifier.heightIn(min = TouchTarget)) { Text(stringResource(UiR.string.app_account_add)) }
+                }
             }
         },
         confirmButton = {

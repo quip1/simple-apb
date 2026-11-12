@@ -5,6 +5,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- A preset Android app for one server (ADR-0050): set the `SIMPLEAPB_PRESET_SERVER` secret and each release also carries `simple-apb-android-X.Y.Z-preset.apk`. It opens straight to that server's sign-in, with no setup and no other servers.
+
+### Fixed
+- Android, folders on this device: a folder of several m4b files (a series) showed as one long book. Folders now split into books like the server does, at any depth: a folder of mp3s is one book, each m4b/m4a is its own book, and CD1/CD2 folders make one book.
+
 ## [0.5.2] - 2026-11-12
 
 ### Fixed

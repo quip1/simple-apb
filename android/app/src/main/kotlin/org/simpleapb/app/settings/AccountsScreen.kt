@@ -18,6 +18,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.simpleapb.app.Preset
 import org.simpleapb.app.ui.AppViewModel
 import org.simpleapb.app.ui.BusyButton
 import org.simpleapb.app.ui.FormColumn
@@ -50,8 +51,10 @@ fun AccountsScreen(app: AppViewModel, active: Account, accounts: List<Account>, 
             }
             HorizontalDivider()
         }
-        OutlinedButton(onClick = app::startAdding, modifier = Modifier.fillMaxWidth().heightIn(min = TouchTarget)) {
-            Text(stringResource(UiR.string.app_account_add))
+        if (Preset.server == null) {
+            OutlinedButton(onClick = app::startAdding, modifier = Modifier.fillMaxWidth().heightIn(min = TouchTarget)) {
+                Text(stringResource(UiR.string.app_account_add))
+            }
         }
     }
 }

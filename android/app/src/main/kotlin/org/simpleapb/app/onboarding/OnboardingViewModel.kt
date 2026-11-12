@@ -57,6 +57,22 @@ constructor(private val auth: AuthRepository) : ViewModel() {
         }
     }
 
+    /** A preset build (ADR-0050): connects to the built-in server, accepting plain http (the builder chose it). */
+    fun connectPreset(address: String, onReady: () -> Unit) {
+        val s = _state.value
+        if (s.busy) return
+        _state.update { it.copy(address = address, busy = true, error = null, server = null, insecureAccepted = true) }
+        viewModelScope.launch {
+            when (val r = auth.probe(address)) {
+                is Outcome.Failed -> _state.update { it.copy(busy = false, error = r.failure) }
+                is Outcome.Ok -> {
+                    _state.update { it.copy(busy = false, server = r.value, challenge = null, signupSent = false) }
+                    if (canProceed(r.value, accepted = true)) onReady()
+                }
+            }
+        }
+    }
+
     /** After the http warning: the user chose to continue. */
     fun acceptInsecure(onReady: () -> Unit) {
         _state.update { it.copy(insecureAccepted = true) }

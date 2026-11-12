@@ -47,6 +47,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.simpleapb.app.BuildConfig
+import org.simpleapb.app.Preset
 import org.simpleapb.app.ui.Section
 import org.simpleapb.app.ui.TouchTarget
 import org.simpleapb.core.data.net.AppScope
@@ -117,7 +118,7 @@ constructor(@ApplicationContext private val context: Context, @AppScope private 
             if (conn.responseCode == HttpURLConnection.HTTP_NOT_FOUND) return null
             check(conn.responseCode == HttpURLConnection.HTTP_OK) { "HTTP ${conn.responseCode}" }
             val body = conn.inputStream.bufferedReader().use { it.readText() }
-            return parse(Json.parseToJsonElement(body).jsonObject)
+            return parse(Json.parseToJsonElement(body).jsonObject, preset = Preset.server != null)
         } finally {
             conn.disconnect()
         }
@@ -132,14 +133,17 @@ constructor(@ApplicationContext private val context: Context, @AppScope private 
         private const val PAGE = "page"
         private const val SKIPPED = "skipped"
 
-        /** The release's version and its signed APK (assets named simple-apb-android-X.Y.Z.apk). */
-        fun parse(o: JsonObject): AppRelease? {
+        /**
+         * The release's version and its signed APK: simple-apb-android-X.Y.Z.apk, or
+         * for a preset build (ADR-0050) simple-apb-android-X.Y.Z-preset.apk.
+         */
+        fun parse(o: JsonObject, preset: Boolean = false): AppRelease? {
             val tag = o["tag_name"]?.jsonPrimitive?.contentOrNull?.removePrefix("v") ?: return null
             if (o["draft"]?.jsonPrimitive?.contentOrNull == "true" || o["prerelease"]?.jsonPrimitive?.contentOrNull == "true") return null
             val apk =
                 o["assets"]?.jsonArray?.map { it.jsonObject }?.firstOrNull {
                     val name = it["name"]?.jsonPrimitive?.contentOrNull.orEmpty()
-                    name.startsWith("simple-apb-android-") && name.endsWith(".apk")
+                    name.startsWith("simple-apb-android-") && name.endsWith(".apk") && name.endsWith("-preset.apk") == preset
                 }?.get("browser_download_url")?.jsonPrimitive?.contentOrNull ?: return null
             if (!apk.startsWith("https://github.com/")) return null
             return AppRelease(tag, apk, o["html_url"]?.jsonPrimitive?.contentOrNull.orEmpty())

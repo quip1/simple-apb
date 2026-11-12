@@ -14,6 +14,11 @@
 //   SIMPLEAPB_PLAY_KEYSTORE, _KEYSTORE_PASSWORD, _KEY_ALIAS, _KEY_PASSWORD
 //       the Google Play upload key (Play App Signing re-signs for users)
 // The fdroid build is never signed here: F-Droid builds it from source and signs it.
+//
+// Preset build (ADR-0050): SIMPLEAPB_PRESET_SERVER=https://books.example.com bakes one
+// server into the app, which then opens straight to its sign-in and offers no other
+// server. Set only when building that APK (the release workflow reads a secret); the
+// repository never names a server, and without it the app asks as usual.
 
 import java.util.zip.ZipFile
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
@@ -39,6 +44,7 @@ android {
         versionCode = 502
         versionName = "0.5.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "PRESET_SERVER", "\"${presetServer()}\"")
     }
 
     signingConfigs {
@@ -141,6 +147,15 @@ dependencies {
     testImplementation(platform(libs.compose.bom))
     testImplementation(libs.compose.ui.test.junit4)
     debugImplementation(libs.compose.ui.test.manifest)
+}
+
+/** The preset server, checked: an http(s) address with nothing that could break out of a Java string. */
+fun presetServer(): String {
+    val v = secret("SIMPLEAPB_PRESET_SERVER")?.trim()?.trimEnd('/') ?: return ""
+    require(Regex("^https?://[A-Za-z0-9.-]+(:[0-9]+)?(/[A-Za-z0-9._~/-]*)?$").matches(v)) {
+        "SIMPLEAPB_PRESET_SERVER must be a plain http(s) address, e.g. https://books.example.com"
+    }
+    return v
 }
 
 fun secret(name: String): String? = (providers.environmentVariable(name).orNull ?: providers.gradleProperty(name).orNull)?.takeIf { it.isNotBlank() }

@@ -18,6 +18,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -66,6 +67,26 @@ fun WelcomeScreen(onConnect: () -> Unit, onLocal: () -> Unit) {
         // The other path (brief §7.4): play audiobook files already on this device, no server.
         OutlinedButton(onClick = onLocal, modifier = Modifier.fillMaxWidth().heightIn(min = TouchTarget)) {
             Text(stringResource(UiR.string.app_welcome_local))
+        }
+    }
+}
+
+/** A preset build's first screen: connecting to the built-in server, with a retry when it can't. */
+@Composable
+fun PresetConnectScreen(vm: OnboardingViewModel, server: String, onReady: () -> Unit) {
+    val s by vm.state.collectAsStateWithLifecycle()
+    LaunchedEffect(server) { vm.connectPreset(server, onReady) }
+    FormColumn {
+        Heading(stringResource(UiR.string.app_welcome_title))
+        val info = s.server
+        when {
+            s.busy || (info == null && s.error == null) -> Text(stringResource(UiR.string.app_preset_connecting))
+            info?.updateRequired == true -> Notice(stringResource(UiR.string.app_server_update_required))
+            info?.instance?.setupRequired == true -> Notice(stringResource(UiR.string.app_server_setup_required))
+            s.error != null -> {
+                Notice(stringResource(UiR.string.app_preset_unreachable))
+                BusyButton(stringResource(UiR.string.app_preset_retry), busy = false, onClick = { vm.connectPreset(server, onReady) })
+            }
         }
     }
 }

@@ -28,8 +28,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
+import org.simpleapb.app.Preset
 import org.simpleapb.app.local.LocalApp
 import org.simpleapb.app.onboarding.OnboardingViewModel
+import org.simpleapb.app.onboarding.PresetConnectScreen
 import org.simpleapb.app.onboarding.RequestAccountScreen
 import org.simpleapb.app.onboarding.ServerScreen
 import org.simpleapb.app.onboarding.SignInScreen
@@ -43,6 +45,8 @@ import org.simpleapb.core.ui.R as UiR
 @Serializable private object Server
 
 @Serializable private object SignIn
+
+@Serializable private object PresetServer
 
 @Serializable private object RequestAccount
 
@@ -81,11 +85,11 @@ fun AppRoot(app: AppViewModel) {
                 val active = state.active
                 when {
                     // Files on this device only, until a server is connected.
-                    active == null && local && !adding -> LocalApp(app)
+                    active == null && local && !adding && Preset.server == null -> LocalApp(app)
                     active == null || adding ->
                         Onboarding(
-                            firstAccount = state.accounts.isEmpty() && !local,
-                            canCancel = active != null || local,
+                            firstAccount = state.accounts.isEmpty() && (!local || Preset.server != null),
+                            canCancel = active != null || (local && Preset.server == null),
                             onCancel = app::stopAdding,
                             onSignedIn = app::signedIn,
                             onLocal = { app.useLocal(true) }
@@ -109,13 +113,23 @@ private fun Onboarding(firstAccount: Boolean, canCancel: Boolean, onCancel: () -
     BackHandler(enabled = canCancel && nav.previousBackStackEntry == null) { onCancel() }
     NavHost(
         navController = nav,
-        startDestination = if (firstAccount) Welcome else Server,
+        startDestination =
+        when {
+            Preset.server != null -> PresetServer
+            firstAccount -> Welcome
+            else -> Server
+        },
         // E-ink: no animation at all (brief §11).
         enterTransition = { if (eink) EnterTransition.None else androidx.compose.animation.fadeIn() },
         exitTransition = { if (eink) ExitTransition.None else androidx.compose.animation.fadeOut() }
     ) {
         composable<Welcome> { WelcomeScreen(onConnect = { nav.navigate(Server) }, onLocal = onLocal) }
         composable<Server> { ServerScreen(vm, onReady = { nav.navigate(SignIn) }) }
+        composable<PresetServer> {
+            PresetConnectScreen(vm, Preset.server.orEmpty(), onReady = {
+                nav.navigate(SignIn) { popUpTo<PresetServer> { inclusive = true } }
+            })
+        }
         composable<SignIn> {
             SignInScreen(
                 vm,

@@ -122,7 +122,28 @@ jobs:
           mkdir -p "$RUNNER_TEMP/out"
           cp app/build/outputs/apk/github/release/app-github-release.apk "$RUNNER_TEMP/out/simple-apb-android-$v.apk"
           cp app/build/outputs/bundle/playRelease/app-play-release.aab "$RUNNER_TEMP/out/simple-apb-android-$v-play.aab"
-          rm -f "$RUNNER_TEMP"/*.jks
+      # The preset APK (ADR-0050): the same github build with one server baked in, from
+      # the SIMPLEAPB_PRESET_SERVER secret. The repository never names a server.
+      - name: Preset APK
+        if: steps.keys.outputs.skip != 'true'
+        env:
+          PRESET: ${{ secrets.SIMPLEAPB_PRESET_SERVER }}
+          SIMPLEAPB_KEYSTORE_PASSWORD: ${{ secrets.SIMPLEAPB_KEYSTORE_PASSWORD }}
+          SIMPLEAPB_KEY_ALIAS: ${{ secrets.SIMPLEAPB_KEY_ALIAS }}
+          SIMPLEAPB_KEY_PASSWORD: ${{ secrets.SIMPLEAPB_KEY_PASSWORD }}
+        run: |
+          if [ -z "$PRESET" ]; then
+            echo "No SIMPLEAPB_PRESET_SERVER secret: no preset APK in this release."
+            exit 0
+          fi
+          v="${{ needs.version.outputs.version }}"
+          SIMPLEAPB_PRESET_SERVER="$PRESET" ./gradlew --no-daemon :app:assembleGithubRelease
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BT/apksigner" verify app/build/outputs/apk/github/release/app-github-release.apk
+          cp app/build/outputs/apk/github/release/app-github-release.apk "$RUNNER_TEMP/out/simple-apb-android-$v-preset.apk"
+      - name: Forget the keys
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/*.jks
       - uses: actions/upload-artifact@v7
         if: steps.keys.outputs.skip != 'true'
         with:
@@ -182,6 +203,10 @@ jobs:
             echo "**Server:** \`docker pull $img\`, or **Admin → Updates → Update now** (docs/UPDATING.md)."
             echo
             echo "**Android:** \`simple-apb-android-$v.apk\` (installs over the previous version). **Windows:** \`simple-apb-windows-$v-setup.exe\`."
+            if [ -f "dist/simple-apb-android-$v-preset.apk" ]; then
+              echo
+              echo "\`simple-apb-android-$v-preset.apk\` is set up for one server: it opens straight to that server's sign-in."
+            fi
           } >> notes.md
       - name: Publish the release
         env:

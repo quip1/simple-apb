@@ -74,6 +74,19 @@ signed `github` APK and `play` bundle and attaches them to the GitHub release as
 update. Without the secrets, the release goes out without Android files, and the run shows a
 warning.
 
+## A preset app for your server
+
+To give people an app that needs no setup, add one more Actions secret:
+
+| Secret | Value |
+|---|---|
+| `SIMPLEAPB_PRESET_SERVER` | your server's address, e.g. `https://books.example.com` |
+
+Each release then also carries `simple-apb-android-X.Y.Z-preset.apk`. It opens straight to that
+server's sign-in, has no "add a server", and updates itself from the preset APK of later
+releases. The address is baked into that APK (anyone can read it there) but never into this
+repository. Locally: `SIMPLEAPB_PRESET_SERVER=https://… ./gradlew :app:assembleGithubRelease`.
+
 ## F-Droid
 
 F-Droid builds the `fdroid` flavor itself, so it has to build from source with no proprietary

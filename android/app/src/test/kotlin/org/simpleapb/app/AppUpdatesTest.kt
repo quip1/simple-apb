@@ -34,6 +34,13 @@ class AppUpdatesTest {
             )
         assertEquals("0.6.0", r?.version)
         assertEquals("https://github.com/o/r/a.apk", r?.apkUrl)
+        // A preset build (ADR-0050) takes the preset APK; an ordinary build never does.
+        val both =
+            """{"tag_name":"v0.6.0","assets":[
+            {"name":"simple-apb-android-0.6.0-preset.apk","browser_download_url":"https://github.com/o/r/p.apk"},
+            {"name":"simple-apb-android-0.6.0.apk","browser_download_url":"https://github.com/o/r/a.apk"}]}"""
+        assertEquals("https://github.com/o/r/a.apk", release(both)?.apkUrl)
+        assertEquals("https://github.com/o/r/p.apk", AppUpdates.parse(Json.parseToJsonElement(both).jsonObject, preset = true)?.apkUrl)
         // No APK (a release without Android signing keys), a pre-release, or a foreign host: nothing offered.
         assertNull(release("""{"tag_name":"v0.6.0","assets":[]}"""))
         assertNull(
