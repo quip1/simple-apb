@@ -57,6 +57,9 @@ jobs:
           fi
           echo "tags=$tags" >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v6
+        env:
+          # No build-record artifact: the publish job collects artifacts by name.
+          DOCKER_BUILD_RECORD_UPLOAD: false
         with:
           context: .
           file: server/Dockerfile
@@ -161,8 +164,10 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v5
+      # Only the app files: other artifacts (such as a Docker build record) aren't release files.
       - uses: actions/download-artifact@v8
         with:
+          pattern: "{android,windows}"
           path: dist
           merge-multiple: true
       - name: Release notes from the changelog

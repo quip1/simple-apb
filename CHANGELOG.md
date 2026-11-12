@@ -5,6 +5,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-11-12
+
+### Fixed
+- Releases: publishing also picked up the Docker build record and failed, so 0.5.1 published its server image but no GitHub release. The first complete release is 0.5.2.
+
 ## [0.5.1] - 2026-11-12
 
 ### Fixed

@@ -36,8 +36,8 @@ android {
         applicationId = "org.simpleapb.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 501
-        versionName = "0.5.1"
+        versionCode = 502
+        versionName = "0.5.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
