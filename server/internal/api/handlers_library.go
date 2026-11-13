@@ -342,7 +342,7 @@ func (s *Server) GetAuthor(ctx context.Context, req GetAuthorRequestObject) (Get
 
 func (s *Server) GetNarrator(ctx context.Context, req GetNarratorRequestObject) (GetNarratorResponseObject, error) {
 	id := req.PersonId.String()
-	name, books, err := s.personPage(ctx, "narrators", id, store.LibraryFilter{NarratorID: id, Sort: "title"})
+	name, books, err := s.personPage(ctx, "narrators", id, store.LibraryFilter{NarratorID: id, Sort: "series"})
 	if err != nil {
 		return nil, err
 	}

@@ -74,11 +74,11 @@ func InsertBook(ctx context.Context, q Querier, b *NewBook) (string, error) {
 	if status == "" {
 		status = "ready"
 	}
-	_, err := q.Exec(ctx, `INSERT INTO books (id, title, sort_title, subtitle, series_id, series_index, description, publisher,
+	_, err := q.Exec(ctx, `INSERT INTO books (id, title, sort_title, subtitle, series_id, series_index, series_order, description, publisher,
 		published_year, language, isbn, asin, duration_ms, size_bytes, cover_path, uploader_id, origin, status,
 		checksum_sha256, folder_path, epub_path, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		id, b.Meta.Title, SortTitle(b.Meta.Title), nullStr(b.Meta.Subtitle), seriesID, nullStr(b.Meta.SeriesIndex),
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		id, b.Meta.Title, SortTitle(b.Meta.Title), nullStr(b.Meta.Subtitle), seriesID, nullStr(b.Meta.SeriesIndex), seriesOrderArg(b.Meta.SeriesIndex),
 		nullStr(b.Meta.Description), nullStr(b.Meta.Publisher), year, nullStr(b.Meta.Language), nullStr(b.Meta.ISBN),
 		nullStr(b.Meta.ASIN), b.DurationMS, b.SizeBytes, nullStr(b.CoverPath), nullStr(b.UploaderID), b.Origin, status,
 		nullStr(b.Checksum), b.FolderPath, nullStr(b.EpubPath), now, now)

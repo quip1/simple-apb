@@ -227,7 +227,8 @@ fun MainApp(app: AppViewModel, account: Account, accounts: List<Account>, snackb
                             onBook = openBook,
                             onLibrary = { shelf -> nav.navigate(LibraryRoute(shelf = shelf)) },
                             onLocalBook = { nav.navigate(LocalBookRoute(it)) },
-                            onSwitch = { switching = true }
+                            onSwitch = { switching = true },
+                            onOpenPlayer = showPlayer
                         )
                     }
                     composable<LibraryRoute> { e ->
@@ -280,7 +281,16 @@ fun MainApp(app: AppViewModel, account: Account, accounts: List<Account>, snackb
             }
             if (!onPlayer && !onCar) {
                 MiniPlayer(player, onOpen = showPlayer)
-                TabBar(lit) { t -> nav.goToTab(t) }
+                TabBar(lit) { t ->
+                    if (t == lit) {
+                        // Tapping the tab you're in goes back to its first page.
+                        if (!t.matches(destination)) nav.backToTabRoot(t)
+                    } else {
+                        // The tab stays lit on whatever page of it comes back (restored).
+                        tab = t
+                        nav.goToTab(t)
+                    }
+                }
             }
         }
     }
@@ -304,6 +314,18 @@ fun MainApp(app: AppViewModel, account: Account, accounts: List<Account>, snackb
             onDismiss = { switching = false }
         )
     }
+}
+
+private fun NavHostController.backToTabRoot(t: Tab) {
+    val popped =
+        when (t) {
+            Tab.HOME -> popBackStack<HomeRoute>(inclusive = false)
+            Tab.LIBRARY -> popBackStack<LibraryRoute>(inclusive = false)
+            Tab.DOWNLOADS -> popBackStack<DownloadsRoute>(inclusive = false)
+            Tab.STATS -> popBackStack<StatsRoute>(inclusive = false)
+            Tab.SETTINGS -> popBackStack<SettingsRoute>(inclusive = false)
+        }
+    if (!popped) goToTab(t)
 }
 
 private fun NavHostController.goToTab(t: Tab) {

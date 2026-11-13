@@ -5,6 +5,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Home shows the book you're on (Android and web): a large card with its chapter, progress, time left and Play/Pause, or the last book you played with Resume. Tap it for the player (ADR-0051).
+
+### Changed
+- Books sort by their number in a series everywhere: series, author and narrator pages, the series and author sorts (an author's series stay together, in order), next in series, and the Android app's offline lists. "Book 10" now comes after "Book 2" (ADR-0051).
+- Android tabs: tapping the tab you're in goes back to its first page.
+
+### Fixed
+- Android: a paused phone carried on from its own old position after another device moved on, and could overwrite the other device's newer position. It now follows the other device while paused and when play is pressed (ADR-0051).
+- Android: a book downloaded while it was open kept streaming and stopped when offline. It now switches to the downloaded files.
+- Android: after switching tabs, the tab you came back to could light up Home instead of itself.
+
 ## [0.5.3] - 2026-11-12
 
 ### Added

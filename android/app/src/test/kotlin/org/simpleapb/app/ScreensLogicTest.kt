@@ -158,4 +158,32 @@ class ScreensLogicTest {
         assertEquals(url, org.simpleapb.app.onboarding.decodeLuminance(org.simpleapb.app.onboarding.qrReader(), data, stride, m.width, m.height))
         assertNull(org.simpleapb.app.onboarding.decodeLuminance(org.simpleapb.app.onboarding.qrReader(), ByteArray(stride * 240), stride, 240, 240))
     }
+
+    @Test
+    fun offlineSeriesSortGoesByNumber() {
+        val dcc = UUID.randomUUID()
+        fun inSeries(title: String, index: String?) =
+            book(title, "Matt Dinniman").copy(series = org.simpleapb.api.model.SeriesRef(dcc, "Dungeon Crawler Carl", index))
+        val books =
+            listOf(
+                inSeries("Carl's Doomsday Scenario", "2"),
+                inSeries("The Eye of the Bedlam Bride", "10"),
+                book("Kaiju", "Matt Dinniman"),
+                inSeries("Dungeon Crawler Carl", "1"),
+                inSeries("A Side Story", "Novella"),
+                inSeries("The Dungeon Anarchist's Cookbook", "Book 3")
+            )
+        val want =
+            listOf(
+                "Dungeon Crawler Carl",
+                "Carl's Doomsday Scenario",
+                "The Dungeon Anarchist's Cookbook",
+                "The Eye of the Bedlam Bride",
+                "A Side Story",
+                "Kaiju"
+            )
+        for (sort in listOf(SortListLibrary.SERIES, SortListLibrary.AUTHOR)) {
+            assertEquals(want, OfflineFilter.apply(books, ShelfListLibrary.ALL, sort, "", null).map { it.title })
+        }
+    }
 }

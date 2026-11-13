@@ -14,6 +14,10 @@ import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.simpleapb.api.infrastructure.Serializer
@@ -67,6 +71,45 @@ constructor(
     private val writes = Mutex()
 
     suspend fun account(id: String): Account? = accounts.current().accounts.firstOrNull { it.id == id }
+
+    /** Another device's newer position, as it reaches this device's mirror (see [Follow]). */
+    fun progressFlow(b: LoadedBook): Flow<Progress?> = if (b.isLocal) flowOf(null) else local.progressFlow(b.accountId, b.id)
+
+    /**
+     * Asks the server for the book's progress now and keeps it in the mirror,
+     * so a resume picks up a position another device saved while this one was
+     * paused, even if no live hint arrived (the app was in the background).
+     */
+    suspend fun refreshProgress(b: LoadedBook) {
+        if (b.isLocal) return
+        val account = account(b.accountId) ?: return
+        runCatching { apis.forAccount(account).progress.getProgress(UUID.fromString(b.id)) }
+            .getOrNull()
+            ?.takeIf { it.isSuccessful }
+            ?.body()
+            ?.let { local.saveProgress(account.id, listOf(it)) }
+    }
+
+    /** Whether this account's book has a finished download (the loaded copy may still stream). */
+    fun downloadDone(b: LoadedBook): Flow<Boolean> = if (b.isLocal) {
+        flowOf(false)
+    } else {
+        downloads.all.map { rows -> rows.any { it.accountId == b.accountId && it.bookId == b.id && it.finishedAt != null } }.distinctUntilChanged()
+    }
+
+    /**
+     * The book again, now from its download, when it was loaded streaming (ADR-0051):
+     * a book downloaded while it was open would otherwise keep streaming, and fail offline.
+     */
+    suspend fun fromDownload(b: LoadedBook): LoadedBook? {
+        if (b.isLocal || b.localDir != null) return null
+        downloads.completeDir(b.accountId, b.id) ?: return null
+        val account = account(b.accountId) ?: return null
+        return (load(account, b.id) as? Outcome.Ok)?.value?.takeIf { it.localDir != null }
+    }
+
+    /** When this device last saved its own position for the book (ms), if ever. */
+    suspend fun localSavedAt(bookId: String): Long = store.localPosition(bookId)?.atMs ?: 0
 
     suspend fun activeAccount(): Account? = accounts.current().active
 

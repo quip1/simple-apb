@@ -353,6 +353,16 @@ fun BookDetail.summary() = BookSummary(
     removedAt = removedAt
 )
 
+/** "3" → 3, "Book 10" → 10, "2.5" → 2.5; null without a number (the server's store.SeriesOrder). */
+fun seriesOrder(index: String?): Double? = index?.let { Regex("""\d+(?:[.,]\d+)?""").find(it)?.value?.replace(',', '.')?.toDoubleOrNull() }
+
+/** Series by name, then by number (unnumbered last), then title; books outside a series last. */
+val bySeries: Comparator<BookSummary> =
+    compareBy<BookSummary>({ it.series == null }, { it.series?.name?.lowercase() })
+        .thenBy { seriesOrder(it.series?.index) == null }
+        .thenBy { seriesOrder(it.series?.index) }
+        .thenBy { it.title.lowercase() }
+
 /** The library's shelves, sort and search, done on this device for the offline list. */
 object OfflineFilter {
     fun apply(all: List<BookSummary>, shelf: ShelfListLibrary, sort: SortListLibrary, query: String, tagId: String?): List<BookSummary> {
@@ -380,13 +390,13 @@ object OfflineFilter {
             }
         return when (sort) {
             SortListLibrary.TITLE -> shown.sortedBy { it.title.lowercase() }
-            SortListLibrary.AUTHOR -> shown.sortedBy { it.authors.firstOrNull()?.name?.lowercase() ?: "" }
-            SortListLibrary.SERIES -> shown.sortedWith(
-                compareBy({ it.series?.name?.lowercase() ?: "\uffff" }, {
-                    it.series?.index?.toDoubleOrNull()
-                        ?: 0.0
-                })
+            // An author's series together and in reading order, like the server (ADR-0051).
+            SortListLibrary.AUTHOR -> shown.sortedWith(
+                compareBy<BookSummary> {
+                    it.authors.isEmpty()
+                }.thenBy { it.authors.firstOrNull()?.name?.lowercase() }.then(bySeries)
             )
+            SortListLibrary.SERIES -> shown.sortedWith(bySeries)
             SortListLibrary.DURATION -> shown.sortedBy { it.durationMs }
             SortListLibrary.RECENT_PLAYED -> shown.sortedByDescending { it.progress?.clientTs ?: "" }
             SortListLibrary.RECENT_ADDED -> shown.sortedByDescending { it.addedAt ?: it.updatedAt }

@@ -164,6 +164,9 @@ interface MirrorDao {
     @Query("SELECT * FROM progress WHERE accountId = :a AND bookId = :b")
     suspend fun progress(a: String, b: String): ProgressRow?
 
+    @Query("SELECT * FROM progress WHERE accountId = :a AND bookId = :b")
+    fun progressFlow(a: String, b: String): Flow<ProgressRow?>
+
     @Query("SELECT * FROM progress WHERE accountId = :a")
     suspend fun allProgress(a: String): List<ProgressRow>
 

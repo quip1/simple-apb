@@ -104,7 +104,7 @@ func UpdateBookMeta(ctx context.Context, q Querier, id string, p MetaPatch, lock
 		if sid != nil {
 			idx = strings.TrimSpace(p.Series.Index)
 		}
-		sets, args = append(sets, "series_id = ?", "series_index = ?"), append(args, sid, nullStr(idx))
+		sets, args = append(sets, "series_id = ?", "series_index = ?", "series_order = ?"), append(args, sid, nullStr(idx), seriesOrderArg(idx))
 	}
 	if lock {
 		locked, err := LockedFields(ctx, q, id)

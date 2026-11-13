@@ -1593,6 +1593,67 @@ picked folder:
 Unit tests cover the series folder, nested Author/Series/Book folders, disc sets, and
 non-disc subfolders (books of their own).
 
+---
+
+## ADR-0051 — Sync between devices, series order, Home's current book, tab navigation
+
+Jacob asked for the sync between devices and downloaded books to be checked, for books to sort
+by their number in a series, for Home to show the book he's on, and for better back-and-forth
+navigation.
+
+**Sync, checked on the emulator against the demo server, with `curl` as a second device:**
+
+1. **The phone picks up the server's position.** A book last played elsewhere at 1:11 started
+   at 1:11 and saved 1:28 on pause. This passed as it was.
+2. **A paused phone carried on from its old place (bug).** The tablet saved 2:30 while the phone
+   sat paused at 1:28. The live hint reached the phone's offline mirror, but the player never
+   looked at it. Play went on from 1:28, and the next save overwrote the tablet's 2:30. The
+   difference was under the 3-minute conflict threshold, so the server took the newer write
+   quietly, and the tablet's listening was lost.
+   - **Fix:** the player now follows another device, as the web player already did. While a
+     book is loaded and paused, or for 5 s after pressing play, a newer position in the mirror
+     moves the player there. Play also asks the server for the book's progress first, so a
+     position saved while the app was in the background is caught too.
+   - **How "newer" is judged:** the mirror doesn't keep which device wrote a position. One
+     written more than a second after this device's own last save, and more than 2 s from
+     where the player is, counts as another device's. The rule is `Follow` (unit-tested).
+   - **Checked:** resume started from the tablet's 2:50, and a paused player jumped to the
+     tablet's 1:00 within 8 s.
+3. **A book downloaded while it was open kept streaming (bug).** It played from the server and
+   failed offline ("This book can't be played right now").
+   - **Fix:** when a book's download finishes, the open book switches to its files at the same
+     position: at once when paused, at the next pause while playing. A streaming error with a
+     finished download switches immediately and carries on.
+   - **Checked:** with the server stopped mid-play, the book kept playing from disk. Its
+     offline position reached the server within 20 s of the server coming back.
+
+A big difference between two devices that both listened offline is still the conflict prompt's
+job (ADR-0042, unit-tested in `SyncEngineTest`).
+
+**Series order.** `series_index` is free text, so "10" sorted before "2".
+- **The fix:** a new `series_order` number (migration 00004 in both dialects) is read from the
+  index ("3", "Book 10", "2.5" and "2,5" all work). It's set whenever the index is, and filled
+  in at start-up for existing books. Books without a number sort after numbered ones.
+- **Where it applies:**
+  - series pages, the "series" sort, and the next-in-series row, which uses series pages;
+  - author pages, and the "author" sort, which now keeps each author's series together in
+    reading order before their other books;
+  - narrator pages, which sorted by title before.
+- **Android's offline sorts** read the number the same way.
+- **Tested** with Dungeon Crawler Carl books 1, 2, "Book 3", 10 and an unnumbered novella.
+
+**Home's current book.** A large card at the top of Home, on Android and the web, shows the book
+in the player live: cover, chapter, progress and time left, and Play/Pause. With nothing loaded
+it shows the book you played last, with Resume. Tapping it opens the player, and the
+"Continue listening" row no longer repeats that book.
+
+**Tabs (Android).** Two navigation problems are fixed:
+- **Wrong tab lit:** after a tab change, the tab you returned to lit up Home while showing its
+  restored page (a book opened from Library). The app now remembers which tab you picked.
+- **Re-tapping a tab:** tapping the tab you're in now returns to its first page, as most apps do.
+- **Checked:** Back from a tab goes to Home, Back from the player returns to where it was
+  opened, and the book page's Play/Resume opens the player.
+
 ## Open questions for Jacob
 
 | # | Question | Current choice (until answered) |

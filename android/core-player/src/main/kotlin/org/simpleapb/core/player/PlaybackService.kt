@@ -46,9 +46,13 @@ import javax.inject.Inject
 import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.guava.future
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -68,7 +72,7 @@ import org.simpleapb.core.ui.R as UiR
  * A book plays as a playlist of its files; everything the user sees and
  * every progress report uses the book-global position from [BookTimeline].
  */
-@OptIn(UnstableApi::class)
+@OptIn(UnstableApi::class, ExperimentalCoroutinesApi::class)
 @AndroidEntryPoint
 class PlaybackService :
     MediaLibraryService(),
@@ -101,6 +105,7 @@ class PlaybackService :
     private var lastSentMs = -1L
     private var seekAt = 0L
     private var pausedAt = 0L
+    private var resumedAt = 0L
 
     private val shake = ShakeDetector()
     private val effects = EffectsProcessor()
@@ -118,6 +123,18 @@ class PlaybackService :
                     state.conflict.value = PendingConflict(b.id, c.conflictId, c.serverPositionMs, c.serverDevice)
                 }
             }
+        }
+        // A download finished for the book that's open: play it from disk (ADR-0051).
+        scope.launch {
+            state.book
+                .flatMapLatest { b -> if (b == null) emptyFlow() else repo.downloadDone(b).map { done -> b to done } }
+                .collect { (b, done) -> if (done && !exo.playWhenReady) switchToDownload(b, play = false) }
+        }
+        // Another device moved on while this one was paused: follow it (ADR-0051).
+        scope.launch {
+            state.book
+                .flatMapLatest { b -> if (b == null) emptyFlow() else repo.progressFlow(b).map { p -> b to p } }
+                .collect { (b, p) -> if (p != null) follow(b, p) }
         }
         val http = OkHttpDataSource.Factory(calls)
         // The audio effects run inside the player's sink, before the speed change.
@@ -217,12 +234,42 @@ class PlaybackService :
         b.timeline.nextChapterStart(position())?.let(::seekBook)
     }
 
-    /** Auto-rewind (brief §7.2) when resuming after a pause. */
+    /** Auto-rewind (brief §7.2) when resuming after a pause; and a look for another device's newer position. */
     override fun beforePlay() {
-        if (exo.isPlaying || pausedAt == 0L) return
+        if (exo.isPlaying) return
+        resumedAt = SystemClock.elapsedRealtime()
+        book()?.let { b -> appScope.launch { repo.refreshProgress(b) } }
+        if (pausedAt == 0L) return
         val back = autoRewindMs(settings.autoRewindS, SystemClock.elapsedRealtime() - pausedAt)
         pausedAt = 0
         if (back > 0) seekBook((position() - back).coerceAtLeast(0))
+    }
+
+    /** Reloads the open book from its finished download at the same position; false if there's none. */
+    private suspend fun switchToDownload(b: LoadedBook, play: Boolean): Boolean {
+        val at = position()
+        val d = repo.fromDownload(b) ?: return false
+        if (book()?.id != b.id) return false
+        val loaded = d.copy(startMs = at.coerceIn(0, d.timeline.durationMs))
+        state.book.value = loaded
+        val p = loaded.timeline.locate(loaded.startMs)
+        exo.setMediaItems(repo.mediaItems(loaded), p.index, p.localMs)
+        exo.prepare()
+        if (play) exo.play()
+        return true
+    }
+
+    private suspend fun follow(b: LoadedBook, p: org.simpleapb.api.model.Progress) {
+        if (book()?.id != b.id || state.conflict.value != null) return
+        val paused = !exo.playWhenReady || SystemClock.elapsedRealtime() - resumedAt < Follow.RESUME_WINDOW_MS
+        val to =
+            Follow.target(p.positionMs, p.clientTs, p.finishedAt != null, repo.localSavedAt(b.id), position(), paused)
+                ?: return
+        seekBook(to.coerceIn(0, b.timeline.durationMs))
+        // Not a move of this device's own: nothing to report back.
+        lastSentMs = to
+        store.saveLocalPosition(b.id, to, System.currentTimeMillis())
+        publish()
     }
 
     private fun togglePlay() {
@@ -402,6 +449,7 @@ class PlaybackService :
                 if (!playWhenReady) {
                     pausedAt = SystemClock.elapsedRealtime()
                     report(force = true)
+                    book()?.takeIf { it.localDir == null && !it.isLocal }?.let { b -> scope.launch { switchToDownload(b, play = false) } }
                 }
             }
 
@@ -425,6 +473,12 @@ class PlaybackService :
             }
 
             override fun onPlayerError(error: PlaybackException) {
+                // Streaming failed (offline, say) but the book is downloaded: carry on from disk.
+                val b = book()
+                if (b != null && b.localDir == null && !b.isLocal) {
+                    scope.launch { if (!switchToDownload(b, play = true)) state.events.tryEmit(PlayerEvent.PlaybackFailed) }
+                    return
+                }
                 state.events.tryEmit(PlayerEvent.PlaybackFailed)
             }
         }

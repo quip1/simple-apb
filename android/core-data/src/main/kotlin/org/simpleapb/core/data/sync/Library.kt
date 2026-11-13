@@ -5,6 +5,8 @@ import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
@@ -74,6 +76,9 @@ constructor(val dao: MirrorDao) {
 
     /** The newest progress this device knows of (from the server, or written here). */
     suspend fun progress(accountId: String, bookId: String): Progress? = dao.progress(accountId, bookId)?.let { it.toProgress() }
+
+    /** One book's progress as it changes (a sync brings another device's position). */
+    fun progressFlow(accountId: String, bookId: String): Flow<Progress?> = dao.progressFlow(accountId, bookId).map { it?.toProgress() }
 
     suspend fun allProgress(accountId: String): Map<String, Progress> = dao.allProgress(accountId).associate { it.bookId to it.toProgress() }
 

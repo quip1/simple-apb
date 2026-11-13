@@ -5,9 +5,11 @@
   import { api, type BookSummary, type Schemas } from "../api/client";
   import Alert from "../components/Alert.svelte";
   import Button from "../components/Button.svelte";
+  import NowListening from "../components/NowListening.svelte";
   import Shelf from "../components/Shelf.svelte";
   import { t } from "../lib/i18n";
   import { live } from "../lib/live.svelte";
+  import { player } from "../lib/player.svelte";
   import { link } from "../lib/router.svelte";
   import { session } from "../lib/session.svelte";
 
@@ -102,8 +104,12 @@
       <p class="muted">{t("home.empty_body")}</p>
     </div>
   {:else}
-    {#if continuing.length}
-      <Shelf id="shelf-continue" title={t("home.continue")} books={continuing} more="/library?shelf=in_progress" />
+    <!-- The book you're on, front and centre (ADR-0051); the row holds the others. -->
+    <NowListening fallback={continuing[0]} />
+    {@const current = player.book?.id ?? continuing[0]?.id}
+    {@const others = continuing.filter((b) => b.id !== current)}
+    {#if others.length}
+      <Shelf id="shelf-continue" title={t("home.continue")} books={others} more="/library?shelf=in_progress" />
     {/if}
     {#if recs.length}
       <Shelf id="shelf-recs" title={t("home.recommended")} books={recs.map((r) => r.book)}>

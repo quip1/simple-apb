@@ -116,6 +116,12 @@ func NewApp(ctx context.Context, db *store.DB, secrets *config.Secrets, log *slo
 		}}
 	a.Backup = newBackupService(a, o.Paths.Backups)
 	a.Backup.PGDump = os.Getenv("SIMPLEAPB_PG_DUMP")
+	// Books from before series_order existed get it now (ADR-0051).
+	if n, err := store.BackfillSeriesOrder(ctx, db); err != nil {
+		log.Warn("series order backfill", "err", err)
+	} else if n > 0 {
+		log.Info("series order filled in", "books", n)
+	}
 	a.Updates = update.NewChecker()
 	a.UpdaterDir = filepath.Join(o.Paths.Config, "updater")
 	a.registerJobs()

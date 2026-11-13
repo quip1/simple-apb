@@ -266,9 +266,10 @@ func ListLibrary(ctx context.Context, q Querier, userID string, f LibraryFilter)
 	case "duration":
 		order = "b.duration_ms DESC, b.id"
 	case "series":
-		order = "CASE WHEN s.name IS NULL THEN 1 ELSE 0 END, lower(s.name), b.series_index, b.sort_title, b.id"
+		order = "CASE WHEN s.name IS NULL THEN 1 ELSE 0 END, lower(s.name), CASE WHEN b.series_order IS NULL THEN 1 ELSE 0 END, b.series_order, b.series_index, b.sort_title, b.id"
 	case "author":
-		order = `CASE WHEN fa.name IS NULL THEN 1 ELSE 0 END, lower(fa.name), b.sort_title, b.id`
+		// An author's series stay together, in reading order; books outside a series follow.
+		order = `CASE WHEN fa.name IS NULL THEN 1 ELSE 0 END, lower(fa.name), CASE WHEN s.name IS NULL THEN 1 ELSE 0 END, lower(s.name), CASE WHEN b.series_order IS NULL THEN 1 ELSE 0 END, b.series_order, b.series_index, b.sort_title, b.id`
 	case "", "recent_added":
 	default:
 		return nil, fmt.Errorf("%w: unknown sort %q", ErrInvalidFilter, f.Sort)

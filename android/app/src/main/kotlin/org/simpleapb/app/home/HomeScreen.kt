@@ -178,9 +178,18 @@ constructor(
 }
 
 @Composable
-fun HomeScreen(account: Account, onBook: (String) -> Unit, onLibrary: (String?) -> Unit, onLocalBook: (String) -> Unit, onSwitch: () -> Unit) {
+fun HomeScreen(
+    account: Account,
+    onBook: (String) -> Unit,
+    onLibrary: (String?) -> Unit,
+    onLocalBook: (String) -> Unit,
+    onSwitch: () -> Unit,
+    onOpenPlayer: () -> Unit
+) {
     val vm: HomeViewModel = hiltViewModel()
     val s by vm.state.collectAsStateWithLifecycle()
+    val player: org.simpleapb.app.player.PlayerViewModel = hiltViewModel()
+    val playing by player.book.collectAsStateWithLifecycle()
     LaunchedEffect(account.id) { vm.load() }
     val open = { b: BookSummary -> onBook(b.id.toString()) }
     Column(
@@ -212,8 +221,12 @@ fun HomeScreen(account: Account, onBook: (String) -> Unit, onLibrary: (String?) 
                 }
             }
             else -> {
-                if (s.continuing.isNotEmpty()) {
-                    Shelf(stringResource(UiR.string.home_continue), s.continuing, account.serverUrl, open, onSeeAll = { onLibrary("in_progress") })
+                // The book you're on, front and centre (ADR-0051); the row below holds the others.
+                NowListening(s.continuing.firstOrNull(), account.serverUrl, onOpenPlayer)
+                val current = playing?.id ?: s.continuing.firstOrNull()?.id?.toString()
+                val others = s.continuing.filter { it.id.toString() != current }
+                if (others.isNotEmpty()) {
+                    Shelf(stringResource(UiR.string.home_continue), others, account.serverUrl, open, onSeeAll = { onLibrary("in_progress") })
                 }
                 if (s.recommended.isNotEmpty()) {
                     val byBook = s.recommended.associateBy { it.book.id }
