@@ -98,11 +98,11 @@ test("sam listens on one device and continues on another", async ({ browser }) =
 
   const laptop = await newPage(browser);
   await signIn(laptop, "sam", state.password);
-  const shelf = laptop.getByRole("region", { name: "Continue listening" });
-  await expect(shelf.getByRole("link", { name: new RegExp(TITLE) })).toBeVisible();
-  await shelf.getByRole("link", { name: new RegExp(TITLE) }).click();
-  await expect(laptop.getByRole("button", { name: "Resume" })).toBeVisible();
+  // Home leads with the book you're on (ADR-0051).
+  const current = laptop.getByRole("region", { name: new RegExp(TITLE) });
+  await expect(current.getByText("Pick up where you left off")).toBeVisible();
   // The position came across: resuming starts where the phone stopped.
-  await laptop.getByRole("button", { name: "Resume" }).click();
+  await current.getByRole("button", { name: "Resume" }).click();
+  await expect(laptop).toHaveURL(/\/player$/);
   await expect.poll(() => position(laptop), { timeout: 20_000 }).toBeGreaterThanOrEqual(saved - 1);
 });
