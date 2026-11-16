@@ -5,6 +5,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.4] - 2026-11-16
+
 ### Added
 - Self-contained updates (ADR-0052):
   - Server: install with one command (`deploy/install.sh`); the updater now runs by default with no settings, and an update also brings the release's `docker-compose.yml` and updater script (rolled back with the rest if the new version doesn't start).
