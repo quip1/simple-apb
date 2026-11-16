@@ -210,7 +210,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  # The one-click updater (deploy/updater, ADR-0049): an update and a rollback,
+  # install.sh and the one-click updater (deploy/updater, ADR-0049, ADR-0052): an install, an update and a rollback,
   # with stand-in server images in a local registry.
   updater:
     runs-on: ubuntu-latest

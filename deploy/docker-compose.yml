@@ -6,10 +6,10 @@
 #   docker compose -f deploy/docker-compose.yml up -d
 #   docker compose -f deploy/docker-compose.yml logs simpleapb | grep setup_token
 #
-# Updates (docs/UPDATING.md): set SIMPLEAPB_VERSION in .env (or leave
-# "latest"), then `docker compose pull && docker compose up -d`. For one-click
-# updates from the admin panel, also run the updater:
-#   docker compose --profile updater up -d
+# Updates (docs/UPDATING.md): Admin → Updates → Update now. The updater
+# service below does it (backup first, rollback if the new version fails).
+# Without it: set SIMPLEAPB_VERSION in .env, then
+# `docker compose pull && docker compose up -d`.
 #
 # To build the server from this repository instead of using release images:
 #   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.build.yml up -d --build
@@ -79,23 +79,23 @@ services:
       retries: 3
       start_period: 40s
 
-  # One-click updates from the admin panel (ADR-0049). Optional: it needs the
-  # Docker socket, which is as powerful as root on this machine. It has no
-  # network of its own; the Docker daemon downloads the images.
+  # One-click updates from the admin panel (ADR-0049, ADR-0052). It finds this
+  # folder by itself. It needs the Docker socket, which is as powerful as root
+  # on this machine, and has no network of its own (the Docker daemon
+  # downloads images; a short-lived helper fetches the new deploy files).
+  # Don't want it? `docker compose stop updater`, or delete this service.
   updater:
     image: docker:29.9-cli
-    profiles: [updater]
     restart: unless-stopped
     network_mode: none
     entrypoint: ["/bin/sh", "/opt/simpleapb/updater.sh"]
     environment:
-      # This folder's absolute path on the host (it is mounted at the same path).
-      SIMPLEAPB_DEPLOY_DIR: ${SIMPLEAPB_DEPLOY_DIR:-}
       SIMPLEAPB_UPDATE_TIMEOUT: ${SIMPLEAPB_UPDATE_TIMEOUT:-300}
+      # Where a new version's deploy files come from (empty: keep these files).
+      SIMPLEAPB_RELEASE_FILES: ${SIMPLEAPB_RELEASE_FILES-https://raw.githubusercontent.com/quip1/simple-apb}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./updater/updater.sh:/opt/simpleapb/updater.sh:ro
-      - ${SIMPLEAPB_DEPLOY_DIR:-./.updater-not-configured}:${SIMPLEAPB_DEPLOY_DIR:-/not-configured}
       - ${SIMPLEAPB_CONFIG:-./data/config}/updater:/updater
 
   postgres:

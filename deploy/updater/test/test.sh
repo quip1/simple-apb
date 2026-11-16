@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # End-to-end test of the updater (CI, needs Docker): a local registry with
-# three stand-in server images, the real compose file, and two updates: one
-# that works and one that has to be rolled back.
+# three stand-in server images, an install with deploy/install.sh from
+# stand-in release files, and two updates: one that works and one that has to
+# be rolled back.
 set -Eeuo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -19,8 +20,8 @@ report() {
   ann() { echo "::error title=$1::$(printf '%s' "$2" | tail -c 3500 | tr -d '\r' | awk 'BEGIN{ORS="%0A"} {gsub(/%/,"%25"); print}')"; }
   ann "updater test failed at line $line" "$(sed -n "${line}p" "$0")"
   if [ -d "$work/deploy" ]; then
-    (cd "$work/deploy" && ann "compose ps" "$(docker compose --profile updater ps -a 2>&1)")
-    (cd "$work/deploy" && ann "updater log" "$(docker compose --profile updater logs --no-color --tail 40 updater 2>&1)")
+    (cd "$work/deploy" && ann "compose ps" "$(docker compose ps -a 2>&1)")
+    (cd "$work/deploy" && ann "updater log" "$(docker compose logs --no-color --tail 40 updater 2>&1)")
     (cd "$work/deploy" && ann "server log" "$(docker compose logs --no-color --tail 20 simpleapb 2>&1)")
     ann "updater folder" "$(sudo ls -la "$work/deploy/data/config/updater" 2>&1; sudo cat "$work/deploy/data/config/updater/result.json" 2>&1)"
   fi
@@ -28,8 +29,9 @@ report() {
 trap 'report $LINENO' ERR
 
 cleanup() {
-  (cd "$work/deploy" && docker compose --profile updater down -v >/dev/null 2>&1) || true
+  (cd "$work/deploy" && docker compose down -v >/dev/null 2>&1) || true
   docker rm -f sapb-registry >/dev/null 2>&1 || true
+  [ -n "${files_pid:-}" ] && kill "$files_pid" 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -42,27 +44,35 @@ for v in 1.0.0 1.1.0 1.2.0; do
   docker rmi "$reg:$v" >/dev/null
 done
 
-# A deploy folder like a real one.
-mkdir -p "$work/deploy/updater" "$work/library"
-cp "$deploy/docker-compose.yml" "$work/deploy/"
-cp "$deploy/updater/updater.sh" "$work/deploy/updater/"
-cat >"$work/deploy/.env" <<ENV
-SIMPLEAPB_IMAGE=$reg
-SIMPLEAPB_VERSION=1.0.0
-SIMPLEAPB_LIBRARY=$work/library
-NTFY_PUBLIC_URL=http://localhost:8081
-SIMPLEAPB_DEPLOY_DIR=$work/deploy
-SIMPLEAPB_UPDATE_TIMEOUT=45
-ENV
-cd "$work/deploy"
-docker compose --profile updater up -d --quiet-pull
+# Release files, as GitHub would serve them: <base>/v<version>/deploy/…, each
+# compose file marked with its version.
+for v in 1.0.0 1.1.0 1.2.0; do
+  mkdir -p "$work/release/v$v/deploy/updater"
+  { cat "$deploy/docker-compose.yml"; echo "# release $v"; } >"$work/release/v$v/deploy/docker-compose.yml"
+  cp "$deploy/updater/updater.sh" "$work/release/v$v/deploy/updater/updater.sh"
+  cp "$deploy/.env.example" "$work/release/v$v/deploy/.env.example"
+done
+(cd "$work/release" && python3 -m http.server 8099 --bind 0.0.0.0 >/dev/null 2>&1) &
+files_pid=$!
 
-running_version() { docker inspect -f '{{index .Config.Labels "org.opencontainers.image.version"}}' "$(docker compose ps -q simpleapb)"; }
 wait_for() { # seconds, condition...
   local t=$1; shift
   for _ in $(seq 1 "$t"); do "$@" && return 0; sleep 1; done
   return 1
 }
+wait_for 10 curl -fs -o /dev/null http://localhost:8099/v1.0.0/deploy/docker-compose.yml
+
+# Install like a user would, with nothing typed (no terminal): the settings come from the environment.
+mkdir -p "$work/library"
+SIMPLEAPB_DIR="$work/deploy" SIMPLEAPB_VERSION=1.0.0 SIMPLEAPB_LIBRARY="$work/library"   NTFY_PUBLIC_URL=http://localhost:8081 SIMPLEAPB_IMAGE="$reg" SIMPLEAPB_RELEASE_FILES=http://localhost:8099   sh "$deploy/install.sh" </dev/null
+cd "$work/deploy"
+grep -q '^# release 1.0.0$' docker-compose.yml || { echo "install.sh didn't fetch 1.0.0's files"; report $LINENO; exit 1; }
+# The updater reaches the stand-in release files through the host; quicker timeouts for the test.
+sed -i 's|^SIMPLEAPB_RELEASE_FILES=.*|SIMPLEAPB_RELEASE_FILES=http://host.docker.internal:8099|' .env
+echo SIMPLEAPB_UPDATE_TIMEOUT=45 >>.env
+docker compose up -d --quiet-pull
+
+running_version() { docker inspect -f '{{index .Config.Labels "org.opencontainers.image.version"}}' "$(docker compose ps -q simpleapb)"; }
 healthy() { [ "$(docker inspect -f '{{.State.Health.Status}}' "$(docker compose ps -q simpleapb)")" = healthy ]; }
 result_is() { sudo grep -q "\"status\":\"$1\"" data/config/updater/result.json 2>/dev/null; }
 
@@ -79,10 +89,18 @@ update() { # to
   sudo cat data/config/updater/result.json
 }
 
+old_updater=$(docker compose ps -q updater)
 update 1.1.0
 result_is succeeded || { echo "1.1.0 should succeed"; report $LINENO; exit 1; }
 [ "$(running_version)" = 1.1.0 ] || { echo "running $(running_version), want 1.1.0"; report $LINENO; exit 1; }
 grep -q '^SIMPLEAPB_VERSION=1.1.0$' .env || { echo ".env not pinned to 1.1.0"; report $LINENO; exit 1; }
+[ "$(stat -c %U:%a .env)" = "$(id -un):600" ] || { echo ".env changed owner or mode: $(stat -c %U:%a .env)"; report $LINENO; exit 1; }
+[ "$(stat -c %U docker-compose.yml)" = "$(id -un)" ] || { echo "docker-compose.yml changed owner"; report $LINENO; exit 1; }
+grep -q '^# release 1.1.0$' docker-compose.yml || { echo "1.1.0's docker-compose.yml wasn't fetched"; report $LINENO; exit 1; }
+# The updater restarts itself on the new script.
+new_updater() { id=$(docker compose ps -q updater); [ -n "$id" ] && [ "$id" != "$old_updater" ] && [ "$(docker inspect -f '{{.State.Running}}' "$id")" = true ]; }
+wait_for 60 new_updater || { echo "the updater didn't restart on its new script"; report $LINENO; exit 1; }
+sleep 6 # its first heartbeat
 
 update 1.2.0
 result_is rolled_back || { echo "1.2.0 should be rolled back"; report $LINENO; exit 1; }
@@ -90,5 +108,6 @@ sudo grep -q 'migration 00042 failed' data/config/updater/result.json || { echo 
 wait_for 60 healthy || { echo "not healthy after the rollback"; report $LINENO; exit 1; }
 [ "$(running_version)" = 1.1.0 ] || { echo "running $(running_version) after rollback, want 1.1.0"; report $LINENO; exit 1; }
 grep -q '^SIMPLEAPB_VERSION=1.1.0$' .env || { echo ".env not back on 1.1.0"; report $LINENO; exit 1; }
+grep -q '^# release 1.1.0$' docker-compose.yml || { echo "docker-compose.yml not put back after the rollback"; report $LINENO; exit 1; }
 
-echo "updater: update and rollback work"
+echo "updater: update (with new deploy files) and rollback work"

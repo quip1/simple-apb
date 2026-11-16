@@ -1654,6 +1654,47 @@ it shows the book you played last, with Resume. Tapping it opens the player, and
 - **Checked:** Back from a tab goes to Home, Back from the player returns to where it was
   opened, and the book page's Play/Resume opens the player.
 
+## ADR-0052 — Self-contained updates: the apps install themselves, the server updater needs no setup
+
+**Context.** Jacob wants every part to update in place without removing the old version or
+taking anything apart, and found the server too many steps. Before this, the server updater was
+an opt-in profile that needed `SIMPLEAPB_DEPLOY_DIR`, its compose file and script changed only
+by `git pull`, and the apps only opened a download page (ADR-0049).
+
+**Decision.**
+- **Server install:** `deploy/install.sh` (one `curl … | sh`) downloads the newest release's
+  `deploy/` files from the tag, asks for the library folder and the ntfy address, writes `.env`
+  with the version pinned, and starts the stack. It never overwrites an existing `.env`.
+- **Server updater on by default, no settings.** It finds its project (name, folder, compose
+  files) from the labels Docker Compose puts on its own container, and runs compose in a
+  short-lived helper container that mounts the project folder at its own path, so relative
+  paths mean the same host folders. An update first fetches the release's `docker-compose.yml`
+  and `updater.sh` (`.new` → `docker compose config` check → swap, keeping `.bak`; skipped for a
+  git checkout), then pins the version, pulls and recreates the server. Unhealthy: old version
+  and old files go back. Healthy: the rest of the stack follows the new compose file and the
+  updater restarts itself on its new script. Pinning writes a new `.env` beside the old one with
+  the same owner and mode and renames it over.
+- **Android:** "Update now" downloads the APK inside the app, checks it is this package, a
+  higher versionCode, and signed by the same certificate (SHA-256) as the installed app, then
+  installs it in a `PackageInstaller` session. The permission `REQUEST_INSTALL_PACKAGES` is only
+  in the github flavor's manifest (play and fdroid have stores). Sessions ask for
+  `USER_ACTION_NOT_REQUIRED`, so on Android 12+ the app, once it is the installer of record
+  (after its first self-update), updates without a dialog.
+- **Windows:** Tauri's updater plugin with a minisign key pair. The public key is in
+  `tauri.conf.json`; the release workflow signs the installer with the private key (secrets
+  `TAURI_SIGNING_PRIVATE_KEY`, `…_PASSWORD`) and publishes `latest.json` with the release, so
+  `releases/latest/download/latest.json` always names the newest stable installer. The installer
+  runs in passive mode (a progress bar, no questions) and reopens the app.
+
+**Why not fully silent on Android?** Android requires the user's OK the first time an app installs
+another (or itself); after that it's one tap, or none on Android 12+.
+
+**Consequences.** The updater's helper reaches GitHub (the updater itself still has no network).
+A fork points it elsewhere with `SIMPLEAPB_RELEASE_FILES`, or turns fetching off by setting it
+empty. Losing the Tauri private key means a new public key and a manual reinstall of the Windows
+app for everyone, like losing the Android key. Releases before 0.5.4 have no `latest.json`, so the
+Windows app falls back to the release page for those.
+
 ## Open questions for Jacob
 
 | # | Question | Current choice (until answered) |

@@ -5,10 +5,10 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.Button
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -26,7 +26,9 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -59,7 +61,8 @@ data class AppRelease(val version: String, val apkUrl: String, val pageUrl: Stri
 /**
  * The in-app update check of the sideloaded (github) build (ADR-0049). It
  * looks at the newest GitHub release at most twice a day and offers its APK,
- * which installs over this one because both are signed with the release key.
+ * which [ApkInstaller] installs over this one (ADR-0052): both are signed with
+ * the release key, so Android keeps the app's data.
  * The play and fdroid builds have their stores and never check.
  */
 @Singleton
@@ -168,7 +171,7 @@ constructor(@ApplicationContext private val context: Context, @AppScope private 
 @HiltViewModel
 class UpdatesViewModel
 @Inject
-constructor(private val updates: AppUpdates) : ViewModel() {
+constructor(private val updates: AppUpdates, val installer: ApkInstaller) : ViewModel() {
     val available: StateFlow<AppRelease?> = updates.available
 
     init {
@@ -180,8 +183,66 @@ constructor(private val updates: AppUpdates) : ViewModel() {
     fun skip(version: String) = updates.skip(version)
 }
 
-private fun openDownload(context: Context, url: String) {
-    context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+private fun open(context: Context, intent: Intent) {
+    runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+}
+
+/**
+ * Update now → download (with progress) → Android installs it over this
+ * version (ADR-0052). Asks for "install unknown apps" first if needed, and
+ * offers the release page if anything goes wrong.
+ */
+@Composable
+private fun UpdateAction(release: AppRelease, installer: ApkInstaller, fill: Boolean) {
+    val context = LocalContext.current
+    val state by installer.state.collectAsStateWithLifecycle()
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { installer.resume() }
+    val width = if (fill) Modifier.fillMaxWidth() else Modifier
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        when (val s = state) {
+            is ApkInstaller.State.Downloading -> {
+                Text(stringResource(UiR.string.app_update_downloading, s.percent))
+                LinearProgressIndicator(progress = { s.percent / 100f }, modifier = Modifier.fillMaxWidth())
+            }
+            ApkInstaller.State.Installing -> {
+                Text(stringResource(UiR.string.app_update_installing))
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+            ApkInstaller.State.NeedsPermission -> {
+                Text(stringResource(UiR.string.app_update_permission))
+                Button(onClick = { open(context, installer.permissionIntent()) }, modifier = width.heightIn(min = TouchTarget)) {
+                    Text(stringResource(UiR.string.app_update_allow))
+                }
+            }
+            is ApkInstaller.State.Confirm ->
+                Button(onClick = { open(context, s.intent) }, modifier = width.heightIn(min = TouchTarget)) {
+                    Text(stringResource(UiR.string.app_update_confirm))
+                }
+            ApkInstaller.State.Idle, is ApkInstaller.State.Failed -> {
+                if (s is ApkInstaller.State.Failed) {
+                    Text(
+                        stringResource(
+                            when (s.reason) {
+                                ApkInstaller.Reason.DOWNLOAD -> UiR.string.app_update_download_failed
+                                ApkInstaller.Reason.SIGNATURE -> UiR.string.app_update_bad_signature
+                                ApkInstaller.Reason.INSTALL -> UiR.string.app_update_install_failed
+                            }
+                        ),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                Button(onClick = { installer.install(release) }, modifier = width.heightIn(min = TouchTarget)) {
+                    Text(stringResource(UiR.string.app_update_install))
+                }
+                if (s is ApkInstaller.State.Failed && release.pageUrl.isNotEmpty()) {
+                    TextButton(
+                        onClick = { open(context, Intent(Intent.ACTION_VIEW, release.pageUrl.toUri())) },
+                        modifier = Modifier.heightIn(min = TouchTarget)
+                    ) { Text(stringResource(UiR.string.app_update_release_page)) }
+                }
+            }
+        }
+    }
 }
 
 /** Home: a newer version is out. Nothing at all in the play and fdroid builds. */
@@ -191,13 +252,11 @@ fun UpdateBanner() {
     val vm: UpdatesViewModel = hiltViewModel()
     val release by vm.available.collectAsStateWithLifecycle()
     val r = release ?: return
-    val context = LocalContext.current
+    val state by vm.installer.state.collectAsStateWithLifecycle()
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(UiR.string.app_update_available, r.version), style = MaterialTheme.typography.titleSmall)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { openDownload(context, r.apkUrl) }, modifier = Modifier.heightIn(min = TouchTarget)) {
-                Text(stringResource(UiR.string.app_update_download))
-            }
+        UpdateAction(r, vm.installer, fill = false)
+        if (state == ApkInstaller.State.Idle) {
             TextButton(onClick = { vm.skip(r.version) }, modifier = Modifier.heightIn(min = TouchTarget)) {
                 Text(stringResource(UiR.string.app_update_later))
             }
@@ -211,7 +270,6 @@ fun UpdateSection() {
     if (!BuildConfig.UPDATE_CHECK) return
     val vm: UpdatesViewModel = hiltViewModel()
     val release by vm.available.collectAsStateWithLifecycle()
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var outcome by remember { mutableStateOf<AppUpdates.Outcome?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -219,9 +277,7 @@ fun UpdateSection() {
         Text(stringResource(UiR.string.app_update_current, BuildConfig.VERSION_NAME))
         release?.let { r ->
             Text(stringResource(UiR.string.app_update_available, r.version))
-            Button(onClick = { openDownload(context, r.apkUrl) }, modifier = Modifier.fillMaxWidth().heightIn(min = TouchTarget)) {
-                Text(stringResource(UiR.string.app_update_download))
-            }
+            UpdateAction(r, vm.installer, fill = true)
         }
         when (outcome) {
             AppUpdates.Outcome.NONE -> Text(stringResource(UiR.string.app_update_none))

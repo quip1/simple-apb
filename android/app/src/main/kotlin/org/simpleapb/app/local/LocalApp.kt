@@ -43,6 +43,8 @@ import org.simpleapb.app.ui.RadioGroup
 import org.simpleapb.app.ui.ScreenHeader
 import org.simpleapb.app.ui.Section
 import org.simpleapb.app.ui.TouchTarget
+import org.simpleapb.app.update.UpdateBanner
+import org.simpleapb.app.update.UpdateSection
 import org.simpleapb.core.ui.AppTheme
 import org.simpleapb.core.ui.LocalEink
 import org.simpleapb.core.ui.R as UiR
@@ -117,6 +119,8 @@ private fun LocalHome(app: AppViewModel, onBook: (String) -> Unit, onFolders: ()
                 Icon(Icons.Filled.Refresh, contentDescription = stringResource(UiR.string.app_local_rescan))
             }
         }
+        // Updates reach phones that never connect to a server too (ADR-0052).
+        UpdateBanner()
         if (books.isEmpty()) {
             Text(stringResource(if (trees.isEmpty()) UiR.string.app_local_empty else UiR.string.app_local_empty_folders))
             Button(onClick = onFolders, modifier = Modifier.fillMaxWidth().heightIn(min = TouchTarget)) {
@@ -155,5 +159,6 @@ private fun LocalHome(app: AppViewModel, onBook: (String) -> Unit, onFolders: ()
                 Text(stringResource(UiR.string.app_welcome_connect))
             }
         }
+        UpdateSection()
     }
 }

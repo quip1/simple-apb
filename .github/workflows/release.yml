@@ -3,7 +3,8 @@
 # `node scripts/release.mjs X.Y.Z` and its commit) builds and publishes:
 #   - the server image: ghcr.io/<owner>/simple-apb-server:X.Y.Z (and X.Y, latest)
 #   - the signed Android APK (github flavor) and the Play bundle
-#   - the Windows installer
+#   - the Windows installer, and with the TAURI_SIGNING_PRIVATE_KEY secret its
+#     signature and latest.json, which the Windows app updates itself from (ADR-0052)
 #   - a GitHub release with those files and the changelog section
 # The apps and the server's admin panel look for new versions here.
 name: Release
@@ -164,14 +165,37 @@ jobs:
         working-directory: web
       - run: npm ci
         working-directory: desktop
+      # With the updater key, the installer is also signed for the app's own
+      # updater (the public key is in tauri.conf.json). Without it the app
+      # still sees the release, but sends people to the release page.
       - name: Installer
-        run: npm run build
+        shell: bash
         working-directory: desktop
-      - name: Name the file
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            npx tauri build --config '{"bundle":{"createUpdaterArtifacts":true}}'
+          else
+            echo "::warning::No TAURI_SIGNING_PRIVATE_KEY secret: the Windows app can't update itself to this release."
+            npm run build
+          fi
+      - name: Name the file, and latest.json for the app's updater
         shell: bash
         run: |
+          v="${{ needs.version.outputs.version }}"
+          exe="simple-apb-windows-$v-setup.exe"
           mkdir -p out
-          cp desktop/src-tauri/target/release/bundle/nsis/*-setup.exe "out/simple-apb-windows-${{ needs.version.outputs.version }}-setup.exe"
+          cp desktop/src-tauri/target/release/bundle/nsis/*-setup.exe "out/$exe"
+          sig=$(ls desktop/src-tauri/target/release/bundle/nsis/*-setup.exe.sig 2>/dev/null | head -n 1)
+          if [ -n "$sig" ]; then
+            cp "$sig" "out/$exe.sig"
+            url="https://github.com/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME/$exe"
+            jq -n --arg v "$v" --arg sig "$(cat "$sig")" --arg url "$url" --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+              '{version: $v, pub_date: $date, platforms: {"windows-x86_64": {signature: $sig, url: $url}}}' > out/latest.json
+            cat out/latest.json
+          fi
       - uses: actions/upload-artifact@v7
         with:
           name: windows
@@ -202,7 +226,7 @@ jobs:
             echo
             echo "**Server:** \`docker pull $img\`, or **Admin → Updates → Update now** (docs/UPDATING.md)."
             echo
-            echo "**Android:** \`simple-apb-android-$v.apk\` (installs over the previous version). **Windows:** \`simple-apb-windows-$v-setup.exe\`."
+            echo "**Apps:** the Android and Windows apps offer this version themselves (**Update now**). New installs: \`simple-apb-android-$v.apk\`, \`simple-apb-windows-$v-setup.exe\`."
             if [ -f "dist/simple-apb-android-$v-preset.apk" ]; then
               echo
               echo "\`simple-apb-android-$v-preset.apk\` is set up for one server: it opens straight to that server's sign-in."

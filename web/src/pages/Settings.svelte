@@ -4,9 +4,10 @@
   // on its own page. Theme and stream quality are per device; the other
   // playback preferences follow the account (prefs.svelte.ts).
   import { api, type Me, type Schemas } from "../api/client";
-  import { DESKTOP, checkUpdate, desktop, openExternal, toggleMini } from "../lib/desktop.svelte";
+  import { DESKTOP, checkUpdate, desktop, toggleMini } from "../lib/desktop.svelte";
   import Alert from "../components/Alert.svelte";
   import Button from "../components/Button.svelte";
+  import DesktopUpdate from "../components/DesktopUpdate.svelte";
   import Field from "../components/Field.svelte";
   import { t, tError } from "../lib/i18n";
   import { stopLive } from "../lib/live.svelte";
@@ -170,9 +171,8 @@
         {#if desktop.update && !desktop.update.available}
           <span class="muted" role="status">{t("desktop.update.none")}</span>
         {/if}
-        {#if desktop.update?.available && desktop.update.url}
-          {@const u = desktop.update.url}
-          <Button onclick={() => openExternal(u)}>{t("desktop.update.download")}</Button>
+        {#if desktop.update?.available}
+          <DesktopUpdate update={desktop.update} />
         {/if}
       </div>
     </section>

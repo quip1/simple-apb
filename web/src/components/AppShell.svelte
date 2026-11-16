@@ -3,13 +3,14 @@
   // Signed-in layout: header navigation, page content, the mini-player bar and
   // a polite live region announcing playback state (brief §11 accessibility).
   import type { Snippet } from "svelte";
-  import { DESKTOP, desktop, openExternal, skipUpdate } from "../lib/desktop.svelte";
+  import { DESKTOP, desktop, skipUpdate, updateProgress } from "../lib/desktop.svelte";
   import { t } from "../lib/i18n";
   import { player } from "../lib/player.svelte";
   import { link, route } from "../lib/router.svelte";
   import { session } from "../lib/session.svelte";
   import { themeState } from "../lib/theme.svelte";
   import Button from "./Button.svelte";
+  import DesktopUpdate from "./DesktopUpdate.svelte";
   import ConflictPrompt from "./ConflictPrompt.svelte";
   import Dialog from "./Dialog.svelte";
   import Icon from "./Icon.svelte";
@@ -71,8 +72,10 @@
     {@const u = desktop.update}
     <div class="update card" role="status">
       <span>{t("desktop.update.available", { version: u.version ?? "" })}</span>
-      <Button variant="secondary" onclick={() => u.url && openExternal(u.url)}>{t("desktop.update.download")}</Button>
-      <Button variant="ghost" onclick={() => u.version && void skipUpdate(u.version)}>{t("desktop.update.skip")}</Button>
+      <DesktopUpdate update={u} />
+      {#if updateProgress.phase === "idle"}
+        <Button variant="ghost" onclick={() => u.version && void skipUpdate(u.version)}>{t("desktop.update.skip")}</Button>
+      {/if}
     </div>
   {/if}
   {@render children()}

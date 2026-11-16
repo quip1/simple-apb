@@ -123,6 +123,26 @@ export async function checkUpdate(): Promise<void> {
   desktop.update = await call<UpdateInfo>("GET", "update");
 }
 
+export interface UpdateProgress {
+  phase: "idle" | "downloading" | "installing" | "failed";
+  percent: number;
+}
+
+/** "Update now" (ADR-0052): the app downloads the signed installer and runs it; it then restarts. */
+export const updateProgress = $state<UpdateProgress>({ phase: "idle", percent: 0 });
+
+export async function installUpdate(): Promise<void> {
+  await call("POST", "update/install");
+  updateProgress.phase = "downloading";
+  updateProgress.percent = 0;
+  // Until the installer closes the app, or it fails.
+  while (updateProgress.phase === "downloading" || updateProgress.phase === "installing") {
+    await new Promise((r) => setTimeout(r, 500));
+    const p = await call<UpdateProgress>("GET", "update/progress");
+    if (p) Object.assign(updateProgress, p);
+  }
+}
+
 export async function skipUpdate(version: string): Promise<void> {
   await call("POST", "update/skip", { version });
   desktop.update = null;

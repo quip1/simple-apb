@@ -60,6 +60,20 @@ pub async fn route(app: &AppHandle, s: &Arc<Shared>, rest: &str, req: Request<Ve
             json_response(StatusCode::OK, &json!({}))
         }
         (Method::GET, ["update"]) => json_response(StatusCode::OK, &crate::update::check(s).await),
+        (Method::POST, ["update", "install"]) => {
+            if crate::update::install(app) {
+                json_response(StatusCode::ACCEPTED, &json!({}))
+            } else {
+                error(
+                    StatusCode::CONFLICT,
+                    "busy",
+                    "An update is already under way",
+                )
+            }
+        }
+        (Method::GET, ["update", "progress"]) => {
+            json_response(StatusCode::OK, &crate::update::progress())
+        }
         _ => error(StatusCode::NOT_FOUND, "not_found", "Not found"),
     }
 }

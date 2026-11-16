@@ -6,9 +6,14 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Self-contained updates (ADR-0052):
+  - Server: install with one command (`deploy/install.sh`); the updater now runs by default with no settings, and an update also brings the release's `docker-compose.yml` and updater script (rolled back with the rest if the new version doesn't start).
+  - Android: **Update now** downloads and installs the new version inside the app, after checking it's signed like the installed one. Updates also show in local-only mode.
+  - Windows: **Update now** downloads the signed installer, installs it with just a progress bar and reopens the app.
 - Home shows the book you're on (Android and web): a large card with its chapter, progress, time left and Play/Pause, or the last book you played with Resume. Tap it for the player (ADR-0051).
 
 ### Changed
+- The server updater is no longer an optional profile, and `SIMPLEAPB_DEPLOY_DIR` is gone. Existing installs, once: get the new deploy files (`git pull`), drop `SIMPLEAPB_DEPLOY_DIR` from `.env`, and run `docker compose up -d`. After that, updates bring their own deploy files.
 - Books sort by their number in a series everywhere: series, author and narrator pages, the series and author sorts (an author's series stay together, in order), next in series, and the Android app's offline lists. "Book 10" now comes after "Book 2" (ADR-0051).
 - Android tabs: tapping the tab you're in goes back to its first page.
 

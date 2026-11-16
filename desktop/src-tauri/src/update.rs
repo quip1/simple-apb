@@ -1,11 +1,99 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! The update check (brief §10): compares this version with the newest
-//! GitHub release and offers the download page. Nothing is installed
-//! automatically (ADR-0047).
+//! Updates (brief §10). The check compares this version with the newest
+//! GitHub release (ADR-0047). "Update now" then downloads the release's
+//! signed installer with Tauri's updater, checks its signature against the
+//! public key in tauri.conf.json, and runs it: a progress bar, no questions,
+//! and the new version opens with the same settings and downloads
+//! (ADR-0052). Nothing installs without the user asking.
+
+use std::sync::Mutex;
 
 use serde_json::{json, Value};
+use tauri::AppHandle;
+use tauri_plugin_updater::UpdaterExt;
 
 use crate::Shared;
+
+#[derive(Clone, Copy, PartialEq)]
+enum Phase {
+    Idle,
+    Downloading,
+    Installing,
+    Failed,
+}
+
+struct Install {
+    phase: Phase,
+    done: u64,
+    total: u64,
+}
+
+static INSTALL: Mutex<Install> = Mutex::new(Install {
+    phase: Phase::Idle,
+    done: 0,
+    total: 0,
+});
+
+/// Where "Update now" is: idle, downloading (with a percentage), installing or failed.
+pub fn progress() -> Value {
+    let i = INSTALL.lock().unwrap();
+    let phase = match i.phase {
+        Phase::Idle => "idle",
+        Phase::Downloading => "downloading",
+        Phase::Installing => "installing",
+        Phase::Failed => "failed",
+    };
+    let percent = (i.done * 100).checked_div(i.total).unwrap_or(0).min(100);
+    json!({ "phase": phase, "percent": percent })
+}
+
+/// Starts downloading and installing the newest release; false if one is under way.
+pub fn install(app: &AppHandle) -> bool {
+    {
+        let mut i = INSTALL.lock().unwrap();
+        if matches!(i.phase, Phase::Downloading | Phase::Installing) {
+            return false;
+        }
+        *i = Install {
+            phase: Phase::Downloading,
+            done: 0,
+            total: 0,
+        };
+    }
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        if let Err(e) = download_and_install(&app).await {
+            log::warn!("update failed: {e}");
+            INSTALL.lock().unwrap().phase = Phase::Failed;
+        }
+    });
+    true
+}
+
+async fn download_and_install(app: &AppHandle) -> Result<(), String> {
+    let update = app
+        .updater()
+        .map_err(|e| e.to_string())?
+        .check()
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or("no signed update is published")?;
+    let bytes = update
+        .download(
+            |chunk, total| {
+                let mut i = INSTALL.lock().unwrap();
+                i.done += chunk as u64;
+                i.total = total.unwrap_or(0);
+            },
+            || INSTALL.lock().unwrap().phase = Phase::Installing,
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+    // On Windows this hands over to the installer, which closes this app,
+    // installs over it and opens the new version.
+    update.install(bytes).map_err(|e| e.to_string())?;
+    app.restart()
+}
 
 const RELEASES: &str = "https://api.github.com/repos/quip1/simple-apb/releases/latest";
 
