@@ -5,6 +5,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.5] - 2026-11-17
+
 ### Added
 - Admin → Settings → **New books in the library folder**: choose a group (Public for everyone) that books found in your audiobook folder are shared with as they arrive. Off by default; uploads aren't affected (ADR-0053).
 
