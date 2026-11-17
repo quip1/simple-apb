@@ -3906,7 +3906,7 @@ components:
 
     AdminSettings:
       type: object
-      required: [instance, auth, bandwidth, quotas, permission_defaults, smtp, ntfy, metadata]
+      required: [instance, auth, bandwidth, quotas, permission_defaults, smtp, ntfy, metadata, library]
       properties:
         instance: { $ref: "#/components/schemas/InstanceSettings" }
         auth: { $ref: "#/components/schemas/AuthSettings" }
@@ -3916,6 +3916,7 @@ components:
         smtp: { $ref: "#/components/schemas/SmtpSettingsView" }
         ntfy: { $ref: "#/components/schemas/NtfySettingsView" }
         metadata: { $ref: "#/components/schemas/MetadataSettingsView" }
+        library: { $ref: "#/components/schemas/LibrarySettings" }
 
     AdminSettingsPatch:
       type: object
@@ -3928,6 +3929,23 @@ components:
         smtp: { $ref: "#/components/schemas/SmtpSettingsPatch" }
         ntfy: { $ref: "#/components/schemas/NtfySettingsPatch" }
         metadata: { $ref: "#/components/schemas/MetadataSettingsPatch" }
+        library: { $ref: "#/components/schemas/LibrarySettingsPatch" }
+
+    LibrarySettings:
+      type: object
+      properties:
+        auto_share_group_id:
+          type: string
+          format: uuid
+          description: "Books found in the library folder are shared with this group as they are imported (ADR-0053). Absent: nobody until an admin shares them."
+        auto_share_group_name: { type: string }
+
+    LibrarySettingsPatch:
+      type: object
+      properties:
+        auto_share_group_id:
+          type: string
+          description: "A group's id, or an empty string to share new books with nobody"
 
     DashboardEgress:
       type: object

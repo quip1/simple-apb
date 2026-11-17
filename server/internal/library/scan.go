@@ -141,7 +141,8 @@ func changed(kb *store.BookFolder, c Candidate) bool {
 }
 
 // importNew adds a scanned book to the master store (admin-owned, not
-// visible to anyone until distributed).
+// visible to anyone until distributed, unless the admin chose a group to
+// share new books with: OnScanImport).
 func (l *Library) importNew(ctx context.Context, c Candidate) error {
 	a := l.Analyze(ctx, l.Root, c)
 	if a.Problem != nil {
@@ -154,8 +155,14 @@ func (l *Library) importNew(ctx context.Context, c Candidate) error {
 		if id, err = store.InsertBook(ctx, tx, &a.Book); err != nil {
 			return err
 		}
-		return store.Audit(ctx, tx, store.AuditEntry{Action: "book.scan_import", ObjectType: "book", ObjectID: id,
-			Details: map[string]any{"folder": c.Rel}})
+		if err := store.Audit(ctx, tx, store.AuditEntry{Action: "book.scan_import", ObjectType: "book", ObjectID: id,
+			Details: map[string]any{"folder": c.Rel}}); err != nil {
+			return err
+		}
+		if l.OnScanImport != nil {
+			return l.OnScanImport(ctx, tx, id)
+		}
+		return nil
 	})
 	if errors.Is(err, store.ErrConflict) {
 		return nil // imported concurrently

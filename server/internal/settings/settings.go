@@ -40,6 +40,9 @@ type Instance struct {
 // Library settings.
 type Library struct {
 	Path string `json:"path"`
+	// AutoShareGroup is the group books found in the library folder are
+	// shared with as they're imported (ADR-0053); empty: nobody.
+	AutoShareGroup string `json:"auto_share_group,omitempty"`
 }
 
 // SMTP settings (stored encrypted).

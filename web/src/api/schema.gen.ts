@@ -3061,6 +3061,7 @@ export interface components {
             smtp: components["schemas"]["SmtpSettingsView"];
             ntfy: components["schemas"]["NtfySettingsView"];
             metadata: components["schemas"]["MetadataSettingsView"];
+            library: components["schemas"]["LibrarySettings"];
         };
         AdminSettingsPatch: {
             instance?: components["schemas"]["InstanceSettingsPatch"];
@@ -3071,6 +3072,19 @@ export interface components {
             smtp?: components["schemas"]["SmtpSettingsPatch"];
             ntfy?: components["schemas"]["NtfySettingsPatch"];
             metadata?: components["schemas"]["MetadataSettingsPatch"];
+            library?: components["schemas"]["LibrarySettingsPatch"];
+        };
+        LibrarySettings: {
+            /**
+             * Format: uuid
+             * @description Books found in the library folder are shared with this group as they are imported (ADR-0053). Absent: nobody until an admin shares them.
+             */
+            auto_share_group_id?: string;
+            auto_share_group_name?: string;
+        };
+        LibrarySettingsPatch: {
+            /** @description A group's id, or an empty string to share new books with nobody */
+            auto_share_group_id?: string;
         };
         DashboardEgress: {
             /**

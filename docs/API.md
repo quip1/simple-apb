@@ -1121,6 +1121,7 @@ Explicit values; a missing key means "not overridden"
 | `smtp` | `SmtpSettingsView` | yes |  |
 | `ntfy` | `NtfySettingsView` | yes |  |
 | `metadata` | `MetadataSettingsView` | yes |  |
+| `library` | `LibrarySettings` | yes |  |
 
 ### AdminSettingsPatch
 
@@ -1134,6 +1135,20 @@ Explicit values; a missing key means "not overridden"
 | `smtp` | `SmtpSettingsPatch` |  |  |
 | `ntfy` | `NtfySettingsPatch` |  |  |
 | `metadata` | `MetadataSettingsPatch` |  |  |
+| `library` | `LibrarySettingsPatch` |  |  |
+
+### LibrarySettings
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `auto_share_group_id` | string (uuid) |  | Books found in the library folder are shared with this group as they are imported (ADR-0053). Absent: nobody until an admin shares them. |
+| `auto_share_group_name` | string |  |  |
+
+### LibrarySettingsPatch
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `auto_share_group_id` | string |  | A group's id, or an empty string to share new books with nobody |
 
 ### DashboardEgress
 

@@ -101,6 +101,9 @@ func NewApp(ctx context.Context, db *store.DB, secrets *config.Secrets, log *slo
 	a.Jobs = jobs.NewRunner(db, log, workers)
 	a.Hub = NewHub(ctx, db)
 	a.Push = &push.Notifier{DB: db, Enc: secrets, Log: log}
+	a.Lib.OnScanImport = func(ctx context.Context, tx *store.Tx, bookID string) error {
+		return autoShare(ctx, tx, log, bookID)
+	}
 	a.Auth.OnSignup = func(ctx context.Context, q store.Querier, requestID string) {
 		_ = push.Enqueue(ctx, q, push.Recipients{Admins: true}, push.Event{Type: push.SignupRequest, ID: requestID})
 	}

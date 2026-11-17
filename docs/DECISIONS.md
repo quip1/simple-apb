@@ -1695,7 +1695,23 @@ empty. Losing the Tauri private key means a new public key and a manual reinstal
 app for everyone, like losing the Android key. Releases before 0.5.4 have no `latest.json`, so the
 Windows app falls back to the release page for those.
 
-## Open questions for Jacob
+## ADR-0053 — Share new library-folder books with a group automatically
+
+**Context.** Books found in the library folder belong to the admin and are seen by nobody until
+distributed (ADR-0015). Jacob wants new books shared without doing it by hand each time. This is
+outside the brief's §2.1 scope; Jacob asked for it directly.
+
+**Decision.** Admin → Settings → *New books in the library folder* picks one group (Public for
+everyone) or nobody, the default. It is stored in the `library` settings group, so no migration.
+When the scanner imports a new book it creates a normal distribution to that group in the same
+transaction, audited as `distribution.auto` with no actor, and queues the usual "new book" push.
+The admin can revoke it per book like any other distribution. Only books imported after the
+setting is saved are shared; books already in the library keep their sharing. Uploads are not
+affected: they are the uploader's, and sharing them stays the uploader's choice (§6.5). If the
+chosen group is later deleted, new books are shared with nobody (logged) instead of failing the
+import, and the setting shows as off.
+
+
 
 | # | Question | Current choice (until answered) |
 |---|---|---|

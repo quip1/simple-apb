@@ -52,6 +52,8 @@
   let metaAX = $state(true);
   let metaKey = $state("");
   let metaThreshold = $state("80");
+  let autoShare = $state("");
+  let groups = $state<Schemas["Group"][]>([]);
   let testTo = $state("");
   let testResult = $state<{ ok: boolean; message?: string } | null>(null);
 
@@ -82,12 +84,14 @@
     metaAX = v.metadata.audnexus;
     metaKey = "";
     metaThreshold = String(Math.round(v.metadata.threshold * 100));
+    autoShare = v.library.auto_share_group_id ?? "";
   }
 
   async function load() {
     const { data, error: err } = await api.GET("/admin/settings");
     if (err || !data) error = tError(err?.code, err?.message);
     else fill(data);
+    groups = (await api.GET("/admin/groups")).data ?? [];
   }
   $effect(() => {
     void load();
@@ -259,6 +263,23 @@
           hint={s.ntfy.token_set ? t("admin.settings.secret_set") : t("admin.settings.secret_unset")}
         />
         {#if saved === "ntfy"}<Alert kind="ok">{t("settings.saved")}</Alert>{/if}
+        <div class="row"><Button type="submit">{t("common.save")}</Button></div>
+      </form>
+    </section>
+
+    <section class="card stack" aria-labelledby="st-newbooks">
+      <h2 id="st-newbooks">{t("admin.settings.new_books")}</h2>
+      <p class="muted">{t("admin.settings.new_books_intro")}</p>
+      <form class="stack" onsubmit={submit(() => save("library", { library: { auto_share_group_id: autoShare } }))}>
+        <label class="field">
+          <span>{t("admin.settings.auto_share")}</span>
+          <select bind:value={autoShare}>
+            <option value="">{t("admin.settings.auto_share_nobody")}</option>
+            {#each groups as g (g.id)}<option value={g.id}>{g.name}</option>{/each}
+          </select>
+        </label>
+        <p class="muted">{t("admin.settings.auto_share_hint")}</p>
+        {#if saved === "library"}<Alert kind="ok">{t("settings.saved")}</Alert>{/if}
         <div class="row"><Button type="submit">{t("common.save")}</Button></div>
       </form>
     </section>

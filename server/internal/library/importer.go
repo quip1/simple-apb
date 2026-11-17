@@ -33,6 +33,9 @@ type Library struct {
 	Paths config.Paths
 	Root  string // library root (from settings, usually /library)
 	Log   *slog.Logger
+	// OnScanImport runs in the transaction that adds a book found in the
+	// library folder (the admin's automatic sharing, ADR-0053).
+	OnScanImport func(ctx context.Context, tx *store.Tx, bookID string) error
 }
 
 // Analysis is a probed candidate, ready to insert.

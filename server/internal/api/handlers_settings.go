@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -159,6 +160,18 @@ func (s *Server) adminSettings(ctx context.Context) (AdminSettings, error) {
 	if err != nil {
 		return out, err
 	}
+	lib, err := st.Library(ctx)
+	if err != nil {
+		return out, err
+	}
+	var libOut LibrarySettings
+	if lib.AutoShareGroup != "" {
+		if g, err := store.GetGroup(ctx, s.App().DB, lib.AutoShareGroup); err == nil {
+			if id, err := uuid.Parse(g.ID); err == nil {
+				libOut = LibrarySettings{AutoShareGroupId: &id, AutoShareGroupName: &g.Name}
+			}
+		}
+	}
 	tls := smtp.TLS
 	if tls == "" {
 		tls = "starttls"
@@ -176,6 +189,7 @@ func (s *Server) adminSettings(ctx context.Context) (AdminSettings, error) {
 		Ntfy: NtfySettingsView{InternalUrl: ntfy.InternalURL, PublicUrl: ntfy.PublicURL, TokenSet: ntfy.Token != ""},
 		Metadata: MetadataSettingsView{OpenLibrary: meta.OpenLibrary, GoogleBooks: meta.GoogleBooks, GoogleBooksKeySet: meta.GoogleAPIKey != "",
 			Audnexus: meta.Audnexus, Threshold: float32(meta.Threshold)},
+		Library: libOut,
 	}
 	return out, nil
 }
@@ -387,6 +401,29 @@ func (s *Server) UpdateAdminSettings(ctx context.Context, req UpdateAdminSetting
 				return err
 			}
 			changed = append(changed, "metadata")
+		}
+		if p := b.Library; p != nil && p.AutoShareGroupId != nil {
+			v, err := ts.Library(ctx)
+			if err != nil {
+				return err
+			}
+			id := strings.TrimSpace(*p.AutoShareGroupId)
+			if id != "" {
+				if _, err := uuid.Parse(id); err != nil {
+					return badRequest("invalid_group", "that group doesn't exist")
+				}
+				if _, err := store.GetGroup(ctx, tx, id); err != nil {
+					if errors.Is(err, store.ErrNotFound) {
+						return badRequest("invalid_group", "that group doesn't exist")
+					}
+					return err
+				}
+			}
+			v.AutoShareGroup = id
+			if err := ts.Set(ctx, settings.KeyLibrary, v); err != nil {
+				return err
+			}
+			changed = append(changed, "library")
 		}
 		// Secrets are never written to the audit log, only which groups changed.
 		return store.Audit(ctx, tx, store.AuditEntry{ActorID: admin, Action: "settings.update", IP: clientIP(ctx),
