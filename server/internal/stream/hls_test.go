@@ -5,6 +5,7 @@ package stream
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"os"
@@ -92,7 +93,7 @@ func TestHLSTranscodeAndSeek(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := h.Segment(ctx, src, low, last+1); err != ErrBadSegment {
+	if _, err := h.Segment(ctx, src, low, last+1); !errors.Is(err, ErrBadSegment) {
 		t.Fatalf("out of range: %v", err)
 	}
 	// Join the segments and check the stream is ~25 s, mono 22.05 kHz AAC.

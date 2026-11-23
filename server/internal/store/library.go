@@ -5,6 +5,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -111,7 +112,7 @@ func CreateDistribution(ctx context.Context, q Querier, bookID, targetType, targ
 	if err == nil {
 		return existing, nil
 	}
-	if notFound(err) != ErrNotFound {
+	if !errors.Is(notFound(err), ErrNotFound) {
 		return "", err
 	}
 	id, now := NewID(), NowMS()

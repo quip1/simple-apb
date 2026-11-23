@@ -176,7 +176,7 @@ func exec(bin string, args ...string) error {
 func runCmd(bin string, args ...string) error {
 	out, err := osexec.Command(bin, args...).CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%v: %s", err, out)
+		return fmt.Errorf("%w: %s", err, out)
 	}
 	return nil
 }

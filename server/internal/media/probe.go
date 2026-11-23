@@ -180,7 +180,7 @@ func (t Tools) ExtractCover(ctx context.Context, audioPath, dest string) error {
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("extract cover: %v: %s", err, firstLine(stderr.String()))
+		return fmt.Errorf("extract cover: %w: %s", err, firstLine(stderr.String()))
 	}
 	f, err := os.Open(tmp)
 	if err != nil {

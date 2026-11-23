@@ -4,6 +4,7 @@ package update
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -81,7 +82,7 @@ func TestUpdaterFiles(t *testing.T) {
 	if a := Last(dir); a == nil || a.Status != "requested" || a.To != "0.6.0" {
 		t.Fatalf("after request: %+v", a)
 	}
-	if err := Request(dir, "0.5.0", "0.6.0"); err != ErrBusy {
+	if err := Request(dir, "0.5.0", "0.6.0"); !errors.Is(err, ErrBusy) {
 		t.Fatalf("second request: %v", err)
 	}
 	// The updater takes it and finishes.

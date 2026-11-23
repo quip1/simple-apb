@@ -113,7 +113,7 @@ func (t Tools) run(ctx context.Context, args []string) error {
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("ffmpeg: %v: %s", err, stderr.String())
+		return fmt.Errorf("ffmpeg: %w: %s", err, stderr.String())
 	}
 	return nil
 }

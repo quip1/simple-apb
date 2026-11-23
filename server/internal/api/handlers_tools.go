@@ -239,11 +239,11 @@ func (s *Server) ListDuplicates(ctx context.Context, req ListDuplicatesRequestOb
 		if err != nil {
 			return nil, err
 		}
-		ma, err := s.masterOut(ctx, a, true)
+		ma, err := s.masterOut(ctx, a)
 		if err != nil {
 			return nil, err
 		}
-		mb, err := s.masterOut(ctx, b, true)
+		mb, err := s.masterOut(ctx, b)
 		if err != nil {
 			return nil, err
 		}

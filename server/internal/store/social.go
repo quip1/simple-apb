@@ -5,6 +5,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 )
 
@@ -130,7 +131,7 @@ func UpsertReview(ctx context.Context, q Querier, userID, bookID string, stars i
 		}
 		r, err := GetReview(ctx, q, existing.ID)
 		return r, false, err
-	case err != ErrNotFound:
+	case !errors.Is(err, ErrNotFound):
 		return nil, false, err
 	}
 	id := NewID()
@@ -351,7 +352,7 @@ func FileReport(ctx context.Context, q Querier, reporter, objectType, objectID, 
 		_, err = q.Exec(ctx, `UPDATE reports SET reason = ?, details = ?, updated_at = ? WHERE id = ?`, reason, nullStr(details), now, id)
 		return id, false, err
 	}
-	if notFound(err) != ErrNotFound {
+	if !errors.Is(notFound(err), ErrNotFound) {
 		return "", false, err
 	}
 	id = NewID()
@@ -472,7 +473,7 @@ func RequestShare(ctx context.Context, q Querier, bookID, uploaderID, groupID st
 	if err == nil {
 		return id, nil
 	}
-	if notFound(err) != ErrNotFound {
+	if !errors.Is(notFound(err), ErrNotFound) {
 		return "", err
 	}
 	id, now := NewID(), NowMS()
@@ -517,7 +518,7 @@ func DecideShareRequest(ctx context.Context, q Querier, id, status, reason, by s
 	res, err := q.Exec(ctx, `UPDATE review_queue SET status = ?, reason = ?, decided_by = ?, decided_at = ?, updated_at = ?
 		WHERE id = ? AND status = 'pending'`, status, nullStr(reason), by, now, now, id)
 	if err := mustAffect(res, err); err != nil {
-		if err == ErrNotFound {
+		if errors.Is(err, ErrNotFound) {
 			return ErrConflict
 		}
 		return err

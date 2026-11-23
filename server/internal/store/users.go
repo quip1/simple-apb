@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -259,7 +260,7 @@ func GetPermissionOverrides(ctx context.Context, q Querier, userID string) (Perm
 		FROM user_permissions WHERE user_id = ?`, userID).
 		Scan(&vals[0], &vals[1], &vals[2], &vals[3], &vals[4], &vals[5])
 	if err != nil {
-		if notFound(err) == ErrNotFound {
+		if errors.Is(notFound(err), ErrNotFound) {
 			return PermissionOverrides{}, nil
 		}
 		return PermissionOverrides{}, err

@@ -16,7 +16,7 @@ import (
 	"github.com/quip1/simple-apb/server/internal/store"
 )
 
-func (s *Server) masterOut(ctx context.Context, b *store.Book, withDist bool) (MasterBook, error) {
+func (s *Server) masterOut(ctx context.Context, b *store.Book) (MasterBook, error) {
 	db := s.App().DB
 	authors, err := store.PeopleFor(ctx, db, "authors", []string{b.ID})
 	if err != nil {
@@ -44,14 +44,12 @@ func (s *Server) masterOut(ctx context.Context, b *store.Book, withDist bool) (M
 	} else if !errors.Is(err, store.ErrNotFound) {
 		return MasterBook{}, err
 	}
-	if withDist {
-		ds, err := store.ListDistributions(ctx, db, b.ID)
-		if err != nil {
-			return MasterBook{}, err
-		}
-		for _, d := range ds {
-			m.Distributions = append(m.Distributions, distOut(d))
-		}
+	ds, err := store.ListDistributions(ctx, db, b.ID)
+	if err != nil {
+		return MasterBook{}, err
+	}
+	for _, d := range ds {
+		m.Distributions = append(m.Distributions, distOut(d))
 	}
 	return m, nil
 }
@@ -81,7 +79,7 @@ func (s *Server) ListMasterBooks(ctx context.Context, req ListMasterBooksRequest
 	books, next := trimPage(books, offset, limit)
 	page := MasterBookPage{Items: []MasterBook{}, NextCursor: next}
 	for _, b := range books {
-		m, err := s.masterOut(ctx, b, true)
+		m, err := s.masterOut(ctx, b)
 		if err != nil {
 			return nil, err
 		}
@@ -98,7 +96,7 @@ func (s *Server) GetMasterBook(ctx context.Context, req GetMasterBookRequestObje
 	if err != nil {
 		return nil, err
 	}
-	m, err := s.masterOut(ctx, b, true)
+	m, err := s.masterOut(ctx, b)
 	if err != nil {
 		return nil, err
 	}

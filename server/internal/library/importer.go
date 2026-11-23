@@ -243,7 +243,7 @@ const (
 // storeCover records the cover: a cover file in the book folder wins, else the
 // embedded cover is extracted into /cache/covers/<book-id>/cover.jpg.
 func (l *Library) storeCover(ctx context.Context, bookID string, a *Analysis) {
-	path := ""
+	var path string
 	switch {
 	case a.Cover != "":
 		path = CoverInLibrary + a.Cover

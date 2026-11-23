@@ -5,6 +5,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 )
 
@@ -28,7 +29,7 @@ func EnsurePublicGroup(ctx context.Context, q Querier) (string, error) {
 	if err == nil {
 		return id, nil
 	}
-	if notFound(err) != ErrNotFound {
+	if !errors.Is(notFound(err), ErrNotFound) {
 		return "", err
 	}
 	id, now := NewID(), NowMS()

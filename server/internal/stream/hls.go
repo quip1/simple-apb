@@ -267,7 +267,7 @@ func (h *HLS) run(ctx context.Context, t *transcode, src Source, p Profile, dir 
 	err = cmd.Wait()
 	close(stopWatch)
 	if err != nil && ctx.Err() == nil {
-		t.err = fmt.Errorf("ffmpeg: %v: %s", err, strings.TrimSpace(stderr.String()))
+		t.err = fmt.Errorf("ffmpeg: %w: %s", err, strings.TrimSpace(stderr.String()))
 		h.Log.Warn("hls transcode failed", "book", src.BookID, "profile", p.Name, "err", t.err)
 	}
 	// Leftover temp segments from a cancelled run are useless.

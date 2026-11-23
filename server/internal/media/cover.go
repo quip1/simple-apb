@@ -33,7 +33,7 @@ func (t Tools) ResizeCover(ctx context.Context, src, dest string, size int) erro
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("resize cover: %v: %s", err, firstLine(stderr.String()))
+		return fmt.Errorf("resize cover: %w: %s", err, firstLine(stderr.String()))
 	}
 	data, err := os.ReadFile(tmp)
 	if err != nil {

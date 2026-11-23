@@ -199,16 +199,17 @@ func collectionShareOut(c *store.CollectionShare) CollectionShare {
 		TargetName: c.TargetName, CreatedAt: msTime(c.CreatedAt)}
 }
 
-// ownCollection returns the user's live collection.
-func ownCollection(ctx context.Context, q store.Querier, userID, id string) (*store.Collection, error) {
+// ownCollection checks that the collection is the user's and not deleted
+// (store.ErrNotFound otherwise).
+func ownCollection(ctx context.Context, q store.Querier, userID, id string) error {
 	c, err := store.GetCollection(ctx, q, userID, id)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if c.DeletedAt != nil {
-		return nil, store.ErrNotFound
+		return store.ErrNotFound
 	}
-	return c, nil
+	return nil
 }
 
 func (s *Server) ListCollectionShares(ctx context.Context, req ListCollectionSharesRequestObject) (ListCollectionSharesResponseObject, error) {
@@ -218,7 +219,7 @@ func (s *Server) ListCollectionShares(ctx context.Context, req ListCollectionSha
 	}
 	db := s.App().DB
 	id := req.CollectionId.String()
-	if _, err := ownCollection(ctx, db, p.User.ID, id); err != nil {
+	if err := ownCollection(ctx, db, p.User.ID, id); err != nil {
 		return nil, err
 	}
 	shares, err := store.ListCollectionShares(ctx, db, id)
@@ -240,7 +241,7 @@ func (s *Server) ShareCollection(ctx context.Context, req ShareCollectionRequest
 	id, targetType, targetID := req.CollectionId.String(), string(req.Body.TargetType), req.Body.TargetId.String()
 	var out *store.CollectionShare
 	err = s.App().DB.InTx(ctx, func(tx *store.Tx) error {
-		if _, err := ownCollection(ctx, tx, p.User.ID, id); err != nil {
+		if err := ownCollection(ctx, tx, p.User.ID, id); err != nil {
 			return err
 		}
 		target, name, err := s.shareTarget(ctx, tx, p, targetType, targetID)
@@ -282,7 +283,7 @@ func (s *Server) UnshareCollection(ctx context.Context, req UnshareCollectionReq
 	}
 	id, shareID := req.CollectionId.String(), req.ShareId.String()
 	err = s.App().DB.InTx(ctx, func(tx *store.Tx) error {
-		if _, err := ownCollection(ctx, tx, p.User.ID, id); err != nil {
+		if err := ownCollection(ctx, tx, p.User.ID, id); err != nil {
 			return err
 		}
 		if err := store.RemoveCollectionShare(ctx, tx, id, shareID); err != nil {

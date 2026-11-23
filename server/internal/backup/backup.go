@@ -116,7 +116,7 @@ func (s *Service) postgres(ctx context.Context, tmp string) error {
 		if errors.Is(err, exec.ErrNotFound) {
 			return ErrNoPGDump
 		}
-		return fmt.Errorf("pg_dump: %v: %s", err, strings.TrimSpace(stderr.String()))
+		return fmt.Errorf("pg_dump: %w: %s", err, strings.TrimSpace(stderr.String()))
 	}
 	return nil
 }

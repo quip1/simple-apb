@@ -42,7 +42,7 @@ func (t Tools) DetectSilences(ctx context.Context, path string, noiseDB float64,
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		return nil, fmt.Errorf("silencedetect %s: %v: %s", filepath.Base(path), err, lastLine(stderr.String()))
+		return nil, fmt.Errorf("silencedetect %s: %w: %s", filepath.Base(path), err, lastLine(stderr.String()))
 	}
 	return parseSilences(stderr.String()), nil
 }
@@ -98,7 +98,7 @@ func (t Tools) runFFmpeg(ctx context.Context, args ...string) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		return fmt.Errorf("ffmpeg: %v: %s", err, lastLine(stderr.String()))
+		return fmt.Errorf("ffmpeg: %w: %s", err, lastLine(stderr.String()))
 	}
 	return nil
 }
