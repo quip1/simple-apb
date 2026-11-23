@@ -95,3 +95,30 @@ func TestEditBookMetadata(t *testing.T) {
 		}
 	}
 }
+
+func TestLibraryAndPlayback(t *testing.T) {
+	active := Subject{Status: "active", Role: "user", Defaults: DefaultCapabilities()}
+	noDelete := Subject{Status: "active", Role: "user", Defaults: DefaultCapabilities(), UserOverrides: map[Action]*bool{DeleteOwn: b(false)}}
+	admin := Subject{Status: "active", Role: "admin"}
+	cases := []struct {
+		name string
+		got  bool
+		want bool
+	}{
+		{"remove a shared book", RemoveFromLibrary(noDelete, false), true},
+		{"remove own upload with can_delete_own", RemoveFromLibrary(active, true), true},
+		{"remove own upload without it", RemoveFromLibrary(noDelete, true), false},
+		{"uploader sees shares", SeeBookShares(active, true), true},
+		{"others don't", SeeBookShares(active, false), false},
+		{"nor do admins", SeeBookShares(admin, false), false},
+		{"admin plays any book", PlayAnyBook(admin), true},
+		{"restricted admin still may", PlayAnyBook(Subject{Status: "restricted", Role: "admin"}), true},
+		{"suspended admin may not", PlayAnyBook(Subject{Status: "suspended", Role: "admin"}), false},
+		{"users may not", PlayAnyBook(active), false},
+	}
+	for _, tc := range cases {
+		if tc.got != tc.want {
+			t.Errorf("%s: got %v, want %v", tc.name, tc.got, tc.want)
+		}
+	}
+}

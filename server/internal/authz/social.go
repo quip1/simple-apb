@@ -95,3 +95,23 @@ func UseBookTools(s Subject, uploader bool) bool {
 func MergeAsNewBook(s Subject, uploader bool) bool {
 	return UseBookTools(s, uploader) && Allowed(s, Upload)
 }
+
+// RemoveFromLibrary decides whether a user may remove a book from their own
+// library. Removing their own upload deletes it for them, so that needs
+// can_delete_own; any other book they may always remove.
+func RemoveFromLibrary(s Subject, ownUpload bool) bool {
+	return !ownUpload || Allowed(s, DeleteOwn)
+}
+
+// SeeBookShares decides who may list a book's shares and pending share
+// requests: only its uploader.
+func SeeBookShares(s Subject, uploader bool) bool {
+	return uploader && Allowed(s, Read)
+}
+
+// PlayAnyBook reports whether a signed stream link may open a book that isn't
+// in the signer's library: admins may play any master-store book while they
+// may read.
+func PlayAnyBook(s Subject) bool {
+	return s.Role == "admin" && Allowed(s, Read)
+}

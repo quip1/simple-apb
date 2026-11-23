@@ -71,7 +71,7 @@ func (s *Server) ListBookShares(ctx context.Context, req ListBookSharesRequestOb
 	if err != nil {
 		return nil, err
 	}
-	if b.UploaderID != p.User.ID {
+	if !authz.SeeBookShares(p.Subject, b.UploaderID == p.User.ID) {
 		return nil, errForbidden
 	}
 	ds, err := store.ListDistributions(ctx, db, bookID)

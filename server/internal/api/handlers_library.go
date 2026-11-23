@@ -208,7 +208,7 @@ func (s *Server) RemoveFromMyLibrary(ctx context.Context, req RemoveFromMyLibrar
 	if err != nil {
 		return nil, err
 	}
-	if it.Source == "own_upload" && it.Book.UploaderID == p.User.ID && !p.Can(authz.DeleteOwn) {
+	if !authz.RemoveFromLibrary(p.Subject, it.Source == "own_upload" && it.Book.UploaderID == p.User.ID) {
 		return nil, errForbidden
 	}
 	err = db.InTx(ctx, func(tx *store.Tx) error {

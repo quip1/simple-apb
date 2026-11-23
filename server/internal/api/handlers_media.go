@@ -59,13 +59,18 @@ func (s *Server) access(ctx context.Context, bookID string) (*mediaAccess, error
 		return nil, errBadSig
 	}
 	u, err := store.GetUser(ctx, app.DB, userID)
-	if err != nil || (u.Status != "active" && u.Status != "restricted") {
+	if err != nil {
+		return nil, errBadSig
+	}
+	// Status and role decide here; per-user capabilities don't apply to playback.
+	sub := authz.Subject{Status: u.Status, Role: u.Role}
+	if !authz.Allowed(sub, authz.Read) {
 		return nil, errBadSig
 	}
 	var book *store.Book
 	if it, err := store.VisibleBook(ctx, app.DB, userID, bookID); err == nil {
 		book = it.Book
-	} else if u.Role == "admin" {
+	} else if authz.PlayAnyBook(sub) {
 		if book, err = store.GetBook(ctx, app.DB, bookID); err != nil {
 			return nil, err
 		}
