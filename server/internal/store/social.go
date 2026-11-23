@@ -643,16 +643,3 @@ func SharedCollectionsFor(ctx context.Context, q Querier, userID string) ([]*Sha
 	}
 	return out, nil
 }
-
-// CanSeeCollection reports whether a collection is the user's own or shared with them.
-func CanSeeCollection(ctx context.Context, q Querier, userID, collectionID string) (bool, error) {
-	var n int64
-	err := q.QueryRow(ctx, `SELECT COUNT(*) FROM collections c WHERE c.id = ? AND c.deleted_at IS NULL AND (c.owner_id = ?
-		OR EXISTS (SELECT 1 FROM collection_shares s WHERE s.collection_id = c.id AND ((s.target_type = 'user' AND s.target_id = ?)
-			OR (s.target_type = 'group' AND s.target_id IN (SELECT CAST(group_id AS TEXT) FROM group_members WHERE user_id = ?)))))`,
-		collectionID, userID, userID, userID).Scan(&n)
-	if isInvalidUUID(err) {
-		return false, nil
-	}
-	return n > 0, err
-}

@@ -63,8 +63,6 @@ func (s *Server) responseError(w http.ResponseWriter, r *http.Request, err error
 		writeError(w, http.StatusBadRequest, "invalid_filter", err.Error())
 	case errors.Is(err, store.ErrConflict):
 		writeError(w, http.StatusConflict, "conflict", "conflicts with current state")
-	case errors.Is(err, ErrNotImplemented):
-		writeError(w, http.StatusNotImplemented, "not_implemented", "this endpoint is not implemented yet")
 	default:
 		s.log().ErrorContext(r.Context(), "handler error", "err", err, "path", r.URL.Path,
 			"request_id", middleware.GetReqID(r.Context()))

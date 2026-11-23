@@ -71,14 +71,12 @@ Errors are typed (`httpError`, `auth.Error`, `setup.Error`, `store.ErrNotFound`â
 | `api` | HTTP handlers implementing the generated strict interface |
 | `auth` | sessions, argon2id, TOTP, OIDC, rate limits |
 | `authz` | **the only place** permission decisions are made |
-| `library` | master store, user libraries, distribution |
-| `scanner` | folder watch + import |
+| `library` | master store, user libraries, distribution, folder watch + import, uploads, book tools |
 | `media` | ffprobe/ffmpeg, chapters, transcoding, HLS |
 | `metadata` | providers (Open Library, Google Books, Audnexus), scoring, the matching job, provider covers |
 | `sync` | progress, bookmarks, conflicts, delta sync |
 | `stream` | range serving, bandwidth shaping |
 | `push`, `mail` | ntfy publisher; SMTP with translated plain-text + HTML templates |
-| `moderation` | reserved; reports, the review queue and takedowns currently live in `store` (`social.go`, `admin.go`) and `api` (`handlers_social.go`, `handlers_panel.go`) |
 | `stats`, `backup`, `jobs` | stats, backups/scrubs, job queue |
 | `sysinfo` | disk space, memory and load for the admin dashboard |
 | `store` | DB connections, migrations, `?`â†’`$n` rebinding, transactions, repositories, settings, audit log |

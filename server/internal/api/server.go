@@ -4,7 +4,6 @@ package api
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"net/http"
 	"net/netip"
@@ -19,10 +18,6 @@ import (
 	"github.com/quip1/simple-apb/server/internal/version"
 	"github.com/quip1/simple-apb/server/internal/web"
 )
-
-// ErrNotImplemented is returned by operations that exist in the contract but
-// are not built yet. It maps to 501 with code "not_implemented".
-var ErrNotImplemented = errors.New("not implemented")
 
 // Server implements StrictServerInterface. Before setup it runs in "setup
 // mode": only health, instance and /setup endpoints answer.

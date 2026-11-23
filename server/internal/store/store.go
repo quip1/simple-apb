@@ -137,12 +137,6 @@ func NewID() string { return uuid.Must(uuid.NewV7()).String() }
 // NowMS is the current time in unix milliseconds (the DB time format, ADR-0004).
 func NowMS() int64 { return time.Now().UnixMilli() }
 
-// MS converts a time to unix ms.
-func MS(t time.Time) int64 { return t.UnixMilli() }
-
-// FromMS converts unix ms to time.
-func FromMS(ms int64) time.Time { return time.UnixMilli(ms).UTC() }
-
 // ErrNotFound is returned when a row does not exist.
 var ErrNotFound = errors.New("not found")
 

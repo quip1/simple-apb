@@ -123,13 +123,6 @@ func GetUserByLogin(ctx context.Context, q Querier, login string) (*User, error)
 	return scanUser(q.QueryRow(ctx, `SELECT `+userCols+` FROM users WHERE lower(username) = ? OR lower(email) = ? LIMIT 1`, l, l))
 }
 
-// CountUsers returns the number of users (any status).
-func CountUsers(ctx context.Context, q Querier) (int64, error) {
-	var n int64
-	err := q.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&n)
-	return n, err
-}
-
 // ListUsers returns users, optionally filtered by status, ordered by creation.
 func ListUsers(ctx context.Context, q Querier, status string, limit int) ([]*User, error) {
 	query := `SELECT ` + userCols + ` FROM users`
