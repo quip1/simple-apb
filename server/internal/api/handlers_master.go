@@ -78,11 +78,8 @@ func (s *Server) ListMasterBooks(ctx context.Context, req ListMasterBooksRequest
 	if err != nil {
 		return nil, err
 	}
-	page := MasterBookPage{Items: []MasterBook{}}
-	if len(books) > limit {
-		books = books[:limit]
-		page.NextCursor = encodeCursor(offset + limit)
-	}
+	books, next := trimPage(books, offset, limit)
+	page := MasterBookPage{Items: []MasterBook{}, NextCursor: next}
 	for _, b := range books {
 		m, err := s.masterOut(ctx, b, true)
 		if err != nil {

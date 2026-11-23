@@ -104,11 +104,8 @@ func (s *Server) ListReviews(ctx context.Context, req ListReviewsRequestObject) 
 	if err != nil {
 		return nil, err
 	}
-	page := ReviewPage{Items: make([]Review, 0, len(items))}
-	if len(items) > limit {
-		items = items[:limit]
-		page.NextCursor = encodeCursor(offset + limit)
-	}
+	items, next := trimPage(items, offset, limit)
+	page := ReviewPage{Items: make([]Review, 0, len(items)), NextCursor: next}
 	for _, r := range items {
 		page.Items = append(page.Items, reviewOut(r, p))
 	}
@@ -463,11 +460,8 @@ func (s *Server) ListReports(ctx context.Context, req ListReportsRequestObject) 
 	if err != nil {
 		return nil, err
 	}
-	page := ReportPage{Items: make([]AdminReport, 0, len(reps))}
-	if len(reps) > limit {
-		reps = reps[:limit]
-		page.NextCursor = encodeCursor(offset + limit)
-	}
+	reps, next := trimPage(reps, offset, limit)
+	page := ReportPage{Items: make([]AdminReport, 0, len(reps)), NextCursor: next}
 	for _, r := range reps {
 		out, err := s.reportOut(ctx, r)
 		if err != nil {
@@ -973,11 +967,8 @@ func (s *Server) ListReviewQueue(ctx context.Context, req ListReviewQueueRequest
 	if err != nil {
 		return nil, err
 	}
-	page := ReviewQueuePage{Items: make([]ReviewQueueItem, 0, len(items))}
-	if len(items) > limit {
-		items = items[:limit]
-		page.NextCursor = encodeCursor(offset + limit)
-	}
+	items, next := trimPage(items, offset, limit)
+	page := ReviewQueuePage{Items: make([]ReviewQueueItem, 0, len(items)), NextCursor: next}
 	for _, r := range items {
 		page.Items = append(page.Items, ReviewQueueItem{Id: mustUUID(r.ID),
 			Book:     BookRef{Id: mustUUID(r.BookID), Title: r.BookTitle, HasCover: r.BookHasCover},

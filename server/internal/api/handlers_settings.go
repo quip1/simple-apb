@@ -75,11 +75,8 @@ func (s *Server) ListAudit(ctx context.Context, req ListAuditRequestObject) (Lis
 	if err != nil {
 		return nil, err
 	}
-	page := AuditPage{Items: []AuditEntry{}}
-	if len(rows) > limit {
-		rows = rows[:limit]
-		page.NextCursor = encodeCursor(offset + limit)
-	}
+	rows, next := trimPage(rows, offset, limit)
+	page := AuditPage{Items: []AuditEntry{}, NextCursor: next}
 	for _, r := range rows {
 		page.Items = append(page.Items, auditOut(r))
 	}

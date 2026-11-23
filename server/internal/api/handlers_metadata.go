@@ -323,11 +323,8 @@ func (s *Server) ListMetadataReview(ctx context.Context, req ListMetadataReviewR
 	if err != nil {
 		return nil, err
 	}
-	page := MetadataReviewPage{Items: make([]MetadataReviewItem, 0, len(books))}
-	if len(books) > limit {
-		books = books[:limit]
-		page.NextCursor = encodeCursor(offset + limit)
-	}
+	books, next := trimPage(books, offset, limit)
+	page := MetadataReviewPage{Items: make([]MetadataReviewItem, 0, len(books)), NextCursor: next}
 	ids := make([]string, len(books))
 	for i, b := range books {
 		ids[i] = b.ID

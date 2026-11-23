@@ -4,8 +4,6 @@ package api
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -17,36 +15,6 @@ import (
 	"github.com/quip1/simple-apb/server/internal/store"
 	"github.com/quip1/simple-apb/server/internal/version"
 )
-
-// Cursors are opaque to clients; today they wrap an offset (ADR-0014).
-type pageCursor struct {
-	Offset int `json:"o"`
-}
-
-func encodeCursor(offset int) *string {
-	b, _ := json.Marshal(pageCursor{Offset: offset})
-	s := base64.RawURLEncoding.EncodeToString(b)
-	return &s
-}
-
-func decodeCursor(c *string) (int, error) {
-	if c == nil || *c == "" {
-		return 0, nil
-	}
-	b, err := base64.RawURLEncoding.DecodeString(*c)
-	var pc pageCursor
-	if err != nil || json.Unmarshal(b, &pc) != nil || pc.Offset < 0 {
-		return 0, badRequest("invalid_cursor", "the cursor is not valid")
-	}
-	return pc.Offset, nil
-}
-
-func limitOf(l *int, def int) int {
-	if l == nil || *l <= 0 {
-		return def
-	}
-	return min(*l, 200)
-}
 
 // coverURL carries the book's change time, so a new cover isn't hidden by
 // the browser cache (covers are cached for a day).
@@ -143,11 +111,8 @@ func (s *Server) ListLibrary(ctx context.Context, req ListLibraryRequestObject) 
 	if err != nil {
 		return nil, err
 	}
-	page := LibraryPage{}
-	if len(items) > limit {
-		items = items[:limit]
-		page.NextCursor = encodeCursor(offset + limit)
-	}
+	items, next := trimPage(items, offset, limit)
+	page := LibraryPage{NextCursor: next}
 	if page.Items, err = s.summaries(ctx, items); err != nil {
 		return nil, err
 	}

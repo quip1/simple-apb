@@ -228,11 +228,8 @@ func (s *Server) ListDuplicates(ctx context.Context, req ListDuplicatesRequestOb
 	if err != nil {
 		return nil, err
 	}
-	page := DuplicatePage{Items: []DuplicateCandidate{}}
-	if len(ds) > limit {
-		ds = ds[:limit]
-		page.NextCursor = encodeCursor(offset + limit)
-	}
+	ds, next := trimPage(ds, offset, limit)
+	page := DuplicatePage{Items: []DuplicateCandidate{}, NextCursor: next}
 	for _, d := range ds {
 		a, err := store.GetBook(ctx, db, d.BookA)
 		if err != nil {
