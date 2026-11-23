@@ -5,7 +5,10 @@
 // Import it as appsync: the name clashes with the standard library.
 package sync
 
-import "time"
+import (
+	"math"
+	"time"
+)
 
 // Stored is the server's current progress record for a user+book.
 type Stored struct {
@@ -13,6 +16,7 @@ type Stored struct {
 	DeviceID   string
 	ClientTS   time.Time // the writer's clock; "latest" is decided on this
 	ReceivedAt time.Time // when the server stored it
+	Speed      float64
 }
 
 // Incoming is a progress write from a device.
@@ -23,6 +27,9 @@ type Incoming struct {
 	// LastSyncedAt is when this device last synced progress for the book
 	// (zero if it never did).
 	LastSyncedAt time.Time
+	Speed        float64
+	// MarksFinished: the write sets or clears "finished", which is news even in place.
+	MarksFinished bool
 }
 
 // Outcome of a write.
@@ -43,6 +50,10 @@ func (o Outcome) String() string {
 // every comparison forever.
 const MaxClockSkew = 5 * time.Minute
 
+// StillMS: a write closer than this to the stored position, at the same
+// speed, says nothing new (ADR-0054).
+const StillMS = 1000
+
 // ClampClientTS bounds a client timestamp to now + MaxClockSkew.
 func ClampClientTS(ts, now time.Time) time.Time {
 	if ts.IsZero() || ts.After(now.Add(MaxClockSkew)) {
@@ -53,6 +64,10 @@ func ClampClientTS(ts, now time.Time) time.Time {
 
 // Decide applies the sync rule:
 //
+//  0. A write that doesn't move the position (within StillMS, same speed, no
+//     finished change) is ignored: re-sending a place stamped "now" from a
+//     paused device would otherwise make it look like the latest listening,
+//     moving "recently played" and pulling other devices back to it.
 //  1. Conflict when the stored record came from a *different* device, was
 //     received after the incoming device last synced (so that device didn't
 //     know about it — they were offline at the same time), and the positions
@@ -68,6 +83,9 @@ func Decide(stored *Stored, in Incoming, threshold time.Duration) Outcome {
 	diff := in.PositionMS - stored.PositionMS
 	if diff < 0 {
 		diff = -diff
+	}
+	if diff < StillMS && !in.MarksFinished && math.Abs(in.Speed-stored.Speed) < 0.005 {
+		return Ignore
 	}
 	if stored.DeviceID != in.DeviceID &&
 		stored.ReceivedAt.After(in.LastSyncedAt) &&

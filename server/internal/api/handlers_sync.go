@@ -62,7 +62,8 @@ func (s *Server) PutProgress(ctx context.Context, req PutProgressRequestObject) 
 	}
 	pos := min(b.PositionMs, it.Book.DurationMS)
 	now := time.Now()
-	in := appsync.Incoming{PositionMS: pos, DeviceID: b.DeviceId.String(), ClientTS: appsync.ClampClientTS(b.ClientTs, now)}
+	in := appsync.Incoming{PositionMS: pos, DeviceID: b.DeviceId.String(), ClientTS: appsync.ClampClientTS(b.ClientTs, now),
+		Speed: float64(b.Speed), MarksFinished: b.Finished != nil}
 	if b.LastSyncedAt != nil {
 		in.LastSyncedAt = *b.LastSyncedAt
 	}
@@ -95,7 +96,7 @@ func (s *Server) PutProgress(ctx context.Context, req PutProgressRequestObject) 
 			var st *appsync.Stored
 			if stored != nil {
 				st = &appsync.Stored{PositionMS: stored.PositionMS, DeviceID: stored.DeviceID,
-					ClientTS: time.UnixMilli(stored.ClientTS), ReceivedAt: time.UnixMilli(stored.UpdatedAt)}
+					ClientTS: time.UnixMilli(stored.ClientTS), ReceivedAt: time.UnixMilli(stored.UpdatedAt), Speed: stored.Speed}
 			}
 			outcome = appsync.Decide(st, in, threshold)
 		}

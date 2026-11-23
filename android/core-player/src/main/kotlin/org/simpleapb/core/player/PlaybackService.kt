@@ -191,12 +191,12 @@ class PlaybackService :
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = session
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        report(force = true)
+        report()
         super.onTaskRemoved(rootIntent)
     }
 
     override fun onDestroy() {
-        report(force = true)
+        report()
         setSensor(false)
         session?.release()
         session = null
@@ -381,7 +381,7 @@ class PlaybackService :
             checkAutoNext()
             if (seekAt > 0 && now - seekAt >= SEEK_SETTLE_MS) {
                 seekAt = 0
-                report(force = true)
+                report()
             }
             if (exo.isPlaying && now - lastSavedAt >= SAVE_EVERY_MS) {
                 lastSavedAt = now
@@ -411,13 +411,16 @@ class PlaybackService :
         appScope.launch { repo.autoNext(b) }
     }
 
-    private fun report(force: Boolean = false, finished: Boolean? = null) {
+    private fun report(finished: Boolean? = null) {
         val b = book() ?: return
         lastReportAt = SystemClock.elapsedRealtime()
         // While the user decides a conflict, don't keep creating new ones.
         if (state.conflict.value != null) return
         val pos = if (finished == true) b.timeline.durationMs else position()
-        if (!force && finished == null && abs(pos - lastSentMs) < MIN_MOVE_MS) return
+        // Unmoved since the last write (or since the book was opened or followed another
+        // device): nothing to say. Re-sending it stamped "now" on a pause, a swipe-away or
+        // a switch would make this place look newer than another device's (ADR-0054).
+        if (finished == null && abs(pos - lastSentMs) < MIN_MOVE_MS) return
         lastSentMs = pos
         val speed = exo.playbackParameters.speed
         appScope.launch { handle(repo.report(b, pos, speed, finished, null)) }
@@ -448,7 +451,7 @@ class PlaybackService :
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                 if (!playWhenReady) {
                     pausedAt = SystemClock.elapsedRealtime()
-                    report(force = true)
+                    report()
                     book()?.takeIf { it.localDir == null && !it.isLocal }?.let { b -> scope.launch { switchToDownload(b, play = false) } }
                 }
             }
@@ -503,7 +506,7 @@ class PlaybackService :
                     throw LoadFailed(r.failure)
                 }
             }
-        if (book()?.id != b.id) report(force = true)
+        if (book()?.id != b.id) report()
         state.book.value = b
         // A conflict found while this device was offline is asked about now (brief §7.5).
         state.conflict.value = repo.storedConflict(b)

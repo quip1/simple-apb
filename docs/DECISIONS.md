@@ -1711,7 +1711,25 @@ affected: they are the uploader's, and sharing them stays the uploader's choice 
 chosen group is later deleted, new books are shared with nobody (logged) instead of failing the
 import, and the setting shows as off.
 
+## ADR-0054 — A write that doesn't move the position isn't news
 
+**Context.** Jacob's phone kept going back to an older book, and to an older place in the book
+he was on. Every client force-sent its position on pause, on hiding or closing the window, on a
+swipe-away and when switching books, stamped with the current time even when nothing had
+moved. A paused PC app with an older book open therefore rewrote that book as "just played"
+each time its window was hidden, so Home's *Pick up* card and the recently-played order showed
+it; and with the same book open at an older place, the phone followed it back (ADR-0051), since
+"latest client timestamp wins".
+
+**Decision.** Clients send only when the position has moved at least 1 s from what they last
+sent, received or opened the book at (Android `report()`, web `sendProgress` and the unload
+beacon); pausing, hiding, closing and switching no longer force a write. The server enforces
+the same rule for clients still on older versions: `sync.Decide` ignores a write within 1 s of
+the stored position at the same speed that doesn't set or clear *finished*, before the conflict
+rule. Such a write is answered `applied: false`, and the stored record, its device and
+`updated_at` stay.
+
+## Open questions for Jacob
 
 | # | Question | Current choice (until answered) |
 |---|---|---|

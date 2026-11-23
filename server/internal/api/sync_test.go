@@ -111,6 +111,14 @@ func testSyncFlow(t *testing.T, h *harness) {
 	if g.body["position_ms"].(float64) != 240*60_000 || g.body["device_id"] != phoneID || g.body["speed"].(float64) != 1.25 {
 		t.Fatalf("final progress: %s", g.raw)
 	}
+	// 6. A paused device re-sending the same place, stamped now, changes nothing (ADR-0054):
+	// the phone stays the latest writer and "recently played" doesn't move.
+	if r := put(web, webID, 240, now, &now, nil); r.status != 200 || r.body["applied"] != false {
+		t.Fatalf("an unmoved write should be ignored: %s", r.raw)
+	}
+	if g := h.do(nil, "GET", "/me/progress/"+bookID, nil, bearer(web)); g.body["device_id"] != phoneID {
+		t.Fatalf("an unmoved write took over: %s", g.raw)
+	}
 	if r := h.do(nil, "PUT", "/me/progress/"+bookID, map[string]any{"position_ms": 1, "device_id": phoneID, "client_ts": ts(now), "speed": 9}, bearer(phone)); r.status != 400 {
 		t.Fatalf("bad speed accepted: %d", r.status)
 	}

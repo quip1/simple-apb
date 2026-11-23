@@ -314,6 +314,9 @@ export async function openBook(book: Book, opts: { startMs?: number; play?: bool
   const finished = !!book.progress?.finished_at;
   const stored = finished ? 0 : (book.progress?.position_ms ?? 0);
   const start = Math.min(opts.startMs ?? (same ? player.positionMs : stored), Math.max(0, book.duration_ms - 1000));
+  // The server already has this place: opening a book (or hiding the window)
+  // without listening mustn't write it again as if it were new.
+  if (!same) lastSentMs = stored;
   writeLocal(LAST_KEY, { bookId: book.id });
   mediaSessionMetadata();
   await seekTo(start, { play: opts.play ?? false, send: false });
@@ -322,7 +325,7 @@ export async function openBook(book: Book, opts: { startMs?: number; play?: bool
 export async function closeBook(): Promise<void> {
   if (!player.book) return;
   audio?.pause();
-  await sendProgress({ force: true });
+  await sendProgress();
   hls?.destroy();
   hls = null;
   if (audio) {
@@ -543,6 +546,9 @@ export async function followRemoteProgress(): Promise<void> {
 function beacon(): void {
   const book = player.book;
   if (!book || player.conflict) return;
+  // Unmoved: the server has it. Re-sending it stamped "now" would make a
+  // paused device look newer than the one actually listening (ADR-0054).
+  if (Math.abs(player.positionMs - lastSentMs) < 1000) return;
   const body = JSON.stringify({
     position_ms: Math.round(player.positionMs),
     device_id: deviceId(),
@@ -560,7 +566,7 @@ function beacon(): void {
 }
 
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden") void sendProgress({ force: true });
+  if (document.visibilityState === "hidden") void sendProgress();
 });
 window.addEventListener("pagehide", beacon);
 

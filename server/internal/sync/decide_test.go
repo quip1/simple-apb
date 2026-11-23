@@ -40,6 +40,13 @@ func TestDecide(t *testing.T) {
 			Incoming{PositionMS: 0, DeviceID: "watch", ClientTS: t0.Add(time.Minute)}, Conflict},
 		{"backwards jump far apart also asks", phone,
 			Incoming{PositionMS: min(10), DeviceID: "web", ClientTS: t0.Add(time.Minute), LastSyncedAt: t0.Add(-time.Hour)}, Conflict},
+		// ADR-0054: a paused device re-sending the same place, stamped now, isn't news.
+		{"other device re-sends the same place later", phone,
+			Incoming{PositionMS: min(60) + 400, DeviceID: "pc", ClientTS: t0.Add(time.Hour), LastSyncedAt: t0.Add(-time.Hour)}, Ignore},
+		{"same device re-sends the same place later", phone, Incoming{PositionMS: min(60), DeviceID: "phone", ClientTS: t0.Add(time.Hour)}, Ignore},
+		{"same place, new speed", phone, Incoming{PositionMS: min(60), DeviceID: "phone", ClientTS: t0.Add(time.Minute), Speed: 1.5}, Apply},
+		{"same place, marked finished", phone,
+			Incoming{PositionMS: min(60), DeviceID: "phone", ClientTS: t0.Add(time.Minute), MarksFinished: true}, Apply},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
