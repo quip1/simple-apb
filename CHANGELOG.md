@@ -5,6 +5,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- Server code tidied for 0.6 with no change in behavior: dead code and empty packages removed, shared pagination, social handlers split by feature, consistent error wrapping, the last inline permission checks moved into `authz`, and new tests for settings and pagination (ADR-0055).
+
 ### Fixed
 - The phone could go back to an older book, or to an older place in the book you're on. A paused device (often the Windows app or a browser tab) re-sent its old place as new whenever its window was hidden or closed; now a device only saves when it has actually moved, and the server ignores writes that don't move the position (ADR-0054).
 

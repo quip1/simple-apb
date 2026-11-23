@@ -1729,6 +1729,26 @@ the stored position at the same speed that doesn't set or clear *finished*, befo
 rule. Such a write is answered `applied: false`, and the stored record, its device and
 `updated_at` stay.
 
+## ADR-0055 — Server tidy-up before 0.6
+
+**Context.** Before 0.6 the Go server had collected some drift: two placeholder packages
+(`scanner`, `moderation`) that never got code, unused store helpers, an eight-times-copied
+pagination block, a 1,066-line `handlers_social.go`, exec errors formatted with `%v`, and three
+permission checks written inline in handlers despite the "authz only" rule.
+
+**Decision.** A behavior-preserving refactor, no API or schema change. The empty packages and
+dead code are gone (folder watching stays in `library`; moderation in `store` + `api`). List
+handlers share `trimPage` in `internal/api/pagination.go`. Social handlers split into
+`handlers_social.go`, `handlers_reports.go` (reports, review queue) and `handlers_sharing.go`.
+Errors wrap with `%w` and are matched with `errors.Is`. The inline checks became
+`authz.RemoveFromLibrary`, `SeeBookShares` and `PlayAnyBook`; `PlayAnyBook` keeps the old
+rule exactly (an admin whose account may read, including a restricted one), rather than
+`Allowed(Admin)`, which would have locked restricted admins out of stream links. The default
+golangci-lint set stays as CI runs it; a stricter local pass (errorlint, unparam, nilerr,
+wastedassign) was used once and its real findings fixed. The `nilerr` hits in
+`library/upload.go` and `watch.go` are deliberate (a missing tus info file means nothing was
+declared; walk errors skip the entry) and stay.
+
 ## Open questions for Jacob
 
 | # | Question | Current choice (until answered) |
