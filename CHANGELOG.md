@@ -5,6 +5,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-24
+
 ### Added
 - **Your places** (web, Android): every book you've started, each at its own place, with the device that saved it and when, and whether this device still has places waiting to be sent (with **Send now**). Open it from Home or Settings (ADR-0056).
 - Home lists your other books in progress under the big card, each with its place and a Resume button (ADR-0056).
