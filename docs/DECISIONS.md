@@ -1769,8 +1769,9 @@ without their places, so a wrong pick looked like a lost place.
   isn't empty) wherever the queued write is newer than the record it replaces, compared as RFC 3339
   instants; an older queued write never hides another device's newer place. 401 and 429 stop the
   flush and keep the write.
-- *Web:* `pending.svelte.ts` keeps every write in `localStorage` before sending and forgets it once
-  answered (or refused for good). It's resent on load, on `online`, and every minute; the beacon on
+- *Web:* `pending.svelte.ts` keeps every write in `localStorage`, per account, before sending and
+  forgets it once answered (or refused for good); another account signing in on the same browser
+  never sends it. It's resent on load, on `online`, and every minute; the beacon on
   page hide is kept too. Opening a book prefers an unsent place newer than the server's.
 - Conflicts are unchanged: a queued write that meets a 409 is dropped and the player asks.
 

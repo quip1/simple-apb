@@ -222,8 +222,12 @@ fn patch(v: &mut serde_json::Value, pending: &BTreeMap<String, serde_json::Value
             }
         }
         serde_json::Value::Object(map) => {
-            // A bare progress record.
-            if map.contains_key("position_ms") {
+            // A bare progress record (a bookmark has a position too, but an id
+            // and no client time).
+            if map.contains_key("position_ms")
+                && map.contains_key("client_ts")
+                && !map.contains_key("id")
+            {
                 let book = map
                     .get("book_id")
                     .and_then(|i| i.as_str())
@@ -394,6 +398,10 @@ mod tests {
         let v: serde_json::Value = serde_json::from_slice(&o.overlay(none).unwrap()).unwrap();
         assert_eq!(v["progress"]["position_ms"], 90000);
         // Another device listened on later: the server's place stands.
+        // A bookmark in the same book is left alone.
+        let marks =
+            br#"[{"id":"m","book_id":"a","position_ms":3,"updated_at":"2026-01-01T09:00:00Z"}]"#;
+        assert!(o.overlay(marks).is_none());
         let later = br#"{"book_id":"a","position_ms":120000,"client_ts":"2026-01-01T11:00:00Z"}"#;
         assert!(o.overlay(later).is_none());
         let older = br#"{"book_id":"a","position_ms":1,"client_ts":"2026-01-01T09:00:00Z"}"#;

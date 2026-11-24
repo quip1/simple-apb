@@ -8,7 +8,7 @@
   import Button from "../components/Button.svelte";
   import { t } from "../lib/i18n";
   import { live } from "../lib/live.svelte";
-  import { flushPending, pending } from "../lib/pending.svelte";
+  import { flushPending, pending, refreshPending } from "../lib/pending.svelte";
   import { session } from "../lib/session.svelte";
 
   let books = $state<BookSummary[]>([]);
@@ -32,6 +32,7 @@
   }
 
   async function load() {
+    refreshPending();
     try {
       const [going, done] = await Promise.all([all("in_progress"), all("finished")]);
       const at = (b: BookSummary) => Date.parse(b.progress?.updated_at ?? "") || 0;
