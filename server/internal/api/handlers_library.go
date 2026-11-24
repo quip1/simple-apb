@@ -42,7 +42,7 @@ func progressOut(bookID string, it *store.LibraryItem) *Progress {
 		return nil
 	}
 	p := &Progress{BookId: mustUUID(bookID), PositionMs: *it.ProgressMS, DeviceId: uuidOrNil(it.ProgressDevice),
-		Speed: float32(it.ProgressSpeed), FinishedAt: msTimePtr(it.ProgressFinished)}
+		DeviceName: strPtr(it.ProgressDeviceName), Speed: float32(it.ProgressSpeed), FinishedAt: msTimePtr(it.ProgressFinished)}
 	if it.ProgressClientTS != nil {
 		p.ClientTs = msTime(*it.ProgressClientTS)
 	}

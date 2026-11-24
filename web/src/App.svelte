@@ -21,6 +21,7 @@
   import Settings from "./pages/Settings.svelte";
   import BookTools from "./pages/BookTools.svelte";
   import Stats from "./pages/Stats.svelte";
+  import Places from "./pages/Places.svelte";
   import Uploads from "./pages/Uploads.svelte";
   import Setup from "./pages/Setup.svelte";
   import Signup from "./pages/Signup.svelte";
@@ -159,6 +160,8 @@
       <Settings />
     {:else if match("/settings/security", route.path)}
       <Security />
+    {:else if match("/places", route.path)}
+      <Places />
     {:else if match("/stats", route.path)}
       <Stats />
     {:else if match("/uploads", route.path)}

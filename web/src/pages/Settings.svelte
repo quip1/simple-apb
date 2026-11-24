@@ -153,6 +153,7 @@
       </select>
       <small class="muted">{t("settings.conflict_threshold_help")}</small>
     </label>
+    <p><a href="/places" use:link>{t("settings.places")}</a></p>
   </section>
 
   {#if DESKTOP && desktop.info}

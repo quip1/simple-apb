@@ -275,6 +275,13 @@ constructor(
                         ReportResult.Conflict(PendingConflict(b.id, c.conflictId, c.server.positionMs, c.server.deviceName))
                     }
                 }
+                res.code() >= 500 || res.code() == 429 || res.code() == 401 -> {
+                    // The server is having trouble: the place waits in the
+                    // outbox instead of being lost (ADR-0056).
+                    local.queueProgress(account.id, b.id, body)
+                    engine.requestSync()
+                    ReportResult.Failed(ApiFailure.from(res))
+                }
                 else -> ReportResult.Failed(ApiFailure.from(res))
             }
         } catch (_: IOException) {

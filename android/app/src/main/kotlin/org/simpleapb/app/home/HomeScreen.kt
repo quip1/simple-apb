@@ -3,6 +3,7 @@ package org.simpleapb.app.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -21,6 +22,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
@@ -70,6 +72,8 @@ data class HomeState(
     val loaded: Boolean = false,
     val error: ApiFailure? = null,
     val continuing: List<BookSummary> = emptyList(),
+    /** Books in [continuing] whose place is saved here but not sent yet. */
+    val unsent: Set<String> = emptySet(),
     val recommended: List<Recommendation> = emptyList(),
     val nextUp: List<BookSummary> = emptyList(),
     val recent: List<BookSummary> = emptyList(),
@@ -117,7 +121,9 @@ constructor(
 
         @Suppress("UNCHECKED_CAST")
         fun <T> ok(i: Int): T? = (r[i] as? Outcome.Ok<*>)?.value as T?
-        val continuing = ok<org.simpleapb.api.model.LibraryPage>(0)?.items.orEmpty()
+        val account = session.active() ?: return@launch
+        // The place the player will start from: this device's, while it waits to be sent (ADR-0056).
+        val (continuing, unsent) = withUnsent(ok<org.simpleapb.api.model.LibraryPage>(0)?.items.orEmpty(), local.unsentPlaces(account.id))
         val recent = ok<org.simpleapb.api.model.LibraryPage>(1)?.items.orEmpty()
         val finished = ok<org.simpleapb.api.model.LibraryPage>(2)?.items.orEmpty()
         // One card per book, newest recommendation first.
@@ -127,6 +133,7 @@ constructor(
                 loaded = true,
                 error = failure,
                 continuing = continuing,
+                unsent = unsent,
                 recommended = recs,
                 nextUp = nextInSeries(api, finished),
                 recent = recent
@@ -184,7 +191,8 @@ fun HomeScreen(
     onLibrary: (String?) -> Unit,
     onLocalBook: (String) -> Unit,
     onSwitch: () -> Unit,
-    onOpenPlayer: () -> Unit
+    onOpenPlayer: () -> Unit,
+    onPlaces: () -> Unit
 ) {
     val vm: HomeViewModel = hiltViewModel()
     val s by vm.state.collectAsStateWithLifecycle()
@@ -221,12 +229,28 @@ fun HomeScreen(
                 }
             }
             else -> {
-                // The book you're on, front and centre (ADR-0051); the row below holds the others.
+                // The book you're on, front and centre (ADR-0051); below it the other
+                // books you're listening to, each at its own place (ADR-0056).
                 NowListening(s.continuing.firstOrNull(), account.serverUrl, onOpenPlayer)
                 val current = playing?.id ?: s.continuing.firstOrNull()?.id?.toString()
                 val others = s.continuing.filter { it.id.toString() != current }
                 if (others.isNotEmpty()) {
-                    Shelf(stringResource(UiR.string.home_continue), others, account.serverUrl, open, onSeeAll = { onLibrary("in_progress") })
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                stringResource(UiR.string.home_your_books),
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(onClick = onPlaces, modifier = Modifier.heightIn(min = TouchTarget)) {
+                                Text(stringResource(UiR.string.home_all_places))
+                            }
+                        }
+                        BookPlaces(others.take(4), s.unsent, account.serverUrl, details = false, onOpen = open, onPlay = { b ->
+                            player.play(b.id.toString())
+                            onOpenPlayer()
+                        })
+                    }
                 }
                 if (s.recommended.isNotEmpty()) {
                     val byBook = s.recommended.associateBy { it.book.id }

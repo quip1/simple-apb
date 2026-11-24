@@ -119,6 +119,11 @@ func testSyncFlow(t *testing.T, h *harness) {
 	if g := h.do(nil, "GET", "/me/progress/"+bookID, nil, bearer(web)); g.body["device_id"] != phoneID {
 		t.Fatalf("an unmoved write took over: %s", g.raw)
 	}
+	// Library lists say which device saved each place (ADR-0056).
+	lib := h.do(nil, "GET", "/library?shelf=in_progress&sort=recent_played", nil, bearer(web))
+	if items := lib.body["items"].([]any); len(items) != 1 || items[0].(map[string]any)["progress"].(map[string]any)["device_name"] != "alice's android" {
+		t.Fatalf("library progress device: %s", lib.raw)
+	}
 	if r := h.do(nil, "PUT", "/me/progress/"+bookID, map[string]any{"position_ms": 1, "device_id": phoneID, "client_ts": ts(now), "speed": 9}, bearer(phone)); r.status != 400 {
 		t.Fatalf("bad speed accepted: %d", r.status)
 	}

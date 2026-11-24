@@ -206,7 +206,7 @@ type LibraryItem struct {
 	AddedAt                             int64
 	HiddenAt, RemovedAt                 *int64
 	ProgressMS, ProgressClientTS        *int64
-	ProgressDevice                      string
+	ProgressDevice, ProgressDeviceName  string
 	ProgressSpeed                       float64
 	ProgressUpdatedAt, ProgressFinished *int64
 }
@@ -281,7 +281,8 @@ func ListLibrary(ctx context.Context, q Querier, userID string, f LibraryFilter)
 	}
 	args = append(args, limit, f.Offset)
 	query := visibleCTE + ` SELECT ` + bookCols + `, v.source, v.added_at, v.hidden_at, v.removed_at,
-			p.position_ms, p.client_ts, p.device_id, p.speed, p.updated_at, p.finished_at
+			p.position_ms, p.client_ts, p.device_id, p.speed, p.updated_at, p.finished_at,
+			` + progressDeviceName + `
 		FROM vis v JOIN books b ON b.id = v.book_id
 		LEFT JOIN series s ON s.id = b.series_id
 		LEFT JOIN progress p ON p.book_id = b.id AND p.user_id = ?
@@ -306,19 +307,25 @@ func ListLibrary(ctx context.Context, q Querier, userID string, f LibraryFilter)
 	return out, rows.Err()
 }
 
+// The name of the device that saved the place, from the user's sessions on
+// it (as in progressFrom): lists show which device each place came from.
+const progressDeviceName = `(SELECT MAX(se.device_name) FROM sessions se
+				WHERE se.device_id = p.device_id AND se.user_id = p.user_id)`
+
 func scanLibraryItem(row interface{ Scan(...any) error }) (*LibraryItem, error) {
 	var (
 		it                                   LibraryItem
 		hidden, removed, pos, cts, pupd, fin sql.NullInt64
-		dev                                  sql.NullString
+		dev, devName                         sql.NullString
 		speed                                sql.NullFloat64
 	)
-	b, err := scanBook(row, &it.Source, &it.AddedAt, &hidden, &removed, &pos, &cts, &dev, &speed, &pupd, &fin)
+	b, err := scanBook(row, &it.Source, &it.AddedAt, &hidden, &removed, &pos, &cts, &dev, &speed, &pupd, &fin, &devName)
 	if err != nil {
 		return nil, err
 	}
 	it.Book, it.HiddenAt, it.RemovedAt = b, ptr(hidden), ptr(removed)
 	it.ProgressMS, it.ProgressClientTS, it.ProgressDevice = ptr(pos), ptr(cts), dev.String
+	it.ProgressDeviceName = devName.String
 	it.ProgressSpeed, it.ProgressUpdatedAt, it.ProgressFinished = speed.Float64, ptr(pupd), ptr(fin)
 	return &it, nil
 }
@@ -327,7 +334,8 @@ func scanLibraryItem(row interface{ Scan(...any) error }) (*LibraryItem, error) 
 // archived and recently removed), else ErrNotFound.
 func VisibleBook(ctx context.Context, q Querier, userID, bookID string) (*LibraryItem, error) {
 	query := visibleCTE + ` SELECT ` + bookCols + `, v.source, v.added_at, v.hidden_at, v.removed_at,
-			p.position_ms, p.client_ts, p.device_id, p.speed, p.updated_at, p.finished_at
+			p.position_ms, p.client_ts, p.device_id, p.speed, p.updated_at, p.finished_at,
+			` + progressDeviceName + `
 		FROM vis v JOIN books b ON b.id = v.book_id
 		LEFT JOIN series s ON s.id = b.series_id
 		LEFT JOIN progress p ON p.book_id = b.id AND p.user_id = ?

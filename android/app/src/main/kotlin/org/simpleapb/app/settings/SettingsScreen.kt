@@ -93,7 +93,8 @@ fun SettingsScreen(
     onAccounts: () -> Unit,
     onSignOut: () -> Unit,
     onFolders: () -> Unit,
-    onNotifications: () -> Unit
+    onNotifications: () -> Unit,
+    onPlaces: () -> Unit
 ) {
     val vm: SettingsViewModel = hiltViewModel()
     val me by vm.me.collectAsStateWithLifecycle()
@@ -171,6 +172,9 @@ fun SettingsScreen(
             }
             OutlinedButton(onClick = onNotifications, modifier = Modifier.fillMaxWidth().heightIn(min = TouchTarget)) {
                 Text(stringResource(UiR.string.app_push_title))
+            }
+            OutlinedButton(onClick = onPlaces, modifier = Modifier.fillMaxWidth().heightIn(min = TouchTarget)) {
+                Text(stringResource(UiR.string.settings_places))
             }
             Text(stringResource(UiR.string.settings_quality), style = MaterialTheme.typography.labelLarge)
             RadioGroup(s.quality, Quality.entries, { qualityLabel(it) }) { q -> vm.update { it.copy(quality = q) } }

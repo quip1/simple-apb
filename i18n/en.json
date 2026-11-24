@@ -1288,5 +1288,20 @@
   "app.preset.unreachable": "The server can't be reached. Check your internet connection and try again.",
   "app.preset.retry": "Try again",
   "home.now_listening": "Now listening",
-  "home.pick_up": "Pick up where you left off"
+  "home.pick_up": "Pick up where you left off",
+  "home.your_books": "Your other books",
+  "home.all_places": "All your places",
+  "places.position": "{pos} of {total}",
+  "places.saved_on": "Saved on {device} {when}",
+  "places.saved": "Saved {when}",
+  "places.unsent": "Saved on this device, not sent yet",
+  "places.resume": "Resume {title}",
+  "sync.title": "Your places",
+  "sync.intro": "Every book you've started keeps its own place. This is the place each one is at, and the device that saved it.",
+  "sync.all_sent": "Every place is saved on the server.",
+  "sync.waiting": "{n, plural, one {# place is} other {# places are}} saved on this device and waiting to be sent.",
+  "sync.send_now": "Send now",
+  "sync.empty": "You haven't started any books yet.",
+  "sync.finished": "Finished",
+  "settings.places": "See every book's saved place"
 }

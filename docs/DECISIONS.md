@@ -1749,6 +1749,38 @@ wastedassign) was used once and its real findings fixed. The `nilerr` hits in
 `library/upload.go` and `watch.go` are deliberate (a missing tus info file means nothing was
 declared; walk errors skip the entry) and stay.
 
+## ADR-0056 — A place is never lost, and every book shows its own
+
+**Context.** The server has always kept one place per book, but each app could still lose one
+on the way. Android dropped a queued place after eight server errors or on any 4xx, never queued
+a live report that met a server error, and let a sync (or a full snapshot) overwrite a place that
+was still waiting in its outbox. The Windows app served offline pages from a cache that didn't
+know about its own outbox, so reopening a book offline, or just after reconnecting, started from
+the server's older place, and the next save carried that older place with a newer time. The web
+player kept nothing: a failed save was gone. Home showed one book large and the rest as covers
+without their places, so a wrong pick looked like a lost place.
+
+**Decision.** Every client keeps each unsent place until the server has answered it:
+- *Android:* progress rows in the outbox are retried forever (server errors, 429 and 401
+  included); other kinds keep the eight-attempt limit. A live report that meets 5xx/429/401 goes
+  to the outbox like an offline one. Server progress for a book with a pending outbox row doesn't
+  overwrite the mirror, and a full snapshot keeps those rows.
+- *Windows:* the proxy lays the outbox over JSON answers (cached offline, or live while the outbox
+  isn't empty) wherever the queued write is newer than the record it replaces, compared as RFC 3339
+  instants; an older queued write never hides another device's newer place. 401 and 429 stop the
+  flush and keep the write.
+- *Web:* `pending.svelte.ts` keeps every write in `localStorage` before sending and forgets it once
+  answered (or refused for good). It's resent on load, on `online`, and every minute; the beacon on
+  page hide is kept too. Opening a book prefers an unsent place newer than the server's.
+- Conflicts are unchanged: a queued write that meets a 409 is dropped and the player asks.
+
+Home lists the other books you're listening to (up to four) under the big card, each with its
+place, percentage and a Resume button. A new **Your places** page (web `/places`, Android from Home
+and Settings) lists every book you've started or finished, newest first, with the place, the device
+that saved it and when, marks places this device hasn't sent yet, and offers **Send now**. No API
+or schema change: it reads `/library` (in progress + finished, sorted by `recent_played`), whose
+progress now fills the existing optional `device_name` the same way `/me/progress` does.
+
 ## Open questions for Jacob
 
 | # | Question | Current choice (until answered) |

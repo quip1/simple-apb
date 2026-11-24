@@ -19,6 +19,7 @@ import { DESKTOP, isDownloaded, postPlayer } from "./desktop.svelte";
 import { clock } from "./format";
 import { t } from "./i18n";
 import { prefs, readLocal, writeLocal, type Quality } from "./prefs.svelte";
+import { flushPending, keep, retryable, settled, unsentPlace } from "./pending.svelte";
 import { getTheme } from "./theme.svelte";
 
 type Profile = "original" | "medium" | "low";
@@ -311,12 +312,16 @@ export async function openBook(book: Book, opts: { startMs?: number; play?: bool
     lastChapter = -1;
     retriedAt = 0;
   }
-  const finished = !!book.progress?.finished_at;
-  const stored = finished ? 0 : (book.progress?.position_ms ?? 0);
+  // A place this device saved that hasn't reached the server yet is newer
+  // than the server's (ADR-0056).
+  const unsent = unsentPlace(book.id, book.progress?.client_ts);
+  if (unsent && !same) player.speed = unsent.speed ?? player.speed;
+  const finished = unsent ? !!unsent.finished : !!book.progress?.finished_at;
+  const stored = finished ? 0 : (unsent?.position_ms ?? book.progress?.position_ms ?? 0);
   const start = Math.min(opts.startMs ?? (same ? player.positionMs : stored), Math.max(0, book.duration_ms - 1000));
   // The server already has this place: opening a book (or hiding the window)
   // without listening mustn't write it again as if it were new.
-  if (!same) lastSentMs = stored;
+  if (!same) lastSentMs = unsent ? -1 : stored;
   writeLocal(LAST_KEY, { bookId: book.id });
   mediaSessionMetadata();
   await seekTo(start, { play: opts.play ?? false, send: false });
@@ -341,6 +346,7 @@ export async function closeBook(): Promise<void> {
 
 /** Restore the last book (paused) after a reload. */
 export async function restoreLastBook(): Promise<void> {
+  void flushPending();
   const last = readLocal<{ bookId?: string } | null>(LAST_KEY, null);
   if (!last?.bookId || player.book) return;
   const { data } = await api.GET("/books/{bookId}", { params: { path: { bookId: last.bookId } } });
@@ -502,7 +508,7 @@ export async function sendProgress(
   const pos = Math.round(opts.positionMs ?? player.positionMs);
   if (!opts.force && !opts.resolution && opts.finished === undefined && Math.abs(pos - lastSentMs) < 1000) return;
   lastSentMs = pos;
-  const res = await putProgress(api, book.id, {
+  const body = {
     position_ms: pos,
     device_id: deviceId(),
     client_ts: new Date().toISOString(),
@@ -510,12 +516,25 @@ export async function sendProgress(
     finished: opts.finished,
     last_synced_at: syncedAt(book.id),
     resolution: opts.resolution,
-  });
+  };
+  // Kept until the server answers, so no failure loses the place (ADR-0056).
+  keep(book.id, body);
+  let res: Awaited<ReturnType<typeof putProgress>>;
+  try {
+    res = await putProgress(api, book.id, body);
+  } catch {
+    res = { kind: "error", error: undefined, status: 0 };
+  }
   if (res.kind === "ok") {
+    settled(book.id, body.client_ts);
     markSynced(book.id);
     if (player.book?.id === book.id) player.book.progress = res.result.progress;
+    void flushPending();
   } else if (res.kind === "conflict") {
+    settled(book.id, body.client_ts);
     player.conflict = res.conflict;
+  } else if (!retryable(res.status)) {
+    settled(book.id, body.client_ts);
   }
 }
 
@@ -549,13 +568,16 @@ function beacon(): void {
   // Unmoved: the server has it. Re-sending it stamped "now" would make a
   // paused device look newer than the one actually listening (ADR-0054).
   if (Math.abs(player.positionMs - lastSentMs) < 1000) return;
-  const body = JSON.stringify({
+  const update = {
     position_ms: Math.round(player.positionMs),
     device_id: deviceId(),
     client_ts: new Date().toISOString(),
     speed: player.speed,
     last_synced_at: syncedAt(book.id),
-  });
+  };
+  // Whether the beacon gets through is unknown: the next load resends it.
+  keep(book.id, update);
+  const body = JSON.stringify(update);
   void fetch(`/api/v1/me/progress/${encodeURIComponent(book.id)}`, {
     method: "PUT",
     body,

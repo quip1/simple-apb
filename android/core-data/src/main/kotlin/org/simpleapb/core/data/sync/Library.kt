@@ -65,10 +65,19 @@ constructor(val dao: MirrorDao) {
 
     // ── progress ──
 
-    suspend fun saveProgress(accountId: String, list: List<Progress>) {
+    /**
+     * Stores progress from the server. A book with a write of this device's
+     * still waiting in the outbox keeps the local place: it's newer than
+     * anything the server can send until that write arrives (ADR-0056).
+     * [sending] is the outbox row whose answer this is.
+     */
+    suspend fun saveProgress(accountId: String, list: List<Progress>, sending: Long = -1) {
         if (list.isEmpty()) return
+        val pending = dao.pendingProgressKeys(accountId, sending).toSet()
+        val keep = list.filter { "progress:${it.bookId}" !in pending }
+        if (keep.isEmpty()) return
         dao.upsertProgress(
-            list.map {
+            keep.map {
                 ProgressRow(accountId, it.bookId.toString(), it.positionMs, it.clientTs, it.speed, it.finishedAt, it.deviceName)
             }
         )
@@ -79,6 +88,16 @@ constructor(val dao: MirrorDao) {
 
     /** One book's progress as it changes (a sync brings another device's position). */
     fun progressFlow(accountId: String, bookId: String): Flow<Progress?> = dao.progressFlow(accountId, bookId).map { it?.toProgress() }
+
+    /** This device's places that haven't reached the server yet (book id → place), ADR-0056. */
+    suspend fun unsentPlaces(accountId: String): Map<String, Progress> = dao
+        .pendingProgressKeys(accountId)
+        .map { it.removePrefix("progress:") }
+        .mapNotNull { id -> progress(accountId, id)?.let { id to it } }
+        .toMap()
+
+    /** How many places are waiting to be sent, as it changes. */
+    fun unsentCount(accountId: String): Flow<Int> = dao.pendingProgressFlow(accountId).map { it.size }
 
     suspend fun allProgress(accountId: String): Map<String, Progress> = dao.allProgress(accountId).associate { it.bookId to it.toProgress() }
 

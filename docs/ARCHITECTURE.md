@@ -47,7 +47,7 @@
 | Email | `internal/mail` (templates, catalog, SMTP), `internal/api/mail.go` | sign-up approved/declined, password reset by email, opt-in admin alerts; sent as jobs (ADR-0036) |
 | Web uploads | `web/src/lib/upload.ts`, `web/src/pages/Uploads.svelte` | resumable tus uploads from the browser with import status (ADR-0037) |
 | End-to-end tests | `web/e2e`, `web/playwright.config.ts`, CI job `e2e` | Playwright journey against the real server binary (ADR-0037) |
-| Web player | `web/src/lib/player.svelte.ts`, `live.svelte.ts` | one `<audio>` on the book timeline (multi-file or HLS via hls.js), signed stream links, progress sync + conflict prompt, Media Session, `/ws` hints (ADR-0029) |
+| Web player | `web/src/lib/player.svelte.ts`, `live.svelte.ts`, `pending.svelte.ts` (unsent places, ADR-0056) | one `<audio>` on the book timeline (multi-file or HLS via hls.js), signed stream links, progress sync + conflict prompt, Media Session, `/ws` hints (ADR-0029) |
 | TS client | `web/src/api` | generated types + cookie/CSRF/refresh-aware client |
 | Kotlin client | `android/core-api` | generated at build time; query enums send wire values |
 | Android app | `android/app`, `core-ui`, `core-data` | Compose app (flavors play/github/fdroid): onboarding, sign-in with 2FA, accounts with Keystore-sealed tokens and refresh, Fern/e-ink themes, strings generated from `i18n` (ADR-0039); player screen, mini player, playback settings; Home, Library, book, author/series, Stats, Settings, Security and Accounts screens with account-synced preferences (ADR-0041); local-only mode, UnifiedPush, QR sign-in, account switcher (ADR-0044); release signing per flavor and F-Droid checks (ADR-0045) |

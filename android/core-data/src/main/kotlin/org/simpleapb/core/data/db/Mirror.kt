@@ -207,6 +207,14 @@ interface MirrorDao {
     @Query("SELECT COUNT(*) FROM outbox")
     fun outboxCount(): Flow<Int>
 
+    /** Keys ("progress:<book>") of progress writes still waiting to be sent, except the one [except] being sent now. */
+    @Query("SELECT `key` FROM outbox WHERE accountId = :a AND kind = 'progress' AND seq != :except")
+    suspend fun pendingProgressKeys(a: String, except: Long = -1): List<String>
+
+    /** Pending progress writes as they change, for the sync status page. */
+    @Query("SELECT * FROM outbox WHERE accountId = :a AND kind = 'progress' ORDER BY seq")
+    fun pendingProgressFlow(a: String): Flow<List<OutboxRow>>
+
     @Query("DELETE FROM outbox WHERE seq = :seq")
     suspend fun deleteOutbox(seq: Long)
 
@@ -272,7 +280,7 @@ interface MirrorDao {
     @Transaction
     suspend fun clearForSnapshot(a: String) {
         clearBooks(a)
-        clearProgress(a)
+        clearSentProgress(a)
         clearBookmarks(a)
         clearCollections(a)
     }
@@ -285,6 +293,13 @@ interface MirrorDao {
 
     @Query("DELETE FROM progress WHERE accountId = :a")
     suspend fun clearProgress(a: String)
+
+    /** Every progress row except the books with a write still in the outbox: those are this device's newest places. */
+    @Query(
+        "DELETE FROM progress WHERE accountId = :a AND ('progress:' || bookId) NOT IN " +
+            "(SELECT `key` FROM outbox WHERE accountId = :a AND kind = 'progress')"
+    )
+    suspend fun clearSentProgress(a: String)
 
     @Query("DELETE FROM bookmarks WHERE accountId = :a")
     suspend fun clearBookmarks(a: String)

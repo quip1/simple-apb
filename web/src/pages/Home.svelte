@@ -4,6 +4,7 @@
   // added (brief §7.4/§9).
   import { api, type BookSummary, type Schemas } from "../api/client";
   import Alert from "../components/Alert.svelte";
+  import BookPlaces from "../components/BookPlaces.svelte";
   import Button from "../components/Button.svelte";
   import NowListening from "../components/NowListening.svelte";
   import Shelf from "../components/Shelf.svelte";
@@ -104,12 +105,19 @@
       <p class="muted">{t("home.empty_body")}</p>
     </div>
   {:else}
-    <!-- The book you're on, front and centre (ADR-0051); the row holds the others. -->
+    <!-- The book you're on, front and centre (ADR-0051); below it the other
+         books you're listening to, each at its own place (ADR-0056). -->
     <NowListening fallback={continuing[0]} />
     {@const current = player.book?.id ?? continuing[0]?.id}
     {@const others = continuing.filter((b) => b.id !== current)}
     {#if others.length}
-      <Shelf id="shelf-continue" title={t("home.continue")} books={others} more="/library?shelf=in_progress" />
+      <section class="stack" aria-labelledby="your-books">
+        <div class="head">
+          <h2 id="your-books">{t("home.your_books")}</h2>
+          <a href="/places" use:link>{t("home.all_places")}</a>
+        </div>
+        <BookPlaces books={others.slice(0, 4)} />
+      </section>
     {/if}
     {#if recs.length}
       <Shelf id="shelf-recs" title={t("home.recommended")} books={recs.map((r) => r.book)}>
@@ -141,6 +149,15 @@
   }
   .empty {
     max-width: 36rem;
+  }
+  .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+  }
+  .head h2 {
+    margin: 0;
   }
   .rec p {
     margin: 0.25rem 0 0;

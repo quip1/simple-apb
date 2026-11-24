@@ -66,6 +66,7 @@ import org.simpleapb.app.book.BookScreen
 import org.simpleapb.app.book.EditBookScreen
 import org.simpleapb.app.downloads.DownloadsScreen
 import org.simpleapb.app.home.HomeScreen
+import org.simpleapb.app.home.PlacesScreen
 import org.simpleapb.app.library.LibraryScreen
 import org.simpleapb.app.library.PersonKind
 import org.simpleapb.app.library.PersonScreen
@@ -98,6 +99,8 @@ import org.simpleapb.core.ui.R as UiR
 @Serializable private object DownloadsRoute
 
 @Serializable private object StatsRoute
+
+@Serializable private object PlacesRoute
 
 @Serializable private object SettingsRoute
 
@@ -228,7 +231,8 @@ fun MainApp(app: AppViewModel, account: Account, accounts: List<Account>, snackb
                             onLibrary = { shelf -> nav.navigate(LibraryRoute(shelf = shelf)) },
                             onLocalBook = { nav.navigate(LocalBookRoute(it)) },
                             onSwitch = { switching = true },
-                            onOpenPlayer = showPlayer
+                            onOpenPlayer = showPlayer,
+                            onPlaces = { nav.navigate(PlacesRoute) }
                         )
                     }
                     composable<LibraryRoute> { e ->
@@ -238,6 +242,12 @@ fun MainApp(app: AppViewModel, account: Account, accounts: List<Account>, snackb
                         })
                     }
                     composable<DownloadsRoute> { DownloadsScreen(account, onBook = openBook) }
+                    composable<PlacesRoute> {
+                        PlacesScreen(account, onBook = openBook, onPlay = { id ->
+                            player.play(id)
+                            showPlayer()
+                        })
+                    }
                     composable<StatsRoute> { StatsScreen(account, onBook = openBook, onAuthor = { openPerson(PersonKind.AUTHOR, it) }) }
                     composable<SettingsRoute> {
                         SettingsScreen(
@@ -247,7 +257,8 @@ fun MainApp(app: AppViewModel, account: Account, accounts: List<Account>, snackb
                             onAccounts = { nav.navigate(AccountsRoute) },
                             onSignOut = { app.signOut(account) },
                             onFolders = { nav.navigate(FoldersRoute) },
-                            onNotifications = { nav.navigate(NotificationsRoute) }
+                            onNotifications = { nav.navigate(NotificationsRoute) },
+                            onPlaces = { nav.navigate(PlacesRoute) }
                         )
                     }
                     composable<BookRoute> { e ->

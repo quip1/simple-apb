@@ -31,7 +31,9 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.simpleapb.api.infrastructure.Serializer
 import org.simpleapb.api.model.BookmarkCreate
+import org.simpleapb.api.model.Progress
 import org.simpleapb.api.model.ProgressUpdate
 import org.simpleapb.core.data.account.Account
 import org.simpleapb.core.data.account.AccountStore
@@ -211,6 +213,41 @@ class SyncEngineTest {
     }
 
     @Test
+    fun aPlaceIsNeverGivenUpOnAfterServerErrors() = runBlocking {
+        local.queueProgress(account.id, book1, update(4_000, "2026-11-01T09:00:00Z"))
+        repeat(10) {
+            server.enqueue(json("""{"code":"internal","message":"x"}""", 503))
+            assertFalse(engine.sync(account))
+        }
+        server.enqueue(json("""{"code":"unauthorized","message":"x"}""", 401))
+        assertFalse(engine.sync(account))
+        assertEquals(1, db.dao().outbox(account.id).size)
+    }
+
+    @Test
+    fun aSyncDoesNotOverwriteAnUnsentPlace() = runBlocking {
+        // The phone listened on while offline; the server still has an older place.
+        local.queueProgress(account.id, book1, update(90_000, "2026-11-01T09:00:00Z"))
+        local.saveProgress(account.id, listOf(serializer(progress(book1, 5_000))))
+        assertEquals(90_000L, local.progress(account.id, book1)?.positionMs)
+        // A snapshot keeps it too; other books' places are replaced as usual.
+        db.dao().clearForSnapshot(account.id)
+        assertEquals(90_000L, local.progress(account.id, book1)?.positionMs)
+        // Once sent, the server's answer is stored.
+        server.enqueue(json("""{"applied":true,"progress":${progress(book1, 90_000)}}"""))
+        server.enqueue(
+            json(
+                """{"cursor":"c1","has_more":false,"library":[],"progress":[${progress(book2, 7_000)}],
+                "bookmarks":[],"collections":[],"tombstones":[]}"""
+            )
+        )
+        assertTrue(engine.sync(account))
+        assertTrue(db.dao().outbox(account.id).isEmpty())
+        assertEquals(90_000L, local.progress(account.id, book1)?.positionMs)
+        assertEquals(7_000L, local.progress(account.id, book2)?.positionMs)
+    }
+
+    @Test
     fun offlineLeavesTheOutboxAlone() = runBlocking {
         local.queueProgress(account.id, book1, update(1_000, "2026-11-01T09:00:00Z"))
         server.close() // nothing listening any more
@@ -279,4 +316,6 @@ class SyncEngineTest {
         assertEquals(a, org.simpleapb.core.data.local.LocalFolders.idFor("content://tree/primary%3AAudiobooks/document/primary%3AAudiobooks%2FHome"))
         assertTrue(a.startsWith("local:") && a.length == "local:".length + 24)
     }
+
+    private fun serializer(raw: String): Progress = Serializer.kotlinxSerializationJson.decodeFromString(Progress.serializer(), raw)
 }

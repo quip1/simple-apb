@@ -5,10 +5,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **Your places** (web, Android): every book you've started, each at its own place, with the device that saved it and when, and whether this device still has places waiting to be sent (with **Send now**). Open it from Home or Settings (ADR-0056).
+- Home lists your other books in progress under the big card, each with its place and a Resume button (ADR-0056).
+
 ### Changed
 - Server code tidied for 0.6 with no change in behavior: dead code and empty packages removed, shared pagination, social handlers split by feature, consistent error wrapping, the last inline permission checks moved into `authz`, and new tests for settings and pagination (ADR-0055).
 
 ### Fixed
+- Places are never lost on the way to the server (ADR-0056):
+  - Android no longer gives up on a saved place after repeated server errors, queues places that meet a server error instead of dropping them, and a sync no longer replaces a place that's still waiting to be sent.
+  - The Windows app starts a book from the place it saved offline, even before that place has reached the server.
+  - The web player keeps every place until the server confirms it and resends it on the next visit or when the connection returns.
 - The phone could go back to an older book, or to an older place in the book you're on. A paused device (often the Windows app or a browser tab) re-sent its old place as new whenever its window was hidden or closed; now a device only saves when it has actually moved, and the server ignores writes that don't move the position (ADR-0054).
 
 ## [0.5.5] - 2026-11-17

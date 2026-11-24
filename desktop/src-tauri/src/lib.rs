@@ -56,7 +56,8 @@ impl Shared {
 }
 
 /// Sends the progress written offline, oldest book first. A write the server
-/// refuses (a conflict, a removed book) is dropped; offline stops the round.
+/// refuses for good (a conflict, a removed book) is dropped; offline, server
+/// errors and a lapsed sign-in stop the round and keep it.
 pub fn flush_outbox_soon(s: Arc<Shared>) {
     if s.flushing.swap(true, Ordering::AcqRel) {
         return;
@@ -73,7 +74,11 @@ pub fn flush_outbox_soon(s: Arc<Shared>) {
                             p.path
                         );
                     }
-                    if r.status().is_server_error() {
+                    // Server trouble, or signed out for now: keep the place for later (ADR-0056).
+                    if r.status().is_server_error()
+                        || r.status() == reqwest::StatusCode::UNAUTHORIZED
+                        || r.status() == reqwest::StatusCode::TOO_MANY_REQUESTS
+                    {
                         break;
                     }
                     s.outbox.done(&p);

@@ -272,7 +272,7 @@ async fn api(s: &Arc<Shared>, req: Request<Vec<u8>>) -> Resp {
     let body = req.into_body();
     match send(s, &method, &pq, &headers, body.clone()).await {
         Ok(res) => {
-            let u = read(res).await;
+            let mut u = read(res).await;
             if method == "GET"
                 && u.status == StatusCode::OK
                 && Cache::cacheable(&path, &u.content_type, u.body.len())
@@ -280,6 +280,14 @@ async fn api(s: &Arc<Shared>, req: Request<Vec<u8>>) -> Resp {
                 s.cache.put(&server, &pq, &u.content_type, &u.body);
             }
             if !s.outbox.is_empty() {
+                // Back online with places still unsent: show them until they
+                // arrive, so the player doesn't start from the server's older one.
+                if method == "GET" && u.content_type.starts_with("application/json") {
+                    if let Some(b) = s.outbox.overlay(&u.body) {
+                        u.headers.retain(|(k, _)| k != "content-length");
+                        u.body = b;
+                    }
+                }
                 crate::flush_outbox_soon(s.clone());
             }
             respond(u)
@@ -297,6 +305,11 @@ async fn api(s: &Arc<Shared>, req: Request<Vec<u8>>) -> Resp {
                     .get(&server, &pq)
                     .or_else(|| downloads::offline_detail(s, &path))
                 {
+                    let body = if ct.starts_with("application/json") {
+                        s.outbox.overlay(&body).unwrap_or(body)
+                    } else {
+                        body
+                    };
                     return Response::builder()
                         .status(StatusCode::OK)
                         .header(header::CONTENT_TYPE, ct)

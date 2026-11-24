@@ -118,8 +118,13 @@ constructor(
             when (send(account, api, row)) {
                 Sent.DONE -> dao.deleteOutbox(row.seq)
                 Sent.RETRY -> {
-                    // A server error: try again later, but never block the queue forever.
-                    if (row.attempts + 1 >= MAX_ATTEMPTS) dao.deleteOutbox(row.seq) else dao.bumpOutbox(row.seq)
+                    // A server error: try again later. A place is never given up on
+                    // (ADR-0056); other writes are, so they can't block the queue forever.
+                    if (row.kind != LocalLibrary.KIND_PROGRESS && row.attempts + 1 >= MAX_ATTEMPTS) {
+                        dao.deleteOutbox(row.seq)
+                    } else {
+                        dao.bumpOutbox(row.seq)
+                    }
                     return false
                 }
             }
@@ -153,9 +158,10 @@ constructor(
                     }
                     return Sent.DONE
                 }
-                res.body()?.let { local.saveProgress(account.id, listOf(it.progress)) }
+                res.body()?.let { local.saveProgress(account.id, listOf(it.progress), sending = row.seq) }
                 if (res.isSuccessful) local.markSynced(account.id, q.bookId)
-                outcome(res)
+                // Signed out on the server for now (a token refresh follows): keep the place.
+                if (res.code() == 401) Sent.RETRY else outcome(res)
             }
             LocalLibrary.KIND_BOOKMARK_CREATE -> {
                 val b = local.decodeBookmark(row.payload) ?: return Sent.DONE

@@ -105,4 +105,12 @@ test("sam listens on one device and continues on another", async ({ browser }) =
   await current.getByRole("button", { name: "Resume" }).click();
   await expect(laptop).toHaveURL(/\/player$/);
   await expect.poll(() => position(laptop), { timeout: 20_000 }).toBeGreaterThanOrEqual(saved - 1);
+
+  // Your places lists the book with the place and the device that saved it,
+  // and nothing waits to be sent (ADR-0056).
+  await phone.goto("/places");
+  await expect(phone.getByRole("heading", { name: "Your places" })).toBeVisible();
+  await expect(phone.getByRole("link", { name: TITLE, exact: true })).toBeVisible();
+  await expect(phone.getByText(/^Saved on /)).toBeVisible();
+  await expect(phone.getByText("Every place is saved on the server.")).toBeVisible();
 });
